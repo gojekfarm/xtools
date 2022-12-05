@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+option go_package = "../xproto;xproto";
+
+message TestMessage {
+  message Tuple {
+    string key = 1;
+    string value = 2;
+  }
+
+  repeated Tuple key_values = 1;
+  double decimal = 2;
+  int64 long = 3;
+  string str = 4;
+  bool valid = 5;
+  bytes payload = 6;
+  repeated google.protobuf.Any objects = 7;
+}
