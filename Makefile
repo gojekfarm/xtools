@@ -5,6 +5,9 @@ BIN_DIR := $(PROJECT_DIR)/.bin
 fmt:
 	@$(call run-go-mod-dir,go vet ./...,"go fmt")
 
+gofmt:
+	@$(call run-go-mod-dir,go vet ./...,"gofmt -s -w")
+
 vet:
 	@$(call run-go-mod-dir,go vet ./...,"go vet")
 
@@ -15,7 +18,7 @@ lint: golangci-lint
 ci: test test-cov test-xml
 
 imports: gci
-	@$(call run-go-mod-dir,$(GCI) -w -local github.com/gojek ./ | { grep -v -e 'skip file .*' || true; },".bin/gci")
+	@$(call run-go-mod-dir,$(GCI) -w -local github.com/gojekfarm ./ | { grep -v -e 'skip file .*' || true; },".bin/gci")
 
 .PHONY: gomod.tidy
 gomod.tidy:

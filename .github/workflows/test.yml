@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [ 1.18.x ]
+        go-version: [ 1.18.x, 1.19.x ]
     steps:
       - name: Install Go
         uses: actions/setup-go@v2
@@ -19,12 +19,18 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
         uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - name: Go mod cache
+        uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Tools bin cache
+        uses: actions/cache@v2
+        with:
+          path: .bin
+          key: ${{ runner.os }}-go${{ matrix.go-version }}-${{ hashFiles('Makefile') }}
       - name: Test
         run: make ci
       - name: Upload coverage to Codecov
