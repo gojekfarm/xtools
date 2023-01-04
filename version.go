@@ -2,6 +2,6 @@ package xtools
 
 // Version can be used to get the current xtools library version
 func Version() string {
-	return "0.0.0"
+	return "0.1.0"
 	// This string is updated by the pre_release.sh script during release
 }
