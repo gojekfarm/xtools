@@ -28,12 +28,12 @@ func TestFilterStruct(t *testing.T) {
 	}
 
 	assert.EqualValues(t, map[testStruct]bool{
-		testStruct{ID: 1, Valid: true}: true,
-		testStruct{ID: 3, Valid: true}: true,
+		{ID: 1, Valid: true}: true,
+		{ID: 3, Valid: true}: true,
 	}, Filter(map[testStruct]bool{
-		testStruct{ID: 1, Valid: true}: true,
-		testStruct{ID: 2}:              true,
-		testStruct{ID: 3, Valid: true}: true,
-		testStruct{ID: 4}:              true,
+		{ID: 1, Valid: true}: true,
+		{ID: 2}:              true,
+		{ID: 3, Valid: true}: true,
+		{ID: 4}:              true,
 	}, func(k testStruct, _ bool) bool { return k.Valid }))
 }

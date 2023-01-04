@@ -5,6 +5,9 @@ BIN_DIR := $(PROJECT_DIR)/.bin
 fmt:
 	@$(call run-go-mod-dir,go vet ./...,"go fmt")
 
+gofmt:
+	@$(call run-go-mod-dir,go vet ./...,"gofmt -s -w")
+
 vet:
 	@$(call run-go-mod-dir,go vet ./...,"go vet")
 

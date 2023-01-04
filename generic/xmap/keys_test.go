@@ -28,10 +28,10 @@ func TestStructKeys(t *testing.T) {
 	}
 
 	keys := Keys(map[testStruct]bool{
-		testStruct{ID: 1, Valid: true}: true,
-		testStruct{ID: 2}:              true,
-		testStruct{ID: 3, Valid: true}: true,
-		testStruct{ID: 4}:              true,
+		{ID: 1, Valid: true}: true,
+		{ID: 2}:              true,
+		{ID: 3, Valid: true}: true,
+		{ID: 4}:              true,
 	})
 
 	sort.Slice(keys, func(i, j int) bool {
