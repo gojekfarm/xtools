@@ -107,7 +107,7 @@ func (s Set[T]) Intersection(other Set[T]) Set[T] {
 	return set
 }
 
-// String returns the ''native'' string format for Set.
+// String returns the 'native' string format for Set.
 func (s Set[T]) String() string {
 	ms := fmt.Sprintf("%+v", map[T]bool(s))[3:]
 
