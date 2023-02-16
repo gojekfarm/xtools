@@ -12,6 +12,8 @@ type testStructA struct {
 	Value int
 }
 
+type testStructASlice []testStructA
+
 type testStructB struct {
 	Value int
 }
@@ -46,6 +48,14 @@ func TestMap(t *testing.T) {
 			assert.EqualValues(t, tt.want, Map(tt.elems, tt.mapper))
 		})
 	}
+
+	t.Run("MapTypedSlice", func(t *testing.T) {
+		assert.EqualValues(t, []testStructB{{Value: 4}, {Value: 8}, {Value: 12}}, Map(testStructASlice{
+			testStructA{Value: 2},
+			testStructA{Value: 4},
+			testStructA{Value: 6},
+		}, func(i testStructA) testStructB { return testStructB{Value: i.Value * 2} }))
+	})
 }
 
 func TestMapConcurrentWithContext(t *testing.T) {

@@ -10,7 +10,7 @@ type MapperWithContext[T1, T2 any] func(context.Context, T1) T2
 
 // Map returns a new slice populated with the result of calling the Mapper
 // on every element in the given elems slice.
-func Map[T1, T2 any](elems []T1, mapper Mapper[T1, T2]) []T2 {
+func Map[S ~[]T1, T1, T2 any](elems S, mapper Mapper[T1, T2]) []T2 {
 	output := make([]T2, 0, len(elems))
 
 	for _, e := range elems {
@@ -22,7 +22,8 @@ func Map[T1, T2 any](elems []T1, mapper Mapper[T1, T2]) []T2 {
 
 // MapConcurrentWithContext does the same as Map, but concurrently, and receives a context.Context to be cancellable.
 // Note: For simple map operations, Map is about 50x faster than MapConcurrentWithContext.
-func MapConcurrentWithContext[T1, T2 any](ctx context.Context, elems []T1, mapper MapperWithContext[T1, T2]) []T2 {
+func MapConcurrentWithContext[S ~[]T1, T1, T2 any](
+	ctx context.Context, elems S, mapper MapperWithContext[T1, T2]) []T2 {
 	elemOrder := make(chan chan T2, len(elems))
 	output := make([]T2, 0, len(elems))
 
@@ -70,6 +71,6 @@ loop:
 
 // MapConcurrent does the same as Map, but concurrently.
 // Note: For simple map operations, Map is about 50x faster than MapConcurrent.
-func MapConcurrent[T1, T2 any](elems []T1, mapper Mapper[T1, T2]) []T2 {
+func MapConcurrent[S ~[]T1, T1, T2 any](elems S, mapper Mapper[T1, T2]) []T2 {
 	return MapConcurrentWithContext(context.Background(), elems, func(_ context.Context, e T1) T2 { return mapper(e) })
 }

@@ -11,6 +11,8 @@ func TestReduce(t *testing.T) {
 		Value float64
 	}
 
+	type testStructSlice []testStruct
+
 	tests := []struct {
 		name        string
 		elems       []any
@@ -72,12 +74,31 @@ func TestReduce(t *testing.T) {
 			assert.Equal(t, tt.want, Reduce(tt.elems, tt.accumulator))
 		})
 	}
+
+	t.Run("FindStructWithMaxValueFromTypedSlice", func(t *testing.T) {
+		assert.EqualValues(t, testStruct{Value: 6.91}, Reduce(testStructSlice{
+			testStruct{Value: 1.02},
+			testStruct{Value: 4.2},
+			testStruct{Value: 2.01},
+			testStruct{Value: 6.91},
+			testStruct{Value: 3.14},
+			testStruct{Value: 5.3},
+		}, func(in testStruct, e testStruct) testStruct {
+			if in.Value > e.Value {
+				return in
+			}
+
+			return e
+		}))
+	})
 }
 
 func TestReduceWithInitialValue(t *testing.T) {
 	type testStruct struct {
 		Value float64
 	}
+
+	type testStructSlice []testStruct
 
 	tests := []struct {
 		name        string
@@ -126,4 +147,21 @@ func TestReduceWithInitialValue(t *testing.T) {
 			assert.Equal(t, tt.want, ReduceWithInitialValue(tt.elems, tt.initial, tt.accumulator))
 		})
 	}
+
+	t.Run("FindStructWithMaxValueFromTypedSlice", func(t *testing.T) {
+		assert.EqualValues(t, testStruct{Value: 6.91}, ReduceWithInitialValue(testStructSlice{
+			testStruct{Value: 1.02},
+			testStruct{Value: 4.2},
+			testStruct{Value: 2.01},
+			testStruct{Value: 6.91},
+			testStruct{Value: 3.14},
+			testStruct{Value: 5.3},
+		}, testStruct{Value: 0.0}, func(in testStruct, e testStruct) testStruct {
+			if in.Value > e.Value {
+				return in
+			}
+
+			return e
+		}))
+	})
 }
