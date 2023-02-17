@@ -2,17 +2,7 @@ package xkafka
 
 import (
 	"context"
-
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
-
-// Consumer defines the interface for building a consumer.
-type Consumer interface {
-	GetMetadata() (*kafka.Metadata, error)
-	Use(mwf ...MiddlewareFunc)
-	Start(ctx context.Context, handler Handler) error
-	Close() error
-}
 
 // Handler responds to a Message from a Kafka topic.
 type Handler interface {
@@ -38,4 +28,12 @@ type middleware interface {
 // Middleware allows MiddlewareFunc to implement the middleware interface.
 func (mw MiddlewareFunc) Middleware(handler Handler) Handler {
 	return mw(handler)
+}
+
+// ErrorHandler is a callback function that is called when an error occurs.
+type ErrorHandler func(err error) error
+
+// NoopErrorHandler is an ErrorHandler that passes the error through.
+func NoopErrorHandler(err error) error {
+	return err
 }
