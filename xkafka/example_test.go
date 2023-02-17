@@ -18,10 +18,17 @@ func ExampleSimpleConsumer() {
 		return nil
 	})
 
+	ignoreError := func(err error) error {
+		// ignore error
+		return nil
+	}
+
 	consumer, err := xkafka.NewSimpleConsumer(cfg)
 	if err != nil {
 		panic(err)
 	}
+
+	consumer.SetErrorHandler(ignoreError)
 
 	consumer.Use(
 		// middleware to log messages

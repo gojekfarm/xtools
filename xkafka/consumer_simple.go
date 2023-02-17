@@ -7,13 +7,12 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
-var _ Consumer = &SimpleConsumer{}
-
 // SimpleConsumer is a simple consumer that consumes messages from a Kafka topic.
 type SimpleConsumer struct {
-	config      ConsumerConfig
-	kafka       *kafka.Consumer
-	middlewares []middleware
+	config       ConsumerConfig
+	kafka        *kafka.Consumer
+	middlewares  []middleware
+	errorHandler ErrorHandler
 }
 
 // NewSimpleConsumer creates a new SimpleConsumer instance.
@@ -44,12 +43,18 @@ func NewSimpleConsumer(cfg ConsumerConfig) (*SimpleConsumer, error) {
 	}
 
 	return &SimpleConsumer{
-		config: cfg,
-		kafka:  consumer,
+		config:       cfg,
+		kafka:        consumer,
+		errorHandler: NoopErrorHandler,
 	}, nil
 }
 
-// GetMetadata is useful to verify that the client can connect successfully.
+// SetErrorHandler sets the error handler for the consumer.
+func (c *SimpleConsumer) SetErrorHandler(fn ErrorHandler) {
+	c.errorHandler = fn
+}
+
+// GetMetadata returns the metadata for the consumer.
 func (c *SimpleConsumer) GetMetadata() (*kafka.Metadata, error) {
 	return c.kafka.GetMetadata(nil, false, c.config.MetadataRequestTimeout)
 }
@@ -64,6 +69,8 @@ func (c *SimpleConsumer) Use(mwf ...MiddlewareFunc) {
 }
 
 // Start consumes from kafka and dispatches messages to handlers.
+// It blocks until the context is cancelled or an error occurs.
+// Errors are handled by the ErrorHandler if set, otherwise they are returned.
 func (c *SimpleConsumer) Start(ctx context.Context, handler Handler) error {
 	for i := len(c.middlewares) - 1; i >= 0; i-- {
 		handler = c.middlewares[i].Middleware(handler)
@@ -81,12 +88,18 @@ func (c *SimpleConsumer) Start(ctx context.Context, handler Handler) error {
 					continue
 				}
 
-				return err
+				if ferr := c.errorHandler(err); ferr != nil {
+					return ferr
+				}
 			}
 
 			msg := NewMessage(c.config.Group, km)
 
-			_ = handler.Handle(ctx, msg)
+			err = handler.Handle(ctx, msg)
+
+			if ferr := c.errorHandler(err); ferr != nil {
+				return ferr
+			}
 		}
 	}
 }

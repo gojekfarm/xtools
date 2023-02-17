@@ -42,3 +42,6 @@ vendor/
 
 .tools
 tools/vendor
+
+go.work
+go.work.sum
