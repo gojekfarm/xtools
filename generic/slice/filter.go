@@ -4,8 +4,8 @@ package slice
 type Predicate[T any] func(T) bool
 
 // Filter returns a new slice with all elements from the given elems slice for which the Predicate is satisfied.
-func Filter[T any](elems []T, predicate Predicate[T]) []T {
-	var output []T
+func Filter[S ~[]T, T any](elems S, predicate Predicate[T]) S {
+	var output S
 
 	for _, v := range elems {
 		if predicate(v) {

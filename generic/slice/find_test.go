@@ -11,6 +11,8 @@ func TestFind(t *testing.T) {
 		ID int
 	}
 
+	type testStructSlice []testStruct
+
 	tests := []struct {
 		name      string
 		elems     []any
@@ -83,4 +85,28 @@ func TestFind(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("TypedSlices", func(t *testing.T) {
+		t.Run("ElemFound", func(t *testing.T) {
+			v, index := Find(testStructSlice{
+				testStruct{ID: 1},
+				testStruct{ID: 2},
+				testStruct{ID: 3},
+				testStruct{ID: 4},
+			}, func(i testStruct) bool { return i.ID == 2 })
+			assert.NotEqual(t, NotFound, index)
+			assert.EqualValues(t, testStruct{ID: 2}, v)
+		})
+
+		t.Run("ElemNotFound", func(t *testing.T) {
+			v, index := Find(testStructSlice{
+				testStruct{ID: 1},
+				testStruct{ID: 2},
+				testStruct{ID: 3},
+				testStruct{ID: 4},
+			}, func(i testStruct) bool { return i.ID == 5 })
+			assert.Equal(t, NotFound, index)
+			assert.EqualValues(t, testStruct{}, v)
+		})
+	})
 }

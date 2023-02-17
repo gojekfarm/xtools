@@ -12,6 +12,8 @@ func TestFilter(t *testing.T) {
 		Valid bool
 	}
 
+	type testStructSlice []testStruct
+
 	tests := []struct {
 		name      string
 		elems     []any
@@ -40,9 +42,22 @@ func TestFilter(t *testing.T) {
 			want: []any{testStruct{ID: 1, Valid: true}, testStruct{ID: 3, Valid: true}},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.EqualValues(t, tt.want, Filter(tt.elems, tt.predicate))
 		})
 	}
+
+	t.Run("ValidTypedSlice", func(t *testing.T) {
+		assert.EqualValues(t, testStructSlice{
+			testStruct{ID: 1, Valid: true},
+			testStruct{ID: 3, Valid: true},
+		}, Filter(testStructSlice{
+			testStruct{ID: 1, Valid: true},
+			testStruct{ID: 2},
+			testStruct{ID: 3, Valid: true},
+			testStruct{ID: 4},
+		}, func(i testStruct) bool { return i.Valid }))
+	})
 }
