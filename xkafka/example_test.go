@@ -7,12 +7,6 @@ import (
 )
 
 func ExampleSimpleConsumer() {
-	cfg := xkafka.ConsumerConfig{
-		Topics:  []string{"test"},
-		Brokers: "localhost:9092",
-		Group:   "test",
-	}
-
 	handler := xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
 		// do something with the message
 		return nil
@@ -23,12 +17,16 @@ func ExampleSimpleConsumer() {
 		return nil
 	}
 
-	consumer, err := xkafka.NewSimpleConsumer(cfg)
+	consumer, err := xkafka.NewSimpleConsumer(
+		"consumer-id",
+		xkafka.WithTopics("test"),
+		xkafka.WithBrokers("localhost:9092"),
+		xkafka.WithKafkaConfig("group.id", "test"),
+		xkafka.WithErrorHandler(ignoreError),
+	)
 	if err != nil {
 		panic(err)
 	}
-
-	consumer.SetErrorHandler(ignoreError)
 
 	consumer.Use(
 		// middleware to log messages

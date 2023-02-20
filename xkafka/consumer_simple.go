@@ -9,54 +9,37 @@ import (
 
 // SimpleConsumer is a simple consumer that consumes messages from a Kafka topic.
 type SimpleConsumer struct {
-	config       ConsumerConfig
-	kafka        *kafka.Consumer
-	middlewares  []middleware
-	errorHandler ErrorHandler
+	name        string
+	kafka       *kafka.Consumer
+	middlewares []middleware
+	config      consumerOptions
 }
 
 // NewSimpleConsumer creates a new SimpleConsumer instance.
-func NewSimpleConsumer(cfg ConsumerConfig) (*SimpleConsumer, error) {
-	cfg.SetDefaults()
+func NewSimpleConsumer(name string, opts ...ConsumerOption) (*SimpleConsumer, error) {
+	cfg := defaultConsumerOptions()
 
-	kafkaCfg := &kafka.ConfigMap{
-		"bootstrap.servers":           cfg.Brokers,
-		"group.id":                    cfg.Group,
-		"enable.auto.commit":          cfg.AutoCommit,
-		"auto.offset.reset":           cfg.TopicOffset,
-		"socket.keepalive.enable":     true,
-		"session.timeout.ms":          int(cfg.SessionTimeout.Milliseconds()),
-		"heartbeat.interval.ms":       int(cfg.HeartbeatInterval.Milliseconds()),
-		"auto.commit.interval.ms":     int(cfg.AutoCommitInterval.Milliseconds()),
-		"metadata.request.timeout.ms": cfg.MetadataRequestTimeout,
-		"socket.timeout.ms":           int(cfg.SocketTimeout.Milliseconds()),
+	for _, opt := range opts {
+		opt(&cfg)
 	}
 
-	consumer, err := kafka.NewConsumer(kafkaCfg)
-	if err != nil {
-		return nil, err
-	}
+	cfg.configMap.SetKey("bootstrap.servers", cfg.brokers)
 
-	err = consumer.SubscribeTopics(cfg.Topics, nil)
+	consumer, err := kafka.NewConsumer(&cfg.configMap)
 	if err != nil {
 		return nil, err
 	}
 
 	return &SimpleConsumer{
-		config:       cfg,
-		kafka:        consumer,
-		errorHandler: NoopErrorHandler,
+		name:   name,
+		config: cfg,
+		kafka:  consumer,
 	}, nil
-}
-
-// SetErrorHandler sets the error handler for the consumer.
-func (c *SimpleConsumer) SetErrorHandler(fn ErrorHandler) {
-	c.errorHandler = fn
 }
 
 // GetMetadata returns the metadata for the consumer.
 func (c *SimpleConsumer) GetMetadata() (*kafka.Metadata, error) {
-	return c.kafka.GetMetadata(nil, false, c.config.MetadataRequestTimeout)
+	return c.kafka.GetMetadata(nil, false, int(c.config.metadataRequestTimeout.Milliseconds()))
 }
 
 // Use appends a MiddlewareFunc to the chain.
@@ -81,23 +64,23 @@ func (c *SimpleConsumer) Start(ctx context.Context, handler Handler) error {
 		case <-ctx.Done():
 			return nil
 		default:
-			km, err := c.kafka.ReadMessage(c.config.PollTimeout)
+			km, err := c.kafka.ReadMessage(c.config.pollTimeout)
 
 			if err != nil {
 				if kerr, ok := err.(kafka.Error); ok && kerr.Code() == kafka.ErrTimedOut {
 					continue
 				}
 
-				if ferr := c.errorHandler(err); ferr != nil {
+				if ferr := c.config.errorHandler(err); ferr != nil {
 					return ferr
 				}
 			}
 
-			msg := NewMessage(c.config.Group, km)
+			msg := NewMessage(c.name, km)
 
 			err = handler.Handle(ctx, msg)
 
-			if ferr := c.errorHandler(err); ferr != nil {
+			if ferr := c.config.errorHandler(err); ferr != nil {
 				return ferr
 			}
 		}
@@ -106,7 +89,7 @@ func (c *SimpleConsumer) Start(ctx context.Context, handler Handler) error {
 
 // Close closes the consumer.
 func (c *SimpleConsumer) Close() error {
-	<-time.After(c.config.ShutdownTimeout)
+	<-time.After(c.config.shutdownTimeout)
 
 	return c.kafka.Close()
 }
