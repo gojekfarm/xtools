@@ -55,9 +55,11 @@ func (c *SimpleConsumer) Use(mwf ...MiddlewareFunc) {
 // It blocks until the context is cancelled or an error occurs.
 // Errors are handled by the ErrorHandler if set, otherwise they are returned.
 func (c *SimpleConsumer) Start(ctx context.Context, handler Handler) error {
-	for i := len(c.middlewares) - 1; i >= 0; i-- {
-		handler = c.middlewares[i].Middleware(handler)
+	if err := c.subscribe(); err != nil {
+		return err
 	}
+
+	handler = c.concatMiddlewares(handler)
 
 	for {
 		select {
@@ -85,6 +87,18 @@ func (c *SimpleConsumer) Start(ctx context.Context, handler Handler) error {
 			}
 		}
 	}
+}
+
+func (c *SimpleConsumer) concatMiddlewares(h Handler) Handler {
+	for i := len(c.middlewares) - 1; i >= 0; i-- {
+		h = c.middlewares[i].Middleware(h)
+	}
+
+	return h
+}
+
+func (c *SimpleConsumer) subscribe() error {
+	return c.kafka.SubscribeTopics(c.config.topics, nil)
 }
 
 // Close closes the consumer.

@@ -1,8 +1,8 @@
-module github.com/gojekfarm/xtools/xkafkaware
+module github.com/gojekfarm/xtools/xkafka/middleware
 
 go 1.19
 
-replace github.com/gojekfarm/xtools/xkafka => ../xkafka
+replace github.com/gojekfarm/xtools/xkafka => ../
 
 require github.com/gojekfarm/xtools/xkafka v0.0.0-00010101000000-000000000000
 
