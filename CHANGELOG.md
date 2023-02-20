@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.1]
+
+### Changed
+
+- [`generic/slice`](./generic/slice) All functions now accept typed slices as input. ([#4](https://github.com/gojekfarm/xtools/pull/4))
+
 ## [0.1.0]
 
 ### Added
@@ -15,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`generic`](./generic) package added
 - [`xproto`](./xproto) package added
 
-[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/gojekfarm/xtools/releases/tag/v0.1.1
 [0.1.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.1.0
 
