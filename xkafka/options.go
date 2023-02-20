@@ -15,6 +15,8 @@ type consumerOptions struct {
 	metadataRequestTimeout time.Duration
 	pollTimeout            time.Duration
 	shutdownTimeout        time.Duration
+
+	concurrency int
 }
 
 func defaultConsumerOptions() consumerOptions {
@@ -26,57 +28,70 @@ func defaultConsumerOptions() consumerOptions {
 		metadataRequestTimeout: 10 * time.Second,
 		pollTimeout:            10 * time.Second,
 		shutdownTimeout:        1 * time.Second,
+		concurrency:            1,
 	}
 }
 
-// ConsumerOption enables consumer configuration.
-type ConsumerOption func(*consumerOptions)
+// ConsumerOption is an interface for consumer options.
+type ConsumerOption interface{ apply(*consumerOptions) }
 
-// WithTopics sets the topics for the consumer.
+type optionFunc func(*consumerOptions)
+
+func (f optionFunc) apply(o *consumerOptions) { f(o) }
+
+// WithTopics sets the topics to consume from.
 func WithTopics(topics ...string) ConsumerOption {
-	return func(o *consumerOptions) {
+	return optionFunc(func(o *consumerOptions) {
 		o.topics = topics
-	}
+	})
 }
 
-// WithBrokers sets the brokers for the consumer.
+// WithBrokers sets the brokers to consume from.
 func WithBrokers(brokers ...string) ConsumerOption {
-	return func(o *consumerOptions) {
+	return optionFunc(func(o *consumerOptions) {
 		o.brokers = brokers
-	}
+	})
 }
 
-// WithKafkaConfig sets the Kafka config for the consumer.
+// WithKafkaConfig sets the kafka configmap values.
 func WithKafkaConfig(key string, value interface{}) ConsumerOption {
-	return func(o *consumerOptions) {
-		_ = o.configMap.SetKey(key, value)
-	}
+	return optionFunc(func(o *consumerOptions) {
+		o.configMap.SetKey(key, value)
+	})
 }
 
 // WithErrorHandler sets the error handler for the consumer.
-func WithErrorHandler(fn ErrorHandler) ConsumerOption {
-	return func(o *consumerOptions) {
-		o.errorHandler = fn
-	}
+func WithErrorHandler(errorHandler ErrorHandler) ConsumerOption {
+	return optionFunc(func(o *consumerOptions) {
+		o.errorHandler = errorHandler
+	})
 }
 
-// WithMetadataRequestTimeout sets the timeout for metadata requests.
+// WithMetadataRequestTimeout sets the metadata request timeout.
 func WithMetadataRequestTimeout(timeout time.Duration) ConsumerOption {
-	return func(o *consumerOptions) {
+	return optionFunc(func(o *consumerOptions) {
 		o.metadataRequestTimeout = timeout
-	}
+	})
 }
 
-// WithPollTimeout sets the timeout for polling messages.
+// WithPollTimeout sets the poll timeout.
 func WithPollTimeout(timeout time.Duration) ConsumerOption {
-	return func(o *consumerOptions) {
+	return optionFunc(func(o *consumerOptions) {
 		o.pollTimeout = timeout
-	}
+	})
 }
 
-// WithShutdownTimeout sets the timeout for shutting down the consumer.
+// WithShutdownTimeout sets the shutdown timeout.
 func WithShutdownTimeout(timeout time.Duration) ConsumerOption {
-	return func(o *consumerOptions) {
+	return optionFunc(func(o *consumerOptions) {
 		o.shutdownTimeout = timeout
-	}
+	})
+}
+
+// WithConcurrency sets the concurrency level.
+// Used with NewConcurrentConsumer only.
+func WithConcurrency(concurrency int) ConsumerOption {
+	return optionFunc(func(o *consumerOptions) {
+		o.concurrency = concurrency
+	})
 }
