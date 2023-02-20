@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gojekfarm/xtools/xkafka"
 )
 
+var topic = "test-topic"
+
 func TestNewMessage(t *testing.T) {
-	topic := "test-topic"
 	km := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{
 			Topic:     &topic,
@@ -35,7 +37,6 @@ func TestNewMessage(t *testing.T) {
 }
 
 func TestAck(t *testing.T) {
-	topic := "test-topic"
 	km := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{
 			Topic:     &topic,
@@ -200,8 +201,6 @@ func TestCallbacks(t *testing.T) {
 }
 
 func TestHeaders(t *testing.T) {
-
-	topic := "test-topic"
 	km := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{
 			Topic:     &topic,

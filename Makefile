@@ -3,10 +3,10 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 BIN_DIR := $(PROJECT_DIR)/.bin
 
 fmt:
-	@$(call run-go-mod-dir,go vet ./...,"go fmt")
+	@$(call run-go-mod-dir,go fmt ./...,"go fmt")
 
 gofmt:
-	@$(call run-go-mod-dir,go vet ./...,"gofmt -s -w")
+	@$(call run-go-mod-dir,go fmt ./...,"gofmt -s -w")
 
 vet:
 	@$(call run-go-mod-dir,go vet ./...,"go vet")
