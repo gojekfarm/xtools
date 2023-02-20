@@ -49,7 +49,7 @@ func WithBrokers(brokers ...string) ConsumerOption {
 // WithKafkaConfig sets the Kafka config for the consumer.
 func WithKafkaConfig(key string, value interface{}) ConsumerOption {
 	return func(o *consumerOptions) {
-		o.configMap.SetKey(key, value)
+		_ = o.configMap.SetKey(key, value)
 	}
 }
 

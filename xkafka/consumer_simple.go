@@ -23,7 +23,7 @@ func NewSimpleConsumer(name string, opts ...ConsumerOption) (*SimpleConsumer, er
 		opt(&cfg)
 	}
 
-	cfg.configMap.SetKey("bootstrap.servers", cfg.brokers)
+	_ = cfg.configMap.SetKey("bootstrap.servers", cfg.brokers)
 
 	consumer, err := kafka.NewConsumer(&cfg.configMap)
 	if err != nil {
