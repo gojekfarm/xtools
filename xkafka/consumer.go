@@ -2,6 +2,7 @@ package xkafka
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
@@ -24,7 +25,7 @@ func NewConsumer(name string, opts ...ConsumerOption) (*Consumer, error) {
 		opt.apply(&cfg)
 	}
 
-	_ = cfg.configMap.SetKey("bootstrap.servers", cfg.brokers)
+	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
 
 	consumer, err := kafka.NewConsumer(&cfg.configMap)
 	if err != nil {

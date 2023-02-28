@@ -1,4 +1,4 @@
-package xkafkaware
+package middleware
 
 import (
 	"context"
