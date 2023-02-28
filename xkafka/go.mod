@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/confluentinc/confluent-kafka-go v1.9.2
+	github.com/pkg/errors v0.9.1
 	github.com/sourcegraph/conc v0.2.0
 	github.com/stretchr/testify v1.8.1
 )
@@ -17,7 +18,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/sourcegraph/sourcegraph/lib v0.0.0-20221216004406-749998a2ac74 // indirect

@@ -14,11 +14,11 @@ type Consumer struct {
 	name        string
 	kafka       *kafka.Consumer
 	middlewares []middleware
-	config      consumerOptions
+	config      options
 }
 
 // NewConsumer creates a new Consumer instance.
-func NewConsumer(name string, opts ...ConsumerOption) (*Consumer, error) {
+func NewConsumer(name string, opts ...Option) (*Consumer, error) {
 	cfg := defaultConsumerOptions()
 
 	for _, opt := range opts {
