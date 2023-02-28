@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/gojekfarm/xtools/xkafka/middleware"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRecoverMiddleware(t *testing.T) {

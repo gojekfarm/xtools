@@ -6,21 +6,30 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
-type consumerOptions struct {
-	topics       []string
-	brokers      []string
-	configMap    kafka.ConfigMap
-	errorHandler ErrorHandler
+const (
+	atleastLeaderAck = 1
+	partitioner      = "consistent_random"
+)
 
+type options struct {
+	// common options
+	brokers         []string
+	configMap       kafka.ConfigMap
+	errorHandler    ErrorHandler
+	shutdownTimeout time.Duration
+
+	// consumer options
+	topics                 []string
 	metadataRequestTimeout time.Duration
 	pollTimeout            time.Duration
-	shutdownTimeout        time.Duration
 
 	concurrency int
+
+	// producer options
 }
 
-func defaultConsumerOptions() consumerOptions {
-	return consumerOptions{
+func defaultConsumerOptions() options {
+	return options{
 		topics:                 []string{},
 		brokers:                []string{},
 		configMap:              kafka.ConfigMap{},
@@ -32,66 +41,79 @@ func defaultConsumerOptions() consumerOptions {
 	}
 }
 
-// ConsumerOption is an interface for consumer options.
-type ConsumerOption interface{ apply(*consumerOptions) }
+func defaultProducerOptions() options {
+	return options{
+		brokers: []string{},
+		configMap: kafka.ConfigMap{
+			"default.topic.config": kafka.ConfigMap{
+				"acks":        atleastLeaderAck,
+				"partitioner": partitioner,
+			},
+		},
+		errorHandler: NoopErrorHandler,
+	}
+}
 
-type optionFunc func(*consumerOptions)
+// Option is an interface for consumer options.
+type Option interface{ apply(*options) }
 
-func (f optionFunc) apply(o *consumerOptions) { f(o) }
+type optionFunc func(*options)
+
+func (f optionFunc) apply(o *options) { f(o) }
 
 // WithTopics sets the topics to consume from.
-func WithTopics(topics ...string) ConsumerOption {
-	return optionFunc(func(o *consumerOptions) {
+func WithTopics(topics ...string) Option {
+	return optionFunc(func(o *options) {
 		o.topics = topics
 	})
 }
 
 // WithBrokers sets the brokers to consume from.
-func WithBrokers(brokers ...string) ConsumerOption {
-	return optionFunc(func(o *consumerOptions) {
+func WithBrokers(brokers ...string) Option {
+	return optionFunc(func(o *options) {
 		o.brokers = brokers
 	})
 }
 
 // WithKafkaConfig sets the kafka configmap values.
-func WithKafkaConfig(key string, value interface{}) ConsumerOption {
-	return optionFunc(func(o *consumerOptions) {
-		o.configMap.SetKey(key, value)
+func WithKafkaConfig(key string, value interface{}) Option {
+	return optionFunc(func(o *options) {
+		_ = o.configMap.SetKey(key, value)
 	})
 }
 
 // WithErrorHandler sets the error handler for the consumer.
-func WithErrorHandler(errorHandler ErrorHandler) ConsumerOption {
-	return optionFunc(func(o *consumerOptions) {
+func WithErrorHandler(errorHandler ErrorHandler) Option {
+	return optionFunc(func(o *options) {
 		o.errorHandler = errorHandler
 	})
 }
 
 // WithMetadataRequestTimeout sets the metadata request timeout.
-func WithMetadataRequestTimeout(timeout time.Duration) ConsumerOption {
-	return optionFunc(func(o *consumerOptions) {
+func WithMetadataRequestTimeout(timeout time.Duration) Option {
+	return optionFunc(func(o *options) {
 		o.metadataRequestTimeout = timeout
 	})
 }
 
 // WithPollTimeout sets the poll timeout.
-func WithPollTimeout(timeout time.Duration) ConsumerOption {
-	return optionFunc(func(o *consumerOptions) {
+func WithPollTimeout(timeout time.Duration) Option {
+	return optionFunc(func(o *options) {
 		o.pollTimeout = timeout
 	})
 }
 
 // WithShutdownTimeout sets the shutdown timeout.
-func WithShutdownTimeout(timeout time.Duration) ConsumerOption {
-	return optionFunc(func(o *consumerOptions) {
+func WithShutdownTimeout(timeout time.Duration) Option {
+	return optionFunc(func(o *options) {
 		o.shutdownTimeout = timeout
 	})
 }
 
 // WithConcurrency sets the concurrency level.
-// Used with NewConcurrentConsumer only.
-func WithConcurrency(concurrency int) ConsumerOption {
-	return optionFunc(func(o *consumerOptions) {
+// Used with NewConcurrent only.
+func WithConcurrency(concurrency int) Option {
+	return optionFunc(func(o *options) {
 		o.concurrency = concurrency
 	})
 }

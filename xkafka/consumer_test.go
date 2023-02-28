@@ -3,8 +3,9 @@ package xkafka_test
 import (
 	"testing"
 
-	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gojekfarm/xtools/xkafka"
 )
 
 func TestNewConsumer(t *testing.T) {
