@@ -11,10 +11,11 @@ import (
 func TestNewConsumer(t *testing.T) {
 	consumer, err := xkafka.NewConsumer(
 		"consumer-id",
-		xkafka.WithConcurrency(10),
-		xkafka.WithTopics("test"),
-		xkafka.WithBrokers("localhost:9092"),
-		xkafka.WithKafkaConfig("group.id", "test"),
+		xkafka.Topics([]string{"test"}),
+		xkafka.Brokers([]string{"localhost:9092"}),
+		xkafka.ConfigMap(xkafka.ConfigMap{
+			"enable.auto.commit": false,
+		}),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, consumer)

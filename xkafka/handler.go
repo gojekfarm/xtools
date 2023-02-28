@@ -29,11 +29,3 @@ type middleware interface {
 func (mw MiddlewareFunc) Middleware(handler Handler) Handler {
 	return mw(handler)
 }
-
-// ErrorHandler is a callback function that is called when an error occurs.
-type ErrorHandler func(err error) error
-
-// NoopErrorHandler is an ErrorHandler that passes the error through.
-func NoopErrorHandler(err error) error {
-	return err
-}

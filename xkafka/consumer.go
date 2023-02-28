@@ -9,10 +9,31 @@ import (
 	"github.com/sourcegraph/conc/stream"
 )
 
-// Consumer is a simple consumer that consumes messages from a Kafka topic.
+// KafkaConsumer is the interface for kafka consumer.
+type KafkaConsumer interface {
+	GetMetadata(topic *string, allTopics bool, timeoutMs int) (*kafka.Metadata, error)
+	ReadMessage(timeout time.Duration) (*kafka.Message, error)
+	SubscribeTopics(topics []string, rebalanceCb kafka.RebalanceCb) error
+	Unsubscribe() error
+	Close() error
+}
+
+// ConsumerFunc is a function that returns a KafkaConsumer.
+type ConsumerFunc func(cfg *kafka.ConfigMap) (KafkaConsumer, error)
+
+func (cf ConsumerFunc) apply(o *options) { o.consumerFn = cf }
+
+// DefaultConsumerFunc is the default ConsumerFunc that initializes
+// a new confluent-kafka-go/kafka.Consumer.
+func DefaultConsumerFunc(cfg *kafka.ConfigMap) (KafkaConsumer, error) {
+	return kafka.NewConsumer(cfg)
+}
+
+// Consumer manages the consumption of messages from kafka topics
+// and the processing of those messages.
 type Consumer struct {
 	name        string
-	kafka       *kafka.Consumer
+	kafka       KafkaConsumer
 	middlewares []middleware
 	config      options
 }
@@ -27,7 +48,7 @@ func NewConsumer(name string, opts ...Option) (*Consumer, error) {
 
 	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
 
-	consumer, err := kafka.NewConsumer(&cfg.configMap)
+	consumer, err := cfg.consumerFn(&cfg.configMap)
 	if err != nil {
 		return nil, err
 	}
