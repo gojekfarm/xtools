@@ -9,13 +9,32 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ErrRetryable is the error message for retryable errors.
-const ErrRetryable = "retryable"
+// KafkaProducer is the interface for kafka producer.
+type KafkaProducer interface {
+	Produce(msg *kafka.Message, deliveryChan chan kafka.Event) error
+	ProduceChannel() chan *kafka.Message
+	Events() chan kafka.Event
+	Flush(timeoutMs int) int
+	Close()
+}
 
-// Producer wraps around kafka.Producer to provide async publishing of xkafka.Message.
+// ProducerFunc is a function that returns a KafkaProducer.
+type ProducerFunc func(cfg *kafka.ConfigMap) (KafkaProducer, error)
+
+func (pf ProducerFunc) apply(o *options) { o.producerFn = pf }
+
+// DefaultProducerFunc is the default producer function that initializes
+// a new confluent-kafka-go/kafka.Producer.
+func DefaultProducerFunc(cfg *kafka.ConfigMap) (KafkaProducer, error) {
+	return kafka.NewProducer(cfg)
+}
+
+// Producer manages the production of messages to kafka topics.
+// It provides both synchronous and asynchronous publish methods
+// and a channel to stream delivery events.
 type Producer struct {
 	config              options
-	kafka               *kafka.Producer
+	kafka               KafkaProducer
 	delivery            chan *Message
 	middlewares         []middleware
 	wrappedPublish      Handler
@@ -32,7 +51,7 @@ func NewProducer(opts ...Option) (*Producer, error) {
 
 	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
 
-	producer, err := kafka.NewProducer(&cfg.configMap)
+	producer, err := cfg.producerFn(&cfg.configMap)
 	if err != nil {
 		return nil, err
 	}

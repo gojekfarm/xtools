@@ -11,6 +11,25 @@ const (
 	partitioner      = "consistent_random"
 )
 
+// Brokers is an option to set the brokers.
+type Brokers []string
+
+func (b Brokers) apply(o *options) { o.brokers = b }
+
+// Topics is an option to set the topics.
+type Topics []string
+
+func (t Topics) apply(o *options) { o.topics = t }
+
+// ConfigMap is an option to set the config map.
+type ConfigMap map[string]interface{}
+
+func (cm ConfigMap) apply(o *options) {
+	for k, v := range cm {
+		o.configMap.SetKey(k, v)
+	}
+}
+
 type options struct {
 	// common options
 	brokers         []string
@@ -19,17 +38,19 @@ type options struct {
 	shutdownTimeout time.Duration
 
 	// consumer options
+	consumerFn             ConsumerFunc
 	topics                 []string
 	metadataRequestTimeout time.Duration
 	pollTimeout            time.Duration
-
-	concurrency int
+	concurrency            int
 
 	// producer options
+	producerFn ProducerFunc
 }
 
 func defaultConsumerOptions() options {
 	return options{
+		consumerFn:             DefaultConsumerFunc,
 		topics:                 []string{},
 		brokers:                []string{},
 		configMap:              kafka.ConfigMap{},
@@ -43,7 +64,8 @@ func defaultConsumerOptions() options {
 
 func defaultProducerOptions() options {
 	return options{
-		brokers: []string{},
+		producerFn: DefaultProducerFunc,
+		brokers:    []string{},
 		configMap: kafka.ConfigMap{
 			"default.topic.config": kafka.ConfigMap{
 				"acks":        atleastLeaderAck,
@@ -60,34 +82,6 @@ type Option interface{ apply(*options) }
 type optionFunc func(*options)
 
 func (f optionFunc) apply(o *options) { f(o) }
-
-// WithTopics sets the topics to consume from.
-func WithTopics(topics ...string) Option {
-	return optionFunc(func(o *options) {
-		o.topics = topics
-	})
-}
-
-// WithBrokers sets the brokers to consume from.
-func WithBrokers(brokers ...string) Option {
-	return optionFunc(func(o *options) {
-		o.brokers = brokers
-	})
-}
-
-// WithKafkaConfig sets the kafka configmap values.
-func WithKafkaConfig(key string, value interface{}) Option {
-	return optionFunc(func(o *options) {
-		_ = o.configMap.SetKey(key, value)
-	})
-}
-
-// WithErrorHandler sets the error handler for the consumer.
-func WithErrorHandler(errorHandler ErrorHandler) Option {
-	return optionFunc(func(o *options) {
-		o.errorHandler = errorHandler
-	})
-}
 
 // WithMetadataRequestTimeout sets the metadata request timeout.
 func WithMetadataRequestTimeout(timeout time.Duration) Option {
