@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [ 1.18.x, 1.19.x ]
+        go-version: [ 1.19.x ] # TODO: 1.18.x support
     steps:
       - name: Install Go
         uses: actions/setup-go@v2

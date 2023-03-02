@@ -26,7 +26,7 @@ type ConfigMap map[string]interface{}
 
 func (cm ConfigMap) apply(o *options) {
 	for k, v := range cm {
-		o.configMap.SetKey(k, v)
+		_ = o.configMap.SetKey(k, v)
 	}
 }
 
