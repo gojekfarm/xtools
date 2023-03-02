@@ -19,7 +19,7 @@ func ExampleConsumer() {
 
 	consumer, err := xkafka.NewConsumer(
 		"consumer-id",
-		xkafka.WithConcurrency(10),
+		xkafka.Concurrency(10),
 		xkafka.Topics([]string{"test"}),
 		xkafka.Brokers([]string{"localhost:9092"}),
 		xkafka.ConfigMap(xkafka.ConfigMap{
