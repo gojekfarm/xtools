@@ -2,83 +2,204 @@ package xkafka_test
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/gojekfarm/xtools/xkafka"
 )
 
-func TestNewConsumer(t *testing.T) {
+type ConsumerSuite struct {
+	suite.Suite
+	kafka    *MockKafkaConsumer
+	consumer *xkafka.Consumer
+	topics   []string
+	brokers  []string
+	messages []*kafka.Message
+}
+
+func TestConsumerSuite(t *testing.T) {
+	suite.Run(t, &ConsumerSuite{})
+}
+
+func (s *ConsumerSuite) SetupTest() {
+	s.kafka = &MockKafkaConsumer{}
+	s.topics = []string{topic}
+	s.brokers = []string{"localhost:9092"}
+
 	consumer, err := xkafka.NewConsumer(
 		"consumer-id",
-		xkafka.Topics([]string{"test"}),
-		xkafka.Brokers([]string{"localhost:9092"}),
-		xkafka.ConfigMap(xkafka.ConfigMap{
-			"enable.auto.commit": false,
-		}),
-	)
-	assert.NoError(t, err)
-	assert.NotNil(t, consumer)
-
-	noopMiddleware := xkafka.MiddlewareFunc(func(next xkafka.Handler) xkafka.Handler {
-		return next
-	})
-
-	consumer.Use(noopMiddleware)
-}
-
-func TestGetMetadata(t *testing.T) {
-	mock := &MockKafkaConsumer{}
-	consumer, _ := xkafka.NewConsumer(
-		"consumer-id",
-		xkafka.ConsumerFunc(mockConsumerFunc(mock)),
-		xkafka.WithMetadataRequestTimeout(10*time.Second),
-	)
-	require.NotNil(t, consumer)
-
-	mock.On("GetMetadata", (*string)(nil), false, 10000).Return(&kafka.Metadata{}, nil)
-
-	metadata, err := consumer.GetMetadata()
-	assert.NoError(t, err)
-	assert.NotNil(t, metadata)
-
-	mock.AssertExpectations(t)
-}
-
-func TestConsumer(t *testing.T) {
-	kafka := &MockKafkaConsumer{}
-	consumer, _ := xkafka.NewConsumer(
-		"consumer-id",
-		xkafka.Topics([]string{topic}),
-		xkafka.Brokers([]string{"localhost:9092"}),
-		xkafka.ConsumerFunc(mockConsumerFunc(kafka)),
+		xkafka.Topics(s.topics),
+		xkafka.Brokers(s.brokers),
+		mockConsumerFunc(s.kafka),
 		xkafka.WithMetadataRequestTimeout(10*time.Second),
 		xkafka.WithPollTimeout(1*time.Second),
 	)
-	require.NotNil(t, consumer)
+	s.Require().NoError(err)
+	s.Require().NotNil(consumer)
 
-	km := newKafkaMessage()
+	s.consumer = consumer
+
+	s.generateMessages()
+}
+
+func (s *ConsumerSuite) TestGetMetadata() {
+	s.kafka.On("GetMetadata", (*string)(nil), false, 10000).Return(&kafka.Metadata{}, nil)
+
+	metadata, err := s.consumer.GetMetadata()
+	s.NoError(err)
+	s.NotNil(metadata)
+
+	s.kafka.AssertExpectations(s.T())
+}
+
+func (s *ConsumerSuite) TestHandleMessage() {
+	km := s.messages[0]
 	ctx, cancel := context.WithCancel(context.Background())
 	handler := xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
-		assert.Equal(t, topic, msg.Topic)
-		assert.Equal(t, "key", string(msg.Key))
-		assert.Equal(t, "value", string(msg.Value))
+		s.Equal(km.Key, msg.Key)
+		s.Equal(km.Value, msg.Value)
 
 		cancel()
 		return nil
 	})
 
-	kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
-	kafka.On("ReadMessage", 1*time.Second).Return(km, nil)
+	s.kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
+	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil).Once()
 
-	consumer.Start(ctx, handler)
+	err := s.consumer.Start(ctx, handler)
+	s.NoError(err)
 
-	kafka.AssertExpectations(t)
+	s.kafka.AssertExpectations(s.T())
+}
+
+func (s *ConsumerSuite) TestHandleMessageWithErrors() {
+	km := s.messages[0]
+	ctx := context.Background()
+	expect := errors.New("error in handler")
+
+	handler := xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+		return expect
+	})
+
+	s.kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
+	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil).Once()
+
+	err := s.consumer.Start(ctx, handler)
+	s.Error(err)
+	s.EqualError(err, expect.Error())
+
+	s.kafka.AssertExpectations(s.T())
+}
+
+func (s *ConsumerSuite) TestKafkaReadTimeout() {
+	km := s.messages[0]
+	ctx, cancel := context.WithCancel(context.Background())
+	counter := 0
+
+	handler := xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+		counter++
+
+		if counter > 1 {
+			cancel()
+		}
+
+		return nil
+	})
+	expect := kafka.NewError(kafka.ErrTimedOut, "kafka: timed out", false)
+
+	s.kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
+	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil).Once()
+	s.kafka.On("ReadMessage", 1*time.Second).Return(nil, expect).Once()
+	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil)
+
+	err := s.consumer.Start(ctx, handler)
+	s.NoError(err)
+
+	s.kafka.AssertExpectations(s.T())
+}
+
+func (s *ConsumerSuite) TestKafkaError() {
+	ctx := context.Background()
+	expect := kafka.NewError(kafka.ErrUnknown, "kafka: unknown error", false)
+
+	s.kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
+	s.kafka.On("ReadMessage", 1*time.Second).Return(nil, expect).Once()
+
+	err := s.consumer.Start(ctx, noopHandler())
+	s.Error(err)
+	s.EqualError(err, expect.Error())
+
+	s.kafka.AssertExpectations(s.T())
+}
+
+func (s *ConsumerSuite) TestMiddlewareExecutionOrder() {
+	km := s.messages[0]
+	ctx, cancel := context.WithCancel(context.Background())
+	preExec := []int{}
+	postExec := []int{}
+
+	m1 := xkafka.MiddlewareFunc(func(handler xkafka.Handler) xkafka.Handler {
+		return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+			preExec = append(preExec, 1)
+
+			err := handler.Handle(ctx, msg)
+
+			postExec = append(postExec, 1)
+
+			return err
+		})
+	})
+
+	m2 := xkafka.MiddlewareFunc(func(handler xkafka.Handler) xkafka.Handler {
+		return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+			preExec = append(preExec, 2)
+
+			err := handler.Handle(ctx, msg)
+
+			postExec = append(postExec, 2)
+
+			return err
+		})
+	})
+
+	handler := xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+		cancel()
+		return nil
+	})
+
+	s.kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
+	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil).Once()
+
+	s.consumer.Use(m1, m2)
+
+	err := s.consumer.Start(ctx, handler)
+	s.NoError(err)
+
+	s.kafka.AssertExpectations(s.T())
+	s.Equal(preExec, []int{1, 2})
+	s.Equal(postExec, []int{2, 1})
+}
+
+func (s *ConsumerSuite) generateMessages() {
+	for i := 0; i < 10; i++ {
+		km := &kafka.Message{
+			TopicPartition: kafka.TopicPartition{
+				Topic:     &topic,
+				Partition: 1,
+			},
+			Key:       []byte(fmt.Sprintf("key-%d", i)),
+			Value:     []byte(fmt.Sprintf("value-%d", i)),
+			Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
+		}
+
+		s.messages = append(s.messages, km)
+	}
 }
 
 func mockConsumerFunc(mock *MockKafkaConsumer) xkafka.ConsumerFunc {
@@ -87,14 +208,8 @@ func mockConsumerFunc(mock *MockKafkaConsumer) xkafka.ConsumerFunc {
 	}
 }
 
-func newKafkaMessage() *kafka.Message {
-	return &kafka.Message{
-		TopicPartition: kafka.TopicPartition{
-			Topic:     &topic,
-			Partition: 1,
-		},
-		Value:     []byte("value"),
-		Key:       []byte("key"),
-		Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
-	}
+func noopHandler() xkafka.Handler {
+	return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+		return nil
+	})
 }

@@ -23,7 +23,7 @@ type ConsumerFunc func(cfg *kafka.ConfigMap) (KafkaConsumer, error)
 
 func (cf ConsumerFunc) apply(o *options) { o.consumerFn = cf }
 
-// DefaultConsumerFunc is the default ConsumerFunc that initializes
+// DefaultConsumerFunc is the default ConsumerFunc that initialises
 // a new confluent-kafka-go/kafka.Consumer.
 func DefaultConsumerFunc(cfg *kafka.ConfigMap) (KafkaConsumer, error) {
 	return kafka.NewConsumer(cfg)

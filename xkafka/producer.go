@@ -23,7 +23,7 @@ type ProducerFunc func(cfg *kafka.ConfigMap) (KafkaProducer, error)
 
 func (pf ProducerFunc) apply(o *options) { o.producerFn = pf }
 
-// DefaultProducerFunc is the default producer function that initializes
+// DefaultProducerFunc is the default producer function that initialises
 // a new confluent-kafka-go/kafka.Producer.
 func DefaultProducerFunc(cfg *kafka.ConfigMap) (KafkaProducer, error) {
 	return kafka.NewProducer(cfg)

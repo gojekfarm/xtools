@@ -39,6 +39,7 @@ run:
     - .*mock.*\.go$
     - version.go
     - example_test.go
+    - generate.go
   modules-download-mode: readonly
 linters-settings:
   govet:
