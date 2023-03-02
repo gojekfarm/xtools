@@ -37,8 +37,8 @@ func (s *ConsumerSuite) SetupTest() {
 		xkafka.Topics(s.topics),
 		xkafka.Brokers(s.brokers),
 		mockConsumerFunc(s.kafka),
-		xkafka.WithMetadataRequestTimeout(10*time.Second),
-		xkafka.WithPollTimeout(1*time.Second),
+		xkafka.MetadataTimeout(10*time.Second),
+		xkafka.PollTimeout(1*time.Second),
 	)
 	s.Require().NoError(err)
 	s.Require().NotNil(consumer)
