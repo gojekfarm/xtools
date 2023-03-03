@@ -2,6 +2,7 @@ package xkafka
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -34,6 +35,7 @@ func DefaultConsumerFunc(cfg *kafka.ConfigMap) (KafkaConsumer, error) {
 type Consumer struct {
 	name        string
 	kafka       KafkaConsumer
+	handler     Handler
 	middlewares []middleware
 	config      options
 }
@@ -74,16 +76,28 @@ func (c *Consumer) Use(mwf ...MiddlewareFunc) {
 	}
 }
 
+// WithHandler sets the message handler for the consumer.
+// Any previously set handlers are overwritten.
+func (c *Consumer) WithHandler(handler Handler) *Consumer {
+	c.handler = handler
+
+	return c
+}
+
 // Start consumes from kafka and dispatches messages to handlers.
 // It blocks until the context is cancelled or an error occurs.
 // Errors are handled by the ErrorHandler if set, otherwise they stop the consumer
 // and are returned.
-func (c *Consumer) Start(ctx context.Context, handler Handler) error {
+func (c *Consumer) Start(ctx context.Context) error {
+	if c.handler == nil {
+		return errors.New(ErrNoHandler)
+	}
+
 	if err := c.subscribe(); err != nil {
 		return err
 	}
 
-	handler = c.concatMiddlewares(handler)
+	c.handler = c.concatMiddlewares(c.handler)
 
 	st := stream.New().WithMaxGoroutines(c.config.concurrency)
 	errChan := make(chan error, 1)
@@ -114,7 +128,7 @@ func (c *Consumer) Start(ctx context.Context, handler Handler) error {
 			}
 
 			st.Go(func() stream.Callback {
-				c.runHandler(ctx, handler, km, errChan)
+				c.runHandler(ctx, c.handler, km, errChan)
 
 				return func() {}
 			})
