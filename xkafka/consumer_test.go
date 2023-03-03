@@ -58,6 +58,16 @@ func (s *ConsumerSuite) TestGetMetadata() {
 	s.kafka.AssertExpectations(s.T())
 }
 
+func (s *ConsumerSuite) TestNoHandler() {
+	ctx := context.Background()
+
+	err := s.consumer.Start(ctx)
+	s.Error(err)
+	s.EqualError(err, xkafka.ErrNoHandler)
+
+	s.kafka.AssertExpectations(s.T())
+}
+
 func (s *ConsumerSuite) TestHandleMessage() {
 	km := s.messages[0]
 	ctx, cancel := context.WithCancel(context.Background())
@@ -70,9 +80,9 @@ func (s *ConsumerSuite) TestHandleMessage() {
 	})
 
 	s.kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
-	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil).Once()
+	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil)
 
-	err := s.consumer.Start(ctx, handler)
+	err := s.consumer.WithHandler(handler).Start(ctx)
 	s.NoError(err)
 
 	s.kafka.AssertExpectations(s.T())
@@ -90,7 +100,7 @@ func (s *ConsumerSuite) TestHandleMessageWithErrors() {
 	s.kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
 	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil).Once()
 
-	err := s.consumer.Start(ctx, handler)
+	err := s.consumer.WithHandler(handler).Start(ctx)
 	s.Error(err)
 	s.EqualError(err, expect.Error())
 
@@ -118,7 +128,7 @@ func (s *ConsumerSuite) TestKafkaReadTimeout() {
 	s.kafka.On("ReadMessage", 1*time.Second).Return(nil, expect).Once()
 	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil)
 
-	err := s.consumer.Start(ctx, handler)
+	err := s.consumer.WithHandler(handler).Start(ctx)
 	s.NoError(err)
 
 	s.kafka.AssertExpectations(s.T())
@@ -131,7 +141,7 @@ func (s *ConsumerSuite) TestKafkaError() {
 	s.kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
 	s.kafka.On("ReadMessage", 1*time.Second).Return(nil, expect).Once()
 
-	err := s.consumer.Start(ctx, noopHandler())
+	err := s.consumer.WithHandler(noopHandler()).Start(ctx)
 	s.Error(err)
 	s.EqualError(err, expect.Error())
 
@@ -178,7 +188,7 @@ func (s *ConsumerSuite) TestMiddlewareExecutionOrder() {
 
 	s.consumer.Use(m1, m2)
 
-	err := s.consumer.Start(ctx, handler)
+	err := s.consumer.WithHandler(handler).Start(ctx)
 	s.NoError(err)
 
 	s.kafka.AssertExpectations(s.T())

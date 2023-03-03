@@ -20,28 +20,30 @@ func ExampleConsumer() {
 	consumer, err := xkafka.NewConsumer(
 		"consumer-id",
 		xkafka.Concurrency(10),
-		xkafka.Topics([]string{"test"}),
-		xkafka.Brokers([]string{"localhost:9092"}),
-		xkafka.ConfigMap(xkafka.ConfigMap{
+		xkafka.Topics{"test"},
+		xkafka.Brokers{"localhost:9092"},
+		xkafka.ConfigMap{
 			"enable.auto.commit": false,
-		}),
+		},
 		xkafka.ErrorHandler(ignoreError),
 	)
 	if err != nil {
 		panic(err)
 	}
 
-	consumer.Use(
-		// middleware to log messages
-		xkafka.MiddlewareFunc(func(next xkafka.Handler) xkafka.Handler {
-			return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
-				// log the message
-				return next.Handle(ctx, msg)
-			})
-		}),
-	)
+	consumer.
+		WithHandler(handler).
+		Use(
+			// middleware to log messages
+			xkafka.MiddlewareFunc(func(next xkafka.Handler) xkafka.Handler {
+				return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+					// log the message
+					return next.Handle(ctx, msg)
+				})
+			}),
+		)
 
-	if err := consumer.Start(context.Background(), handler); err != nil {
+	if err := consumer.Start(context.Background()); err != nil {
 		panic(err)
 	}
 
@@ -52,11 +54,11 @@ func ExampleProducer() {
 	ctx := context.Background()
 
 	producer, err := xkafka.NewProducer(
-		xkafka.Brokers([]string{"localhost:9092"}),
-		xkafka.ConfigMap(xkafka.ConfigMap{
+		xkafka.Brokers{"localhost:9092"},
+		xkafka.ConfigMap{
 			"socket.keepalive.enable": true,
 			"client.id":               "test-producer",
-		}),
+		},
 	)
 	if err != nil {
 		panic(err)
