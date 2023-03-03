@@ -3,13 +3,15 @@ package xkafka_test
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"github.com/gojekfarm/xtools/xkafka"
 	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/gojekfarm/xtools/xkafka"
 )
 
 type ProducerSuite struct {
@@ -18,6 +20,7 @@ type ProducerSuite struct {
 	producer *xkafka.Producer
 	topic    string
 	messages []*xkafka.Message
+	events   chan kafka.Event
 }
 
 func TestProducerSuite(t *testing.T) {
@@ -25,8 +28,10 @@ func TestProducerSuite(t *testing.T) {
 }
 
 func (s *ProducerSuite) SetupTest() {
+	s.events = make(chan kafka.Event, 1)
 	s.kafka = &MockKafkaProducer{}
-	s.kafka.On("Events").Return(make(chan kafka.Event, 0))
+
+	s.kafka.On("Events").Return(s.events)
 
 	producer, err := xkafka.NewProducer(
 		xkafka.Brokers([]string{"localhost:9092"}),
@@ -54,7 +59,6 @@ func (s *ProducerSuite) TestPublish() {
 		Opaque:        msg,
 	}
 
-	s.kafka.On("Events").Return(make(chan kafka.Event, 0))
 	s.kafka.On("Produce", km, mock.Anything).Run(func(args mock.Arguments) {
 		go func() {
 			args.Get(1).(chan kafka.Event) <- km
@@ -82,7 +86,6 @@ func (s *ProducerSuite) TestPublishError() {
 		Opaque:        msg,
 	}
 
-	s.kafka.On("Events").Return(make(chan kafka.Event, 0))
 	s.kafka.On("Produce", km, mock.Anything).Run(func(args mock.Arguments) {
 		go func() {
 			kmWithError := *km
@@ -95,6 +98,90 @@ func (s *ProducerSuite) TestPublishError() {
 	err := s.producer.Publish(context.Background(), msg)
 	s.Error(err)
 	s.EqualError(err, expectErr.Error())
+
+	s.kafka.AssertExpectations(s.T())
+}
+
+func (s *ProducerSuite) TestAsyncPublish() {
+	msg := s.messages[0]
+	km := &kafka.Message{
+		TopicPartition: kafka.TopicPartition{
+			Topic:     &msg.Topic,
+			Partition: kafka.PartitionAny,
+		},
+		Key:           msg.Key,
+		Value:         msg.Value,
+		TimestampType: kafka.TimestampCreateTime,
+		Opaque:        msg,
+	}
+
+	produceCh := make(chan *kafka.Message, 1)
+	s.kafka.On("ProduceChannel").Return(produceCh)
+
+	err := s.producer.AsyncPublish(context.Background(), msg)
+	s.NoError(err)
+
+	got := <-produceCh
+	s.EqualValues(km, got)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		s.events <- km
+
+		delvMsg := <-s.producer.DeliveryEvents()
+		s.Equal(xkafka.Success, delvMsg.Status)
+
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	s.kafka.AssertExpectations(s.T())
+}
+
+func (s *ProducerSuite) TestAsyncPublishError() {
+	msg := s.messages[0]
+	expectErr := fmt.Errorf("kafka error")
+
+	km := &kafka.Message{
+		TopicPartition: kafka.TopicPartition{
+			Topic:     &msg.Topic,
+			Partition: kafka.PartitionAny,
+		},
+		Key:           msg.Key,
+		Value:         msg.Value,
+		TimestampType: kafka.TimestampCreateTime,
+		Opaque:        msg,
+	}
+
+	produceCh := make(chan *kafka.Message, 1)
+	s.kafka.On("ProduceChannel").Return(produceCh)
+
+	err := s.producer.AsyncPublish(context.Background(), msg)
+	s.NoError(err)
+
+	got := <-produceCh
+	s.EqualValues(km, got)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		kmWithError := *km
+		kmWithError.TopicPartition.Error = expectErr
+
+		s.events <- &kmWithError
+
+		delvMsg := <-s.producer.DeliveryEvents()
+		s.Equal(xkafka.Fail, delvMsg.Status)
+		s.Equal(expectErr, delvMsg.Err())
+
+		wg.Done()
+	}()
+
+	wg.Wait()
 
 	s.kafka.AssertExpectations(s.T())
 }
