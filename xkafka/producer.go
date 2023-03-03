@@ -3,7 +3,6 @@ package xkafka
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/pkg/errors"
@@ -35,6 +34,7 @@ func DefaultProducerFunc(cfg *kafka.ConfigMap) (KafkaProducer, error) {
 type Producer struct {
 	config              options
 	kafka               KafkaProducer
+	events              chan kafka.Event
 	delivery            chan *Message
 	middlewares         []middleware
 	wrappedPublish      Handler
@@ -60,9 +60,13 @@ func NewProducer(opts ...Option) (*Producer, error) {
 		config:   cfg,
 		kafka:    producer,
 		delivery: make(chan *Message),
+		events:   producer.Events(),
 	}
 
-	p.start()
+	p.wrappedPublish = p.publish()
+	p.wrappedAsyncPublish = p.asyncPublish()
+
+	go p.start()
 
 	return p, nil
 }
@@ -93,28 +97,25 @@ func (p *Producer) Use(mwf ...MiddlewareFunc) {
 	}
 }
 
-// Start processes kafka delivery events and passes them over to delivery handler.
 func (p *Producer) start() {
-	go func() {
-		for e := range p.kafka.Events() {
-			switch ev := e.(type) {
-			case *kafka.Message:
-				m, ok := ev.Opaque.(*Message)
-				if !ok {
-					continue
-				}
-
-				if ev.TopicPartition.Error != nil {
-					m.AckFail(ev.TopicPartition.Error)
-				} else {
-					m.AckSuccess()
-				}
-
-				// make a copy of the message for delivery channel
-				p.delivery <- m.Copy()
+	for e := range p.events {
+		switch ev := e.(type) {
+		case *kafka.Message:
+			m, ok := ev.Opaque.(*Message)
+			if !ok {
+				continue
 			}
+
+			if ev.TopicPartition.Error != nil {
+				m.AckFail(ev.TopicPartition.Error)
+			} else {
+				m.AckSuccess()
+			}
+
+			// make a copy of the message for delivery channel
+			p.delivery <- m.Copy()
 		}
-	}()
+	}
 }
 
 // AsyncPublish sends messages to the kafka topic asyncronously.
@@ -168,11 +169,6 @@ func (p *Producer) publish() HandlerFunc {
 			}
 
 			msg.AckSuccess()
-
-			// send a copy of the message to delivery channel
-			// because the message is not sent to kafka.Events() channel
-			// when using sync publish
-			p.delivery <- msg.Copy()
 		}
 
 		return nil
@@ -181,7 +177,7 @@ func (p *Producer) publish() HandlerFunc {
 
 // Close closes delivery & ack channels and the underlying Kafka client.
 func (p *Producer) Close(ctx context.Context) {
-	p.kafka.Flush(int(p.config.shutdownTimeout * time.Millisecond))
+	p.kafka.Flush(int(p.config.shutdownTimeout.Milliseconds()))
 
 	// close kafka client
 	p.kafka.Close()
