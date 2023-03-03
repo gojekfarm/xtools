@@ -47,3 +47,40 @@ func ExampleConsumer() {
 
 	consumer.Close()
 }
+
+func ExampleProducer() {
+	ctx := context.Background()
+
+	producer, err := xkafka.NewProducer(
+		xkafka.Brokers([]string{"localhost:9092"}),
+		xkafka.ConfigMap(xkafka.ConfigMap{
+			"socket.keepalive.enable": true,
+			"client.id":               "test-producer",
+		}),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	producer.Use(
+		// middleware to log messages
+		xkafka.MiddlewareFunc(func(next xkafka.Handler) xkafka.Handler {
+			return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+				// log the message
+				return next.Handle(ctx, msg)
+			})
+		}),
+	)
+
+	msg := &xkafka.Message{
+		Topic: "test",
+		Key:   []byte("key"),
+		Value: []byte("value"),
+	}
+
+	if err := producer.Publish(ctx, msg); err != nil {
+		panic(err)
+	}
+
+	producer.Close(ctx)
+}
