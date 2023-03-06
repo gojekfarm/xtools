@@ -1,4 +1,15 @@
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
+GO_118_MOD_DIRS := $(shell egrep -lir --include=go.mod "go 1.18" . | xargs -I{} dirname {} | sort)
+# extract go minor version from go version output
+GO_MINOR_VERSION := $(shell go version | cut -d' ' -f3 | cut -d'.' -f2)
+
+# set build directory based on go minor version
+ifeq ($(GO_MINOR_VERSION),18)
+GO_BUILD_DIRS := $(GO_118_MOD_DIRS)
+else
+GO_BUILD_DIRS := $(ALL_GO_MOD_DIRS)
+endif
+
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 BIN_DIR := $(PROJECT_DIR)/.bin
 
@@ -89,7 +100,7 @@ endef
 # a go.mod file
 define run-go-mod-dir
 set -e; \
-for dir in $(ALL_GO_MOD_DIRS); do \
+for dir in $(GO_BUILD_DIRS); do \
 	[ -z $(2) ] || echo "$(2) $${dir}/..."; \
 	cd "$(PROJECT_DIR)/$${dir}" && PATH=$(BIN_DIR):$$PATH $(1); \
 done;
