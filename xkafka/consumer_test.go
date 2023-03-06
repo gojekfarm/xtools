@@ -12,11 +12,12 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/gojekfarm/xtools/xkafka"
+	"github.com/gojekfarm/xtools/xkafka/internal"
 )
 
 type ConsumerSuite struct {
 	suite.Suite
-	kafka    *MockKafkaConsumer
+	kafka    *MockConsumerClient
 	consumer *xkafka.Consumer
 	topics   []string
 	brokers  []string
@@ -28,7 +29,7 @@ func TestConsumerSuite(t *testing.T) {
 }
 
 func (s *ConsumerSuite) SetupTest() {
-	s.kafka = &MockKafkaConsumer{}
+	s.kafka = &MockConsumerClient{}
 	s.topics = []string{topic}
 	s.brokers = []string{"localhost:9092"}
 
@@ -98,7 +99,7 @@ func (s *ConsumerSuite) TestHandleMessageWithErrors() {
 	})
 
 	s.kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
-	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil).Once()
+	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil)
 
 	err := s.consumer.WithHandler(handler).Start(ctx)
 	s.Error(err)
@@ -184,7 +185,7 @@ func (s *ConsumerSuite) TestMiddlewareExecutionOrder() {
 	})
 
 	s.kafka.On("SubscribeTopics", []string{topic}, mock.Anything).Return(nil)
-	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil).Once()
+	s.kafka.On("ReadMessage", 1*time.Second).Return(km, nil)
 
 	s.consumer.Use(m1, m2)
 
@@ -212,8 +213,8 @@ func (s *ConsumerSuite) generateMessages() {
 	}
 }
 
-func mockConsumerFunc(mock *MockKafkaConsumer) xkafka.ConsumerFunc {
-	return func(configMap *kafka.ConfigMap) (xkafka.KafkaConsumer, error) {
+func mockConsumerFunc(mock *MockConsumerClient) xkafka.ConsumerFunc {
+	return func(configMap *kafka.ConfigMap) (internal.ConsumerClient, error) {
 		return mock, nil
 	}
 }

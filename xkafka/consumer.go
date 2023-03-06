@@ -8,25 +8,18 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/sourcegraph/conc/stream"
+
+	"github.com/gojekfarm/xtools/xkafka/internal"
 )
 
-// KafkaConsumer is the interface for kafka consumer.
-type KafkaConsumer interface {
-	GetMetadata(topic *string, allTopics bool, timeoutMs int) (*kafka.Metadata, error)
-	ReadMessage(timeout time.Duration) (*kafka.Message, error)
-	SubscribeTopics(topics []string, rebalanceCb kafka.RebalanceCb) error
-	Unsubscribe() error
-	Close() error
-}
-
-// ConsumerFunc is a function that returns a KafkaConsumer.
-type ConsumerFunc func(cfg *kafka.ConfigMap) (KafkaConsumer, error)
+// ConsumerFunc allows the user to customise confluent-kafka-go/kafka.Consumer.
+type ConsumerFunc func(cfg *kafka.ConfigMap) (internal.ConsumerClient, error)
 
 func (cf ConsumerFunc) apply(o *options) { o.consumerFn = cf }
 
 // DefaultConsumerFunc is the default ConsumerFunc that initialises
 // a new confluent-kafka-go/kafka.Consumer.
-func DefaultConsumerFunc(cfg *kafka.ConfigMap) (KafkaConsumer, error) {
+func DefaultConsumerFunc(cfg *kafka.ConfigMap) (internal.ConsumerClient, error) {
 	return kafka.NewConsumer(cfg)
 }
 
@@ -34,7 +27,7 @@ func DefaultConsumerFunc(cfg *kafka.ConfigMap) (KafkaConsumer, error) {
 // and the processing of those messages.
 type Consumer struct {
 	name        string
-	kafka       KafkaConsumer
+	kafka       internal.ConsumerClient
 	handler     Handler
 	middlewares []middleware
 	config      options

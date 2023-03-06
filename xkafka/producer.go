@@ -6,25 +6,18 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/pkg/errors"
+
+	"github.com/gojekfarm/xtools/xkafka/internal"
 )
 
-// KafkaProducer is the interface for kafka producer.
-type KafkaProducer interface {
-	Produce(msg *kafka.Message, deliveryChan chan kafka.Event) error
-	ProduceChannel() chan *kafka.Message
-	Events() chan kafka.Event
-	Flush(timeoutMs int) int
-	Close()
-}
-
 // ProducerFunc is a function that returns a KafkaProducer.
-type ProducerFunc func(cfg *kafka.ConfigMap) (KafkaProducer, error)
+type ProducerFunc func(cfg *kafka.ConfigMap) (internal.ProducerClient, error)
 
 func (pf ProducerFunc) apply(o *options) { o.producerFn = pf }
 
 // DefaultProducerFunc is the default producer function that initialises
 // a new confluent-kafka-go/kafka.Producer.
-func DefaultProducerFunc(cfg *kafka.ConfigMap) (KafkaProducer, error) {
+func DefaultProducerFunc(cfg *kafka.ConfigMap) (internal.ProducerClient, error) {
 	return kafka.NewProducer(cfg)
 }
 
@@ -33,7 +26,7 @@ func DefaultProducerFunc(cfg *kafka.ConfigMap) (KafkaProducer, error) {
 // and a channel to stream delivery events.
 type Producer struct {
 	config              options
-	kafka               KafkaProducer
+	kafka               internal.ProducerClient
 	events              chan kafka.Event
 	delivery            chan *Message
 	middlewares         []middleware

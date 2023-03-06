@@ -12,11 +12,12 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/gojekfarm/xtools/xkafka"
+	"github.com/gojekfarm/xtools/xkafka/internal"
 )
 
 type ProducerSuite struct {
 	suite.Suite
-	kafka    *MockKafkaProducer
+	kafka    *MockProducerClient
 	producer *xkafka.Producer
 	topic    string
 	messages []*xkafka.Message
@@ -29,7 +30,7 @@ func TestProducerSuite(t *testing.T) {
 
 func (s *ProducerSuite) SetupTest() {
 	s.events = make(chan kafka.Event, 1)
-	s.kafka = &MockKafkaProducer{}
+	s.kafka = &MockProducerClient{}
 
 	s.kafka.On("Events").Return(s.events)
 
@@ -207,8 +208,8 @@ func (s *ProducerSuite) generateMessages() {
 	}
 }
 
-func mockProducerFunc(mock *MockKafkaProducer) xkafka.ProducerFunc {
-	return func(configMap *kafka.ConfigMap) (xkafka.KafkaProducer, error) {
+func mockProducerFunc(mock *MockProducerClient) xkafka.ProducerFunc {
+	return func(configMap *kafka.ConfigMap) (internal.ProducerClient, error) {
 		return mock, nil
 	}
 }
