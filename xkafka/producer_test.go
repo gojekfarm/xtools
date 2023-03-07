@@ -35,6 +35,7 @@ func (s *ProducerSuite) SetupTest() {
 	s.kafka.On("Events").Return(s.events)
 
 	producer, err := xkafka.NewProducer(
+		"producer-id",
 		xkafka.Brokers([]string{"localhost:9092"}),
 		mockProducerFunc(s.kafka),
 		xkafka.ShutdownTimeout(1*time.Second),

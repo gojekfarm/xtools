@@ -54,10 +54,10 @@ func ExampleProducer() {
 	ctx := context.Background()
 
 	producer, err := xkafka.NewProducer(
+		"producer-id",
 		xkafka.Brokers{"localhost:9092"},
 		xkafka.ConfigMap{
 			"socket.keepalive.enable": true,
-			"client.id":               "test-producer",
 		},
 	)
 	if err != nil {
