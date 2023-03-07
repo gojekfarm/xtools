@@ -35,7 +35,7 @@ type Producer struct {
 }
 
 // NewProducer creates a new Producer.
-func NewProducer(opts ...Option) (*Producer, error) {
+func NewProducer(name string, opts ...Option) (*Producer, error) {
 	cfg := defaultProducerOptions()
 
 	for _, opt := range opts {
@@ -43,6 +43,7 @@ func NewProducer(opts ...Option) (*Producer, error) {
 	}
 
 	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
+	_ = cfg.configMap.SetKey("client.id", name)
 
 	producer, err := cfg.producerFn(&cfg.configMap)
 	if err != nil {

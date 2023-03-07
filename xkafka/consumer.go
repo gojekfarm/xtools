@@ -42,6 +42,7 @@ func NewConsumer(name string, opts ...Option) (*Consumer, error) {
 	}
 
 	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
+	_ = cfg.configMap.SetKey("group.id", name)
 
 	consumer, err := cfg.consumerFn(&cfg.configMap)
 	if err != nil {
