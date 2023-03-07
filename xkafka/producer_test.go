@@ -103,6 +103,30 @@ func (s *ProducerSuite) TestPublishError() {
 	s.kafka.AssertExpectations(s.T())
 }
 
+func (s *ProducerSuite) TestEnqueueError() {
+	msg := s.messages[0]
+	expectErr := fmt.Errorf("kafka error")
+
+	km := &kafka.Message{
+		TopicPartition: kafka.TopicPartition{
+			Topic:     &msg.Topic,
+			Partition: kafka.PartitionAny,
+		},
+		Key:           msg.Key,
+		Value:         msg.Value,
+		TimestampType: kafka.TimestampCreateTime,
+		Opaque:        msg,
+	}
+
+	s.kafka.On("Produce", km, mock.Anything).Return(expectErr)
+
+	err := s.producer.Publish(context.Background(), msg)
+	s.Error(err)
+	s.ErrorIs(err, expectErr)
+
+	s.kafka.AssertExpectations(s.T())
+}
+
 func (s *ProducerSuite) TestAsyncPublish() {
 	msg := s.messages[0]
 	km := &kafka.Message{
@@ -183,6 +207,71 @@ func (s *ProducerSuite) TestAsyncPublishError() {
 	}()
 
 	wg.Wait()
+
+	s.kafka.AssertExpectations(s.T())
+}
+
+func (s *ProducerSuite) TestMiddlewareExecutionOrder() {
+	msg := s.messages[0]
+	km := &kafka.Message{
+		TopicPartition: kafka.TopicPartition{
+			Topic:     &msg.Topic,
+			Partition: kafka.PartitionAny,
+		},
+		Key:           msg.Key,
+		Value:         msg.Value,
+		TimestampType: kafka.TimestampCreateTime,
+		Opaque:        msg,
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	s.kafka.On("Produce", km, mock.Anything).Run(func(args mock.Arguments) {
+		go func() {
+			args.Get(1).(chan kafka.Event) <- km
+		}()
+	}).Return(nil)
+
+	preExec := []int{}
+	postExec := []int{}
+
+	m1 := xkafka.MiddlewareFunc(func(handler xkafka.Handler) xkafka.Handler {
+		return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+			preExec = append(preExec, 1)
+
+			err := handler.Handle(ctx, msg)
+
+			postExec = append(postExec, 1)
+
+			return err
+		})
+	})
+
+	m2 := xkafka.MiddlewareFunc(func(handler xkafka.Handler) xkafka.Handler {
+		return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+			preExec = append(preExec, 2)
+
+			err := handler.Handle(ctx, msg)
+
+			postExec = append(postExec, 2)
+
+			return err
+		})
+	})
+
+	s.producer.Use(m1, m2)
+
+	go func() {
+		err := s.producer.Publish(context.Background(), msg)
+		s.NoError(err)
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	s.Equal([]int{1, 2}, preExec)
+	s.Equal([]int{2, 1}, postExec)
 
 	s.kafka.AssertExpectations(s.T())
 }
