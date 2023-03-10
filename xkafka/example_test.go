@@ -15,8 +15,7 @@ func ExampleConsumer() {
 		return nil
 	}
 
-	consumer, err := NewConsumer(
-		"consumer-id",
+	consumer, err := NewConsumer("consumer-id", handler,
 		Concurrency(10),
 		Topics{"test"},
 		Brokers{"localhost:9092"},
@@ -29,17 +28,15 @@ func ExampleConsumer() {
 		panic(err)
 	}
 
-	consumer.
-		WithHandler(handler).
-		Use(
-			// middleware to log messages
-			MiddlewareFunc(func(next Handler) Handler {
-				return HandlerFunc(func(ctx context.Context, msg *Message) error {
-					// log the message
-					return next.Handle(ctx, msg)
-				})
-			}),
-		)
+	consumer.Use(
+		// middleware to log messages
+		MiddlewareFunc(func(next Handler) Handler {
+			return HandlerFunc(func(ctx context.Context, msg *Message) error {
+				// log the message
+				return next.Handle(ctx, msg)
+			})
+		}),
+	)
 
 	if err := consumer.Start(context.Background()); err != nil {
 		panic(err)

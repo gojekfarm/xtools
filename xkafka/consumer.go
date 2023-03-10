@@ -2,7 +2,6 @@ package xkafka
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
@@ -21,7 +20,7 @@ type Consumer struct {
 }
 
 // NewConsumer creates a new Consumer instance.
-func NewConsumer(name string, opts ...Option) (*Consumer, error) {
+func NewConsumer(name string, handler Handler, opts ...Option) (*Consumer, error) {
 	cfg := defaultConsumerOptions()
 
 	for _, opt := range opts {
@@ -37,9 +36,10 @@ func NewConsumer(name string, opts ...Option) (*Consumer, error) {
 	}
 
 	return &Consumer{
-		name:   name,
-		config: cfg,
-		kafka:  consumer,
+		name:    name,
+		config:  cfg,
+		kafka:   consumer,
+		handler: handler,
 	}, nil
 }
 
@@ -57,23 +57,11 @@ func (c *Consumer) Use(mwf ...MiddlewareFunc) {
 	}
 }
 
-// WithHandler sets the message handler for the consumer.
-// Any previously set handlers are overwritten.
-func (c *Consumer) WithHandler(handler Handler) *Consumer {
-	c.handler = handler
-
-	return c
-}
-
 // Start consumes from kafka and dispatches messages to handlers.
 // It blocks until the context is cancelled or an error occurs.
 // Errors are handled by the ErrorHandler if set, otherwise they stop the consumer
 // and are returned.
 func (c *Consumer) Start(ctx context.Context) error {
-	if c.handler == nil {
-		return errors.New(ErrNoHandler)
-	}
-
 	if err := c.subscribe(); err != nil {
 		return err
 	}

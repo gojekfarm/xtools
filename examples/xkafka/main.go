@@ -21,6 +21,8 @@ const (
 func main() {
 	setupLogger()
 
+	var wg sync.WaitGroup
+
 	ctx := context.Background()
 
 	producer, err := xkafka.NewProducer(
@@ -33,6 +35,7 @@ func main() {
 
 	consumer, err := xkafka.NewConsumer(
 		"xkafka-consumer",
+		handler(&wg),
 		xkafka.Brokers{broker},
 		xkafka.Topics{topic},
 		xkafka.ConfigMap{
@@ -44,13 +47,9 @@ func main() {
 		log.Fatal().Msgf("%s", err)
 	}
 
-	var wg sync.WaitGroup
-
 	publishMessages(producer, &wg)
 
 	go func() {
-		consumer.WithHandler(handler(&wg))
-
 		if err := consumer.Start(ctx); err != nil {
 			log.Fatal().Msgf("Consumer error: %s", err)
 		}
