@@ -50,7 +50,7 @@ func main() {
 	publishMessages(producer, &wg)
 
 	go func() {
-		if err := consumer.Start(ctx); err != nil {
+		if err := consumer.Run(ctx); err != nil {
 			log.Fatal().Msgf("Consumer error: %s", err)
 		}
 	}()

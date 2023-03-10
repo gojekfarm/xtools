@@ -3,7 +3,6 @@ package xkafka
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -22,7 +21,6 @@ var (
 func TestConsumerClose(t *testing.T) {
 	consumer, mockKafka := newConsumer(t)
 
-	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("Close").Return(nil)
 
 	err := consumer.Close()
@@ -46,7 +44,7 @@ func TestConsumerGetMetadata(t *testing.T) {
 func TestConsumerHandleMessage(t *testing.T) {
 	consumer, mockKafka := newConsumer(t)
 
-	km := generateMessages(1)[0]
+	km := newFakeKafkaMessage()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
@@ -58,10 +56,11 @@ func TestConsumerHandleMessage(t *testing.T) {
 	})
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil)
 
 	consumer.handler = handler
-	err := consumer.Start(ctx)
+	err := consumer.Run(ctx)
 	assert.NoError(t, err)
 
 	mockKafka.AssertExpectations(t)
@@ -70,7 +69,7 @@ func TestConsumerHandleMessage(t *testing.T) {
 func TestConsumerHandleMessageError(t *testing.T) {
 	consumer, mockKafka := newConsumer(t)
 
-	km := generateMessages(1)[0]
+	km := newFakeKafkaMessage()
 	ctx := context.Background()
 	expect := errors.New("error in handler")
 
@@ -79,10 +78,11 @@ func TestConsumerHandleMessageError(t *testing.T) {
 	})
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil)
 
 	consumer.handler = handler
-	err := consumer.Start(ctx)
+	err := consumer.Run(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, expect, err)
 
@@ -94,7 +94,7 @@ func TestConsumerReadMessageTimeout(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	expect := kafka.NewError(kafka.ErrTimedOut, "kafka: timed out", false)
-	km := generateMessages(1)[0]
+	km := newFakeKafkaMessage()
 
 	counter := 0
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
@@ -108,13 +108,14 @@ func TestConsumerReadMessageTimeout(t *testing.T) {
 	})
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil).Once()
 	mockKafka.On("ReadMessage", testPollTimeout).Return(nil, expect).Once()
 	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil)
 
 	consumer.handler = handler
 
-	err := consumer.Start(ctx)
+	err := consumer.Run(ctx)
 	assert.NoError(t, err)
 
 	mockKafka.AssertExpectations(t)
@@ -125,13 +126,14 @@ func TestConsumerKafkaError(t *testing.T) {
 
 	ctx := context.Background()
 	expect := kafka.NewError(kafka.ErrUnknown, "kafka: unknown error", false)
-	km := generateMessages(1)[0]
+	km := newFakeKafkaMessage()
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil).Once()
 	mockKafka.On("ReadMessage", testPollTimeout).Return(nil, expect).Once()
 
-	err := consumer.Start(ctx)
+	err := consumer.Run(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, expect, err)
 
@@ -141,10 +143,11 @@ func TestConsumerKafkaError(t *testing.T) {
 func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 	consumer, mockKafka := newConsumer(t)
 
-	km := generateMessages(1)[0]
+	km := newFakeKafkaMessage()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil)
 
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
@@ -165,7 +168,7 @@ func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 	consumer.Use(middlewares...)
 	consumer.handler = handler
 
-	err := consumer.Start(ctx)
+	err := consumer.Run(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"middleware1", "middleware2", "middleware3"}, preExec)
 	assert.Equal(t, []string{"middleware3", "middleware2", "middleware1"}, postExec)
@@ -201,24 +204,16 @@ func newConsumer(t *testing.T) (*Consumer, *MockConsumerClient) {
 	return consumer, mockConsumer
 }
 
-func generateMessages(count int) []*kafka.Message {
-	messages := make([]*kafka.Message, 0, count)
-
-	for i := 0; i < count; i++ {
-		km := &kafka.Message{
-			TopicPartition: kafka.TopicPartition{
-				Topic:     &testTopics[0],
-				Partition: 1,
-			},
-			Key:       []byte(fmt.Sprintf("key-%d", i)),
-			Value:     []byte(fmt.Sprintf("value-%d", i)),
-			Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
-		}
-
-		messages = append(messages, km)
+func newFakeKafkaMessage() *kafka.Message {
+	return &kafka.Message{
+		TopicPartition: kafka.TopicPartition{
+			Topic:     &testTopics[0],
+			Partition: 1,
+		},
+		Key:       []byte("key"),
+		Value:     []byte("value"),
+		Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
 	}
-
-	return messages
 }
 
 func mockConsumerFunc(mock *MockConsumerClient) consumerFunc {

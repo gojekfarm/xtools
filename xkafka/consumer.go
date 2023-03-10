@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/pkg/errors"
 	"github.com/sourcegraph/conc/stream"
 )
 
@@ -57,11 +58,12 @@ func (c *Consumer) Use(mwf ...MiddlewareFunc) {
 	}
 }
 
-// Start consumes from kafka and dispatches messages to handlers.
+// Run subscribes to the configured topics and starts consuming messages.
+// It runs the handler for each message in a separate goroutine.
 // It blocks until the context is cancelled or an error occurs.
 // Errors are handled by the ErrorHandler if set, otherwise they stop the consumer
 // and are returned.
-func (c *Consumer) Start(ctx context.Context) error {
+func (c *Consumer) Run(ctx context.Context) error {
 	if err := c.subscribe(); err != nil {
 		return err
 	}
@@ -76,9 +78,15 @@ func (c *Consumer) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			st.Wait()
 
-			return nil
+			return c.unsubscribe()
 		case err := <-errChan:
 			st.Wait()
+
+			uerr := c.unsubscribe()
+			if uerr != nil {
+				// TODO: use multierror
+				return errors.Wrap(err, uerr.Error())
+			}
 
 			return err
 		default:
@@ -127,11 +135,13 @@ func (c *Consumer) subscribe() error {
 	return c.kafka.SubscribeTopics(c.config.topics, nil)
 }
 
+func (c *Consumer) unsubscribe() error {
+	return c.kafka.Unsubscribe()
+}
+
 // Close closes the consumer.
 func (c *Consumer) Close() error {
 	<-time.After(c.config.shutdownTimeout)
-
-	_ = c.kafka.Unsubscribe()
 
 	return c.kafka.Close()
 }

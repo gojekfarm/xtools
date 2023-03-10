@@ -38,7 +38,7 @@ func ExampleConsumer() {
 		}),
 	)
 
-	if err := consumer.Start(context.Background()); err != nil {
+	if err := consumer.Run(context.Background()); err != nil {
 		panic(err)
 	}
 
