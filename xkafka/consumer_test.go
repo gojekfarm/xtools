@@ -1,4 +1,4 @@
-package xkafka_test
+package xkafka
 
 import (
 	"context"
@@ -11,14 +11,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/gojekfarm/xtools/xkafka/internal"
 )
 
 type ConsumerSuite struct {
 	suite.Suite
 	kafka    *MockConsumerClient
-	consumer *xkafka.Consumer
+	consumer *Consumer
 	topics   []string
 	brokers  []string
 	messages []*kafka.Message
@@ -33,13 +32,13 @@ func (s *ConsumerSuite) SetupTest() {
 	s.topics = []string{topic}
 	s.brokers = []string{"localhost:9092"}
 
-	consumer, err := xkafka.NewConsumer(
+	consumer, err := NewConsumer(
 		"consumer-id",
-		xkafka.Topics(s.topics),
-		xkafka.Brokers(s.brokers),
+		Topics(s.topics),
+		Brokers(s.brokers),
 		mockConsumerFunc(s.kafka),
-		xkafka.MetadataTimeout(10*time.Second),
-		xkafka.PollTimeout(1*time.Second),
+		MetadataTimeout(10*time.Second),
+		PollTimeout(1*time.Second),
 	)
 	s.Require().NoError(err)
 	s.Require().NotNil(consumer)
@@ -64,7 +63,7 @@ func (s *ConsumerSuite) TestNoHandler() {
 
 	err := s.consumer.Start(ctx)
 	s.Error(err)
-	s.EqualError(err, xkafka.ErrNoHandler)
+	s.EqualError(err, ErrNoHandler)
 
 	s.kafka.AssertExpectations(s.T())
 }
@@ -72,7 +71,7 @@ func (s *ConsumerSuite) TestNoHandler() {
 func (s *ConsumerSuite) TestHandleMessage() {
 	km := s.messages[0]
 	ctx, cancel := context.WithCancel(context.Background())
-	handler := xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		s.Equal(km.Key, msg.Key)
 		s.Equal(km.Value, msg.Value)
 
@@ -94,7 +93,7 @@ func (s *ConsumerSuite) TestHandleMessageWithErrors() {
 	ctx := context.Background()
 	expect := errors.New("error in handler")
 
-	handler := xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		return expect
 	})
 
@@ -113,7 +112,7 @@ func (s *ConsumerSuite) TestKafkaReadTimeout() {
 	ctx, cancel := context.WithCancel(context.Background())
 	counter := 0
 
-	handler := xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		counter++
 
 		if counter > 1 {
@@ -155,8 +154,8 @@ func (s *ConsumerSuite) TestMiddlewareExecutionOrder() {
 	preExec := []int{}
 	postExec := []int{}
 
-	m1 := xkafka.MiddlewareFunc(func(handler xkafka.Handler) xkafka.Handler {
-		return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+	m1 := MiddlewareFunc(func(handler Handler) Handler {
+		return HandlerFunc(func(ctx context.Context, msg *Message) error {
 			preExec = append(preExec, 1)
 
 			err := handler.Handle(ctx, msg)
@@ -167,8 +166,8 @@ func (s *ConsumerSuite) TestMiddlewareExecutionOrder() {
 		})
 	})
 
-	m2 := xkafka.MiddlewareFunc(func(handler xkafka.Handler) xkafka.Handler {
-		return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+	m2 := MiddlewareFunc(func(handler Handler) Handler {
+		return HandlerFunc(func(ctx context.Context, msg *Message) error {
 			preExec = append(preExec, 2)
 
 			err := handler.Handle(ctx, msg)
@@ -179,7 +178,7 @@ func (s *ConsumerSuite) TestMiddlewareExecutionOrder() {
 		})
 	})
 
-	handler := xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		cancel()
 		return nil
 	})
@@ -213,14 +212,14 @@ func (s *ConsumerSuite) generateMessages() {
 	}
 }
 
-func mockConsumerFunc(mock *MockConsumerClient) xkafka.ConsumerFunc {
+func mockConsumerFunc(mock *MockConsumerClient) ConsumerFunc {
 	return func(configMap *kafka.ConfigMap) (internal.ConsumerClient, error) {
 		return mock, nil
 	}
 }
 
-func noopHandler() xkafka.Handler {
-	return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+func noopHandler() Handler {
+	return HandlerFunc(func(ctx context.Context, msg *Message) error {
 		return nil
 	})
 }

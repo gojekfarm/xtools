@@ -1,4 +1,4 @@
-package xkafka_test
+package xkafka
 
 import (
 	"context"
@@ -11,16 +11,15 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/gojekfarm/xtools/xkafka/internal"
 )
 
 type ProducerSuite struct {
 	suite.Suite
 	kafka    *MockProducerClient
-	producer *xkafka.Producer
+	producer *Producer
 	topic    string
-	messages []*xkafka.Message
+	messages []*Message
 	events   chan kafka.Event
 }
 
@@ -34,11 +33,11 @@ func (s *ProducerSuite) SetupTest() {
 
 	s.kafka.On("Events").Return(s.events)
 
-	producer, err := xkafka.NewProducer(
+	producer, err := NewProducer(
 		"producer-id",
-		xkafka.Brokers([]string{"localhost:9092"}),
+		Brokers([]string{"localhost:9092"}),
 		mockProducerFunc(s.kafka),
-		xkafka.ShutdownTimeout(1*time.Second),
+		ShutdownTimeout(1*time.Second),
 	)
 	s.Require().NoError(err)
 	s.Require().NotNil(producer)
@@ -157,7 +156,7 @@ func (s *ProducerSuite) TestAsyncPublish() {
 		s.events <- km
 
 		delvMsg := <-s.producer.DeliveryEvents()
-		s.Equal(xkafka.Success, delvMsg.Status)
+		s.Equal(Success, delvMsg.Status)
 
 		wg.Done()
 	}()
@@ -201,7 +200,7 @@ func (s *ProducerSuite) TestAsyncPublishError() {
 		s.events <- &kmWithError
 
 		delvMsg := <-s.producer.DeliveryEvents()
-		s.Equal(xkafka.Fail, delvMsg.Status)
+		s.Equal(Fail, delvMsg.Status)
 		s.Equal(expectErr, delvMsg.Err())
 
 		wg.Done()
@@ -237,8 +236,8 @@ func (s *ProducerSuite) TestMiddlewareExecutionOrder() {
 	preExec := []int{}
 	postExec := []int{}
 
-	m1 := xkafka.MiddlewareFunc(func(handler xkafka.Handler) xkafka.Handler {
-		return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+	m1 := MiddlewareFunc(func(handler Handler) Handler {
+		return HandlerFunc(func(ctx context.Context, msg *Message) error {
 			preExec = append(preExec, 1)
 
 			err := handler.Handle(ctx, msg)
@@ -249,8 +248,8 @@ func (s *ProducerSuite) TestMiddlewareExecutionOrder() {
 		})
 	})
 
-	m2 := xkafka.MiddlewareFunc(func(handler xkafka.Handler) xkafka.Handler {
-		return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+	m2 := MiddlewareFunc(func(handler Handler) Handler {
+		return HandlerFunc(func(ctx context.Context, msg *Message) error {
 			preExec = append(preExec, 2)
 
 			err := handler.Handle(ctx, msg)
@@ -288,9 +287,9 @@ func (s *ProducerSuite) TestClose() {
 }
 
 func (s *ProducerSuite) generateMessages() {
-	s.messages = make([]*xkafka.Message, 10)
+	s.messages = make([]*Message, 10)
 	for i := 0; i < 10; i++ {
-		s.messages[i] = &xkafka.Message{
+		s.messages[i] = &Message{
 			Topic: s.topic,
 			Key:   []byte(fmt.Sprintf("key-%d", i)),
 			Value: []byte(fmt.Sprintf("value-%d", i)),
@@ -298,7 +297,7 @@ func (s *ProducerSuite) generateMessages() {
 	}
 }
 
-func mockProducerFunc(mock *MockProducerClient) xkafka.ProducerFunc {
+func mockProducerFunc(mock *MockProducerClient) ProducerFunc {
 	return func(configMap *kafka.ConfigMap) (internal.ProducerClient, error) {
 		return mock, nil
 	}

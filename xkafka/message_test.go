@@ -1,4 +1,4 @@
-package xkafka_test
+package xkafka
 
 import (
 	"errors"
@@ -8,8 +8,6 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/gojekfarm/xtools/xkafka"
 )
 
 var topic = "test-topic"
@@ -25,14 +23,14 @@ func TestNewMessage(t *testing.T) {
 		Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
 	}
 
-	m := xkafka.NewMessage("consumer-group-1", km)
+	m := NewMessage("consumer-group-1", km)
 
 	assert.Equal(t, topic, m.Topic)
 	assert.EqualValues(t, 1, m.Partition)
 	assert.Equal(t, "consumer-group-1", m.Group)
 	assert.Equal(t, []byte("key"), m.Key)
 	assert.Equal(t, []byte("value"), m.Value)
-	assert.Equal(t, xkafka.Unassigned, m.Status)
+	assert.Equal(t, Unassigned, m.Status)
 	assert.EqualValues(t, time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC), m.Timestamp)
 }
 
@@ -48,54 +46,54 @@ func TestAck(t *testing.T) {
 	}
 
 	t.Run("FirstAckSuccess", func(t *testing.T) {
-		m := xkafka.NewMessage("consumer-1", km)
+		m := NewMessage("consumer-1", km)
 		res := m.AckSuccess()
 
 		assert.True(t, res)
-		assert.Equal(t, xkafka.Success, m.Status)
+		assert.Equal(t, Success, m.Status)
 	})
 
 	t.Run("FirstAckSkip", func(t *testing.T) {
-		m := xkafka.NewMessage("consumer-1", km)
+		m := NewMessage("consumer-1", km)
 		res := m.AckSkip()
 
 		assert.True(t, res)
-		assert.Equal(t, xkafka.Skip, m.Status)
+		assert.Equal(t, Skip, m.Status)
 	})
 
 	t.Run("FirstAckFail", func(t *testing.T) {
-		m := xkafka.NewMessage("consumer-1", km)
+		m := NewMessage("consumer-1", km)
 		err := errors.New("some-err")
 		res := m.AckFail(err)
 
 		assert.True(t, res)
-		assert.Equal(t, xkafka.Fail, m.Status)
+		assert.Equal(t, Fail, m.Status)
 		assert.EqualError(t, m.Err(), "some-err")
 	})
 
 	t.Run("SuccessAfterFailure", func(t *testing.T) {
-		m := xkafka.NewMessage("consumer-1", km)
+		m := NewMessage("consumer-1", km)
 
 		m.AckFail(errors.New("error"))
 		res := m.AckSuccess()
 
 		assert.True(t, res)
-		assert.Equal(t, xkafka.Success, m.Status)
+		assert.Equal(t, Success, m.Status)
 	})
 
 	t.Run("FailureAfterSuccess", func(t *testing.T) {
-		m := xkafka.NewMessage("consumer-1", km)
+		m := NewMessage("consumer-1", km)
 		m.AckSuccess()
 
 		res := m.AckFail(errors.New("new-found-error"))
 
 		assert.True(t, res)
-		assert.Equal(t, xkafka.Fail, m.Status)
+		assert.Equal(t, Fail, m.Status)
 		assert.EqualError(t, m.Err(), "new-found-error")
 	})
 
 	t.Run("SkipAfterSuccess", func(t *testing.T) {
-		m := xkafka.NewMessage("consumer-1", km)
+		m := NewMessage("consumer-1", km)
 		m.AckSuccess()
 
 		res := m.AckSkip()
@@ -112,19 +110,19 @@ func TestCallbacks(t *testing.T) {
 
 		wg.Add(2)
 
-		onAck1 := func(m *xkafka.Message) {
+		onAck1 := func(m *Message) {
 			ack1Called = true
-			assert.EqualValues(t, xkafka.Success, m.Status)
+			assert.EqualValues(t, Success, m.Status)
 			wg.Done()
 		}
 
-		onAck2 := func(m *xkafka.Message) {
+		onAck2 := func(m *Message) {
 			ack2Called = true
-			assert.EqualValues(t, xkafka.Success, m.Status)
+			assert.EqualValues(t, Success, m.Status)
 			wg.Done()
 		}
 
-		m := xkafka.Message{}
+		m := Message{}
 		m.AddCallback(onAck1)
 		m.AddCallback(onAck2)
 
@@ -143,19 +141,19 @@ func TestCallbacks(t *testing.T) {
 
 		wg.Add(2)
 
-		onAck1 := func(m *xkafka.Message) {
+		onAck1 := func(m *Message) {
 			ack1Called = true
-			assert.EqualValues(t, xkafka.Skip, m.Status)
+			assert.EqualValues(t, Skip, m.Status)
 			wg.Done()
 		}
 
-		onAck2 := func(m *xkafka.Message) {
+		onAck2 := func(m *Message) {
 			ack2Called = true
-			assert.EqualValues(t, xkafka.Skip, m.Status)
+			assert.EqualValues(t, Skip, m.Status)
 			wg.Done()
 		}
 
-		m := xkafka.Message{}
+		m := Message{}
 		m.AddCallback(onAck1)
 		m.AddCallback(onAck2)
 
@@ -175,19 +173,19 @@ func TestCallbacks(t *testing.T) {
 
 		wg.Add(2)
 
-		onAck1 := func(m *xkafka.Message) {
+		onAck1 := func(m *Message) {
 			ack1Called = true
-			assert.EqualValues(t, xkafka.Fail, m.Status)
+			assert.EqualValues(t, Fail, m.Status)
 			wg.Done()
 		}
 
-		onAck2 := func(m *xkafka.Message) {
+		onAck2 := func(m *Message) {
 			ack2Called = true
-			assert.EqualValues(t, xkafka.Fail, m.Status)
+			assert.EqualValues(t, Fail, m.Status)
 			wg.Done()
 		}
 
-		m := xkafka.Message{}
+		m := Message{}
 		m.AddCallback(onAck1)
 		m.AddCallback(onAck2)
 
@@ -211,7 +209,7 @@ func TestHeaders(t *testing.T) {
 		Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
 	}
 
-	m := xkafka.NewMessage("consumer-group-1", km)
+	m := NewMessage("consumer-group-1", km)
 
 	m.SetHeader("foo", []byte("bar"))
 	assert.Equal(t, m.Headers(), map[string][]byte{"foo": []byte("bar")})

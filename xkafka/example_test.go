@@ -1,13 +1,11 @@
-package xkafka_test
+package xkafka
 
 import (
 	"context"
-
-	"github.com/gojekfarm/xtools/xkafka"
 )
 
 func ExampleConsumer() {
-	handler := xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		// do something with the message
 		return nil
 	})
@@ -17,15 +15,15 @@ func ExampleConsumer() {
 		return nil
 	}
 
-	consumer, err := xkafka.NewConsumer(
+	consumer, err := NewConsumer(
 		"consumer-id",
-		xkafka.Concurrency(10),
-		xkafka.Topics{"test"},
-		xkafka.Brokers{"localhost:9092"},
-		xkafka.ConfigMap{
+		Concurrency(10),
+		Topics{"test"},
+		Brokers{"localhost:9092"},
+		ConfigMap{
 			"enable.auto.commit": false,
 		},
-		xkafka.ErrorHandler(ignoreError),
+		ErrorHandler(ignoreError),
 	)
 	if err != nil {
 		panic(err)
@@ -35,8 +33,8 @@ func ExampleConsumer() {
 		WithHandler(handler).
 		Use(
 			// middleware to log messages
-			xkafka.MiddlewareFunc(func(next xkafka.Handler) xkafka.Handler {
-				return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+			MiddlewareFunc(func(next Handler) Handler {
+				return HandlerFunc(func(ctx context.Context, msg *Message) error {
 					// log the message
 					return next.Handle(ctx, msg)
 				})
@@ -53,10 +51,10 @@ func ExampleConsumer() {
 func ExampleProducer() {
 	ctx := context.Background()
 
-	producer, err := xkafka.NewProducer(
+	producer, err := NewProducer(
 		"producer-id",
-		xkafka.Brokers{"localhost:9092"},
-		xkafka.ConfigMap{
+		Brokers{"localhost:9092"},
+		ConfigMap{
 			"socket.keepalive.enable": true,
 		},
 	)
@@ -66,15 +64,15 @@ func ExampleProducer() {
 
 	producer.Use(
 		// middleware to log messages
-		xkafka.MiddlewareFunc(func(next xkafka.Handler) xkafka.Handler {
-			return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
+		MiddlewareFunc(func(next Handler) Handler {
+			return HandlerFunc(func(ctx context.Context, msg *Message) error {
 				// log the message
 				return next.Handle(ctx, msg)
 			})
 		}),
 	)
 
-	msg := &xkafka.Message{
+	msg := &Message{
 		Topic: "test",
 		Key:   []byte("key"),
 		Value: []byte("value"),
