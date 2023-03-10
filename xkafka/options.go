@@ -61,19 +61,19 @@ type options struct {
 	shutdownTimeout time.Duration
 
 	// consumer options
-	consumerFn      ConsumerFunc
+	consumerFn      consumerFunc
 	topics          []string
 	metadataTimeout time.Duration
 	pollTimeout     time.Duration
 	concurrency     int
 
 	// producer options
-	producerFn ProducerFunc
+	producerFn producerFunc
 }
 
 func defaultConsumerOptions() options {
 	return options{
-		consumerFn:      DefaultConsumerFunc,
+		consumerFn:      defaultConsumerFunc,
 		topics:          []string{},
 		brokers:         []string{},
 		configMap:       kafka.ConfigMap{},
@@ -87,7 +87,7 @@ func defaultConsumerOptions() options {
 
 func defaultProducerOptions() options {
 	return options{
-		producerFn: DefaultProducerFunc,
+		producerFn: defaultProducerFunc,
 		brokers:    []string{},
 		configMap: kafka.ConfigMap{
 			"default.topic.config": kafka.ConfigMap{

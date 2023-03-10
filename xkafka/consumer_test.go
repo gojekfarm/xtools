@@ -10,8 +10,6 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-
-	"github.com/gojekfarm/xtools/xkafka/internal"
 )
 
 type ConsumerSuite struct {
@@ -212,8 +210,8 @@ func (s *ConsumerSuite) generateMessages() {
 	}
 }
 
-func mockConsumerFunc(mock *MockConsumerClient) ConsumerFunc {
-	return func(configMap *kafka.ConfigMap) (internal.ConsumerClient, error) {
+func mockConsumerFunc(mock *MockConsumerClient) consumerFunc {
+	return func(configMap *kafka.ConfigMap) (consumerClient, error) {
 		return mock, nil
 	}
 }

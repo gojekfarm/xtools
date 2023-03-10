@@ -10,8 +10,6 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-
-	"github.com/gojekfarm/xtools/xkafka/internal"
 )
 
 type ProducerSuite struct {
@@ -297,8 +295,8 @@ func (s *ProducerSuite) generateMessages() {
 	}
 }
 
-func mockProducerFunc(mock *MockProducerClient) ProducerFunc {
-	return func(configMap *kafka.ConfigMap) (internal.ProducerClient, error) {
+func mockProducerFunc(mock *MockProducerClient) producerFunc {
+	return func(configMap *kafka.ConfigMap) (producerClient, error) {
 		return mock, nil
 	}
 }

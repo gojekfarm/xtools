@@ -8,26 +8,13 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/sourcegraph/conc/stream"
-
-	"github.com/gojekfarm/xtools/xkafka/internal"
 )
-
-// ConsumerFunc allows the user to customise confluent-kafka-go/kafka.Consumer.
-type ConsumerFunc func(cfg *kafka.ConfigMap) (internal.ConsumerClient, error)
-
-func (cf ConsumerFunc) apply(o *options) { o.consumerFn = cf }
-
-// DefaultConsumerFunc is the default ConsumerFunc that initialises
-// a new confluent-kafka-go/kafka.Consumer.
-func DefaultConsumerFunc(cfg *kafka.ConfigMap) (internal.ConsumerClient, error) {
-	return kafka.NewConsumer(cfg)
-}
 
 // Consumer manages the consumption of messages from kafka topics
 // and the processing of those messages.
 type Consumer struct {
 	name        string
-	kafka       internal.ConsumerClient
+	kafka       consumerClient
 	handler     Handler
 	middlewares []middleware
 	config      options

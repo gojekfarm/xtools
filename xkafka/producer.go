@@ -6,27 +6,14 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/pkg/errors"
-
-	"github.com/gojekfarm/xtools/xkafka/internal"
 )
-
-// ProducerFunc is a function that returns a KafkaProducer.
-type ProducerFunc func(cfg *kafka.ConfigMap) (internal.ProducerClient, error)
-
-func (pf ProducerFunc) apply(o *options) { o.producerFn = pf }
-
-// DefaultProducerFunc is the default producer function that initialises
-// a new confluent-kafka-go/kafka.Producer.
-func DefaultProducerFunc(cfg *kafka.ConfigMap) (internal.ProducerClient, error) {
-	return kafka.NewProducer(cfg)
-}
 
 // Producer manages the production of messages to kafka topics.
 // It provides both synchronous and asynchronous publish methods
 // and a channel to stream delivery events.
 type Producer struct {
 	config              options
-	kafka               internal.ProducerClient
+	kafka               producerClient
 	events              chan kafka.Event
 	delivery            chan *Message
 	middlewares         []middleware
