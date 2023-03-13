@@ -74,6 +74,11 @@ func publishMessages(producer *xkafka.Producer, wg *sync.WaitGroup) {
 
 		log.Info().Msgf("[PRODUCER] Sending message: %s: %s", message.Key, message.Value)
 
+		// add a callback to log the status of the message
+		message.AddCallback(func(m *xkafka.Message) {
+			log.Info().Msgf("[PRODUCER] Message %s Status %s", m.Key, m.Status)
+		})
+
 		if err := producer.Publish(context.Background(), message); err != nil {
 			log.Fatal().Msgf("%s", err)
 		}

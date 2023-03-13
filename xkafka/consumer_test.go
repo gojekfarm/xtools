@@ -18,16 +18,6 @@ var (
 	testPollTimeout = 1 * time.Second
 )
 
-func TestConsumerClose(t *testing.T) {
-	consumer, mockKafka := newTestConsumer(t)
-
-	mockKafka.On("Close").Return(nil)
-
-	consumer.Close()
-
-	mockKafka.AssertExpectations(t)
-}
-
 func TestConsumerGetMetadata(t *testing.T) {
 	consumer, mockKafka := newTestConsumer(t)
 
@@ -36,6 +26,8 @@ func TestConsumerGetMetadata(t *testing.T) {
 	metadata, err := consumer.GetMetadata()
 	assert.NoError(t, err)
 	assert.NotNil(t, metadata)
+
+	consumer.Close()
 
 	mockKafka.AssertExpectations(t)
 }
@@ -189,6 +181,8 @@ func testMiddleware(name string, pre, post *[]string) MiddlewareFunc {
 
 func newTestConsumer(t *testing.T) (*Consumer, *MockConsumerClient) {
 	mockConsumer := &MockConsumerClient{}
+
+	mockConsumer.On("Close").Return(nil)
 
 	opts := []Option{
 		testTopics,

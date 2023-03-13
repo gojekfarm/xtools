@@ -46,7 +46,7 @@ func ExampleConsumer() {
 }
 
 func ExampleProducer() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	producer, err := NewProducer(
 		"producer-id",
@@ -69,6 +69,13 @@ func ExampleProducer() {
 		}),
 	)
 
+	go func() {
+		err := producer.Run(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	msg := &Message{
 		Topic: "test",
 		Key:   []byte("key"),
@@ -79,12 +86,15 @@ func ExampleProducer() {
 		panic(err)
 	}
 
-	producer.Close(ctx)
+	// cancel the context to stop the producer
+	cancel()
 }
 
 func ExampleProducer_AsyncPublish() {
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// default callback function called for each message
+	// handled by the producer
 	callback := func(msg *Message) {
 		// do something with the message
 	}
@@ -114,6 +124,12 @@ func ExampleProducer_AsyncPublish() {
 		Value: []byte("value"),
 	}
 
+	// each message can have its own callback function
+	// in addition to the default callback function
+	msg.AddCallback(func(m *Message) {
+		// do something with the message
+	})
+
 	err = producer.AsyncPublish(ctx, msg)
 	if err != nil {
 		panic(err)
@@ -121,6 +137,4 @@ func ExampleProducer_AsyncPublish() {
 
 	// cancel the context to stop the producer
 	cancel()
-
-	producer.Close(ctx)
 }
