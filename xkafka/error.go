@@ -1,10 +1,10 @@
 package xkafka
 
-const (
+import "errors"
+
+var (
 	// ErrRetryable is the error message for retryable errors.
-	ErrRetryable = "xkafka: retryable error"
-	// ErrNoHandler is the error message for when a handler is not set.
-	ErrNoHandler = "xkafka: no handler set"
+	ErrRetryable = errors.New("xkafka: retryable error")
 )
 
 // ErrorHandler is a callback function that is called when an error occurs.

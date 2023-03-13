@@ -81,3 +81,46 @@ func ExampleProducer() {
 
 	producer.Close(ctx)
 }
+
+func ExampleProducer_AsyncPublish() {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	callback := func(msg *Message) {
+		// do something with the message
+	}
+
+	producer, err := NewProducer(
+		"producer-id",
+		Brokers{"localhost:9092"},
+		ConfigMap{
+			"socket.keepalive.enable": true,
+		},
+		DeliveryCallback(callback),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	go func() {
+		err := producer.Run(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	msg := &Message{
+		Topic: "test",
+		Key:   []byte("key"),
+		Value: []byte("value"),
+	}
+
+	err = producer.AsyncPublish(ctx, msg)
+	if err != nil {
+		panic(err)
+	}
+
+	// cancel the context to stop the producer
+	cancel()
+
+	producer.Close(ctx)
+}

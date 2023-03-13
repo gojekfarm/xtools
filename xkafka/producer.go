@@ -15,7 +15,6 @@ type Producer struct {
 	config              options
 	kafka               producerClient
 	events              chan kafka.Event
-	delivery            chan *Message
 	middlewares         []middleware
 	wrappedPublish      Handler
 	wrappedAsyncPublish Handler
@@ -38,23 +37,15 @@ func NewProducer(name string, opts ...Option) (*Producer, error) {
 	}
 
 	p := &Producer{
-		config:   cfg,
-		kafka:    producer,
-		delivery: make(chan *Message),
-		events:   producer.Events(),
+		config: cfg,
+		kafka:  producer,
+		events: producer.Events(),
 	}
 
 	p.wrappedPublish = p.publish()
 	p.wrappedAsyncPublish = p.asyncPublish()
 
-	go p.start()
-
 	return p, nil
-}
-
-// DeliveryEvents returns a read-only channel that streams acked messages.
-func (p *Producer) DeliveryEvents() <-chan *Message {
-	return p.delivery
 }
 
 // Use appends a MiddlewareFunc to the chain.
@@ -78,25 +69,24 @@ func (p *Producer) Use(mwf ...MiddlewareFunc) {
 	}
 }
 
-func (p *Producer) start() {
-	for e := range p.events {
-		switch ev := e.(type) {
-		case *kafka.Message:
-			m, ok := ev.Opaque.(*Message)
-			if !ok {
-				continue
-			}
-
-			if ev.TopicPartition.Error != nil {
-				m.AckFail(ev.TopicPartition.Error)
-			} else {
-				m.AckSuccess()
-			}
-
-			// make a copy of the message for delivery channel
-			p.delivery <- m.Copy()
+// Start starts the kafka event handling.
+// It blocks until the context is cancelled.
+func (p *Producer) Start(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case e := <-p.events:
+			_ = p.handleEvent(e)
 		}
 	}
+}
+
+// Run manages both starting and stopping the producer.
+func (p *Producer) Run(ctx context.Context) error {
+	defer p.Close(ctx)
+
+	return p.Start(ctx)
 }
 
 // AsyncPublish sends messages to the kafka topic asyncronously.
@@ -130,41 +120,52 @@ func (p *Producer) publish() HandlerFunc {
 		err := p.kafka.Produce(m, deliveryChan)
 		if err != nil {
 			// This is an enqueue error and should be retried
-			re := errors.Wrap(err, ErrRetryable)
+			re := errors.Wrap(err, ErrRetryable.Error())
 
 			msg.AckFail(re)
+
+			if p.config.deliveryCb != nil {
+				p.config.deliveryCb(msg)
+			}
 
 			return re
 		}
 
 		e := <-deliveryChan
 
-		switch ev := e.(type) {
-		case *kafka.Message:
-			msg.Partition = ev.TopicPartition.Partition
-
-			if ev.TopicPartition.Error != nil {
-				msg.AckFail(ev.TopicPartition.Error)
-
-				return ev.TopicPartition.Error
-			}
-
-			msg.AckSuccess()
-		}
-
-		return nil
+		return p.handleEvent(e)
 	})
 }
 
-// Close closes delivery & ack channels and the underlying Kafka client.
+// Close waits for all messages to be delivered and closes the producer.
 func (p *Producer) Close(ctx context.Context) {
 	p.kafka.Flush(int(p.config.shutdownTimeout.Milliseconds()))
 
-	// close kafka client
 	p.kafka.Close()
+}
 
-	// and then close delivery channel
-	close(p.delivery)
+func (p *Producer) handleEvent(e kafka.Event) error {
+	switch ev := e.(type) {
+	case *kafka.Message:
+		m, ok := ev.Opaque.(*Message)
+		if !ok {
+			return nil
+		}
+
+		if ev.TopicPartition.Error != nil {
+			m.AckFail(ev.TopicPartition.Error)
+		} else {
+			m.AckSuccess()
+		}
+
+		if p.config.deliveryCb != nil {
+			p.config.deliveryCb(m)
+		}
+
+		return ev.TopicPartition.Error
+	}
+
+	return nil
 }
 
 func newKafkaMessage(msg *Message) *kafka.Message {

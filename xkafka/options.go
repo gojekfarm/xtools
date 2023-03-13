@@ -53,6 +53,12 @@ type Concurrency int
 
 func (c Concurrency) apply(o *options) { o.concurrency = int(c) }
 
+// DeliveryCallback is a callback function triggered for every published message.
+// Works only for xkafka.Producer.
+type DeliveryCallback AckFunc
+
+func (d DeliveryCallback) apply(o *options) { o.deliveryCb = d }
+
 type options struct {
 	// common options
 	brokers         []string
@@ -69,6 +75,7 @@ type options struct {
 
 	// producer options
 	producerFn producerFunc
+	deliveryCb DeliveryCallback
 }
 
 func defaultConsumerOptions() options {

@@ -19,7 +19,7 @@ var (
 )
 
 func TestConsumerClose(t *testing.T) {
-	consumer, mockKafka := newConsumer(t)
+	consumer, mockKafka := newTestConsumer(t)
 
 	mockKafka.On("Close").Return(nil)
 
@@ -30,7 +30,7 @@ func TestConsumerClose(t *testing.T) {
 }
 
 func TestConsumerGetMetadata(t *testing.T) {
-	consumer, mockKafka := newConsumer(t)
+	consumer, mockKafka := newTestConsumer(t)
 
 	mockKafka.On("GetMetadata", mock.Anything, false, 10000).Return(&kafka.Metadata{}, nil)
 
@@ -42,7 +42,7 @@ func TestConsumerGetMetadata(t *testing.T) {
 }
 
 func TestConsumerHandleMessage(t *testing.T) {
-	consumer, mockKafka := newConsumer(t)
+	consumer, mockKafka := newTestConsumer(t)
 
 	km := newFakeKafkaMessage()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -67,7 +67,7 @@ func TestConsumerHandleMessage(t *testing.T) {
 }
 
 func TestConsumerHandleMessageError(t *testing.T) {
-	consumer, mockKafka := newConsumer(t)
+	consumer, mockKafka := newTestConsumer(t)
 
 	km := newFakeKafkaMessage()
 	ctx := context.Background()
@@ -90,7 +90,7 @@ func TestConsumerHandleMessageError(t *testing.T) {
 }
 
 func TestConsumerReadMessageTimeout(t *testing.T) {
-	consumer, mockKafka := newConsumer(t)
+	consumer, mockKafka := newTestConsumer(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	expect := kafka.NewError(kafka.ErrTimedOut, "kafka: timed out", false)
@@ -122,7 +122,7 @@ func TestConsumerReadMessageTimeout(t *testing.T) {
 }
 
 func TestConsumerKafkaError(t *testing.T) {
-	consumer, mockKafka := newConsumer(t)
+	consumer, mockKafka := newTestConsumer(t)
 
 	ctx := context.Background()
 	expect := kafka.NewError(kafka.ErrUnknown, "kafka: unknown error", false)
@@ -141,7 +141,7 @@ func TestConsumerKafkaError(t *testing.T) {
 }
 
 func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
-	consumer, mockKafka := newConsumer(t)
+	consumer, mockKafka := newTestConsumer(t)
 
 	km := newFakeKafkaMessage()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -188,7 +188,7 @@ func testMiddleware(name string, pre, post *[]string) MiddlewareFunc {
 	}
 }
 
-func newConsumer(t *testing.T) (*Consumer, *MockConsumerClient) {
+func newTestConsumer(t *testing.T) (*Consumer, *MockConsumerClient) {
 	mockConsumer := &MockConsumerClient{}
 
 	opts := []Option{

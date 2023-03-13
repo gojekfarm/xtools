@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
 )
 
@@ -23,7 +24,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	producer, err := xkafka.NewProducer(
 		"xkafka-producer",
@@ -49,13 +50,20 @@ func main() {
 
 	publishMessages(producer, &wg)
 
-	go func() {
-		if err := consumer.Run(ctx); err != nil {
-			log.Fatal().Msgf("Consumer error: %s", err)
+	runComponents := func(ctx context.Context) {
+		err := xrun.All(xrun.NoTimeout, consumer, producer).Run(ctx)
+		if err != nil {
+			log.Fatal().Msgf("%s", err)
 		}
-	}()
+	}
 
+	go runComponents(ctx)
+
+	// wait for all messages to be consumed
 	wg.Wait()
+
+	// stop the consumer and producer
+	cancel()
 }
 
 func publishMessages(producer *xkafka.Producer, wg *sync.WaitGroup) {

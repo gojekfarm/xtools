@@ -8,6 +8,7 @@ replace (
 )
 
 require (
+	github.com/gojekfarm/xrun v0.3.0
 	github.com/gojekfarm/xtools/xkafka v0.0.0-00010101000000-000000000000
 	github.com/rs/xid v1.4.0
 	github.com/rs/zerolog v1.29.0
@@ -20,6 +21,8 @@ require (
 	github.com/confluentinc/confluent-kafka-go v1.9.2 // indirect
 	github.com/getsentry/sentry-go v0.13.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
