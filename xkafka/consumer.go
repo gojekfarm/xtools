@@ -58,12 +58,19 @@ func (c *Consumer) Use(mwf ...MiddlewareFunc) {
 	}
 }
 
-// Run subscribes to the configured topics and starts consuming messages.
+// Run manages starting and stopping the consumer.
+func (c *Consumer) Run(ctx context.Context) error {
+	defer c.Close()
+
+	return c.Start(ctx)
+}
+
+// Start subscribes to the configured topics and starts consuming messages.
 // It runs the handler for each message in a separate goroutine.
 // It blocks until the context is cancelled or an error occurs.
 // Errors are handled by the ErrorHandler if set, otherwise they stop the consumer
 // and are returned.
-func (c *Consumer) Run(ctx context.Context) error {
+func (c *Consumer) Start(ctx context.Context) error {
 	if err := c.subscribe(); err != nil {
 		return err
 	}
@@ -140,8 +147,8 @@ func (c *Consumer) unsubscribe() error {
 }
 
 // Close closes the consumer.
-func (c *Consumer) Close() error {
+func (c *Consumer) Close() {
 	<-time.After(c.config.shutdownTimeout)
 
-	return c.kafka.Close()
+	_ = c.kafka.Close()
 }

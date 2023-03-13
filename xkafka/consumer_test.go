@@ -23,8 +23,7 @@ func TestConsumerClose(t *testing.T) {
 
 	mockKafka.On("Close").Return(nil)
 
-	err := consumer.Close()
-	assert.NoError(t, err)
+	consumer.Close()
 
 	mockKafka.AssertExpectations(t)
 }
@@ -148,7 +147,7 @@ func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil)
+	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil).Once()
 
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		cancel()
