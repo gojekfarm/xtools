@@ -3,55 +3,45 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"sync"
 
+	goprom "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/xid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/gojekfarm/xrun"
+	"github.com/gojekfarm/xrun/component"
 	"github.com/gojekfarm/xtools/xkafka"
-)
-
-const (
-	topic  = "xkafka-example"
-	broker = "localhost:9092"
+	"github.com/gojekfarm/xtools/xkafka/middleware/prometheus"
 )
 
 func main() {
 	setupLogger()
 
+	promServer := newPrometheus()
+
 	var wg sync.WaitGroup
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	producer, err := xkafka.NewProducer(
-		"xkafka-producer",
-		xkafka.Brokers{broker},
-	)
-	if err != nil {
-		log.Fatal().Msgf("%s", err)
-	}
+	producer := newProducer()
 
-	consumer, err := xkafka.NewConsumer(
-		"xkafka-consumer",
-		handler(&wg),
-		xkafka.Brokers{broker},
-		xkafka.Topics{topic},
-		xkafka.ConfigMap{
-			"enable.auto.commit": true,
-			"auto.offset.reset":  "earliest",
-		},
-	)
-	if err != nil {
-		log.Fatal().Msgf("%s", err)
-	}
+	consumer := newConsumer(handler(&wg))
 
 	publishMessages(producer, &wg)
 
 	runComponents := func(ctx context.Context) {
-		err := xrun.All(xrun.NoTimeout, consumer, producer).Run(ctx)
+		err := xrun.All(xrun.NoTimeout,
+			consumer,
+			producer,
+			component.HTTPServer(
+				component.HTTPServerOptions{Server: promServer},
+			),
+		).Run(ctx)
 		if err != nil {
 			log.Fatal().Msgf("%s", err)
 		}
@@ -91,6 +81,8 @@ func handler(wg *sync.WaitGroup) xkafka.Handler {
 
 		log.Info().Msgf("[CONSUMER] Received message: %s: %s", msg.Key, msg.Value)
 
+		msg.AckSuccess()
+
 		return nil
 	})
 }
@@ -117,4 +109,27 @@ func setupLogger() {
 	}
 
 	log.Logger = log.Output(console)
+}
+
+func newPrometheus() *http.Server {
+	reg := goprom.NewRegistry()
+
+	if err := prometheus.RegisterConsumerMetrics(reg); err != nil {
+		log.Fatal().Msgf("%s", err)
+	}
+
+	if err := prometheus.RegisterProducerMetrics(reg); err != nil {
+		log.Fatal().Msgf("%s", err)
+	}
+
+	h := http.NewServeMux()
+
+	h.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+
+	server := http.Server{
+		Addr:    ":9090",
+		Handler: h,
+	}
+
+	return &server
 }

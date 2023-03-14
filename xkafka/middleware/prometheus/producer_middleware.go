@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/gojekfarm/xtools/xkafka"
 )
 
 var producerLabels = []string{

@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gojekfarm/xtools/xkafka"
 )
 
 func TestProducerMiddleware(t *testing.T) {
