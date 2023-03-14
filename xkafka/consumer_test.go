@@ -13,10 +13,59 @@ import (
 )
 
 var (
-	testTopics      = Topics{"test-topic"}
-	testBrokers     = Brokers{"localhost:9092"}
-	testPollTimeout = 1 * time.Second
+	testTopics  = Topics{"test-topic"}
+	testBrokers = Brokers{"localhost:9092"}
+	testTimeout = 1 * time.Second
 )
+
+func TestNewConsumer(t *testing.T) {
+	cfg := ConfigMap{
+		"enable.auto.commit": true,
+		"auto.offset.reset":  "earliest",
+	}
+
+	consumer, err := NewConsumer(
+		"test-consumer",
+		noopHandler(),
+		testTopics,
+		testBrokers,
+		cfg,
+		PollTimeout(testTimeout),
+		MetadataTimeout(testTimeout),
+		ShutdownTimeout(testTimeout),
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, consumer)
+
+	assert.Equal(t, "test-consumer", consumer.name)
+	assert.EqualValues(t, testTopics, consumer.config.topics)
+	assert.EqualValues(t, testBrokers, consumer.config.brokers)
+	assert.EqualValues(t, testTimeout, consumer.config.pollTimeout)
+	assert.EqualValues(t, testTimeout, consumer.config.metadataTimeout)
+	assert.EqualValues(t, testTimeout, consumer.config.shutdownTimeout)
+
+	expectedConfig := cfg
+	expectedConfig["bootstrap.servers"] = "localhost:9092"
+	expectedConfig["group.id"] = "test-consumer"
+
+	assert.EqualValues(t, expectedConfig, consumer.config.configMap)
+}
+
+func TestNewConsumerError(t *testing.T) {
+	expectError := errors.New("error in consumer")
+
+	fn := func(configMap *kafka.ConfigMap) (consumerClient, error) {
+		return nil, expectError
+	}
+
+	_, err := NewConsumer(
+		"test-consumer",
+		noopHandler(),
+		consumerFunc(fn),
+	)
+	assert.Error(t, err)
+	assert.Equal(t, expectError, err)
+}
 
 func TestConsumerGetMetadata(t *testing.T) {
 	consumer, mockKafka := newTestConsumer(t)
@@ -28,6 +77,44 @@ func TestConsumerGetMetadata(t *testing.T) {
 	assert.NotNil(t, metadata)
 
 	consumer.Close()
+
+	mockKafka.AssertExpectations(t)
+}
+
+func TestConsumerSubscribeError(t *testing.T) {
+	consumer, mockKafka := newTestConsumer(t)
+
+	ctx := context.Background()
+	expectError := errors.New("error")
+
+	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(expectError)
+
+	err := consumer.Run(ctx)
+	assert.EqualError(t, err, expectError.Error())
+
+	mockKafka.AssertExpectations(t)
+}
+
+func TestConsumerUnsubscribeError(t *testing.T) {
+	consumer, mockKafka := newTestConsumer(t)
+
+	km := newFakeKafkaMessage()
+	ctx := context.Background()
+	unsubError := errors.New("error in unsubscribe")
+	handlerError := errors.New("error in handler")
+
+	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
+		return handlerError
+	})
+
+	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	mockKafka.On("Unsubscribe").Return(unsubError)
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+
+	consumer.handler = handler
+
+	err := consumer.Run(ctx)
+	assert.ErrorIs(t, err, handlerError)
 
 	mockKafka.AssertExpectations(t)
 }
@@ -48,7 +135,7 @@ func TestConsumerHandleMessage(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil)
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 	consumer.handler = handler
 	err := consumer.Run(ctx)
@@ -70,12 +157,40 @@ func TestConsumerHandleMessageError(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil)
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 	consumer.handler = handler
 	err := consumer.Run(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, expect, err)
+
+	mockKafka.AssertExpectations(t)
+}
+
+func TestConsumerErrorCallback(t *testing.T) {
+	consumer, mockKafka := newTestConsumer(t)
+
+	km := newFakeKafkaMessage()
+	ctx := context.Background()
+	expect := errors.New("error in handler")
+
+	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
+		return expect
+	})
+
+	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	mockKafka.On("Unsubscribe").Return(nil)
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+
+	consumer.handler = handler
+	consumer.config.errorHandler = func(err error) error {
+		assert.Equal(t, expect, err)
+
+		return err
+	}
+
+	err := consumer.Run(ctx)
+	assert.EqualError(t, err, expect.Error())
 
 	mockKafka.AssertExpectations(t)
 }
@@ -100,9 +215,9 @@ func TestConsumerReadMessageTimeout(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil).Once()
-	mockKafka.On("ReadMessage", testPollTimeout).Return(nil, expect).Once()
-	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil)
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
+	mockKafka.On("ReadMessage", testTimeout).Return(nil, expect).Once()
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 	consumer.handler = handler
 
@@ -121,8 +236,8 @@ func TestConsumerKafkaError(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil).Once()
-	mockKafka.On("ReadMessage", testPollTimeout).Return(nil, expect).Once()
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
+	mockKafka.On("ReadMessage", testTimeout).Return(nil, expect).Once()
 
 	err := consumer.Run(ctx)
 	assert.Error(t, err)
@@ -139,7 +254,7 @@ func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("ReadMessage", testPollTimeout).Return(km, nil).Once()
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
 
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		cancel()
@@ -188,7 +303,7 @@ func newTestConsumer(t *testing.T) (*Consumer, *MockConsumerClient) {
 		testTopics,
 		testBrokers,
 		mockConsumerFunc(mockConsumer),
-		PollTimeout(testPollTimeout),
+		PollTimeout(testTimeout),
 	}
 	consumer, err := NewConsumer("consumer-id", noopHandler(), opts...)
 	require.NoError(t, err)

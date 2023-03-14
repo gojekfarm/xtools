@@ -59,22 +59,6 @@ func NewMessage(group string, raw *kafka.Message) *Message {
 	}
 }
 
-// Copy creates a copy of this message without callbacks.
-func (m *Message) Copy() *Message {
-	return &Message{
-		ID:        m.ID,
-		Topic:     m.Topic,
-		Partition: m.Partition,
-		Group:     m.Group,
-		Key:       m.Key,
-		Value:     m.Value,
-		Timestamp: m.Timestamp,
-		Status:    m.Status,
-		err:       m.err,
-		headers:   m.headers,
-	}
-}
-
 // AddCallback adds the callback func to the call stack.
 func (m *Message) AddCallback(fn AckFunc) {
 	m.mutex.Lock()
