@@ -39,7 +39,7 @@ type Message struct {
 	Status    Status
 	ErrMsg    string
 
-	headers      *sync.Map
+	headers      map[string][]byte
 	ackCallbacks []AckFunc
 	mutex        sync.Mutex
 	err          error
@@ -122,43 +122,52 @@ func (m *Message) Err() error {
 
 // SetHeader stores the key and value of the header field of the message.
 func (m *Message) SetHeader(key string, value []byte) {
-	m.headers.Store(key, value)
+	m.headers[key] = value
 }
 
 // Headers returns a map to access the key and value of the header field of the message.
 func (m *Message) Headers() map[string][]byte {
-	res := make(map[string][]byte)
-
-	m.headers.Range(func(key, val interface{}) bool {
-		k, ok1 := key.(string)
-		v, ok2 := val.([]byte)
-
-		if ok1 && ok2 {
-			res[k] = v
-
-			return true
-		}
-
-		return false
-	})
-
-	return res
+	return m.headers
 }
 
 // Header returns the value for the given key of the header field of the message.
 func (m *Message) Header(key string) []byte {
-	v, _ := m.headers.Load(key)
-	b, _ := v.([]byte)
-
-	return b
+	return m.headers[key]
 }
 
-func mapHeaders(headers []kafka.Header) *sync.Map {
-	res := &sync.Map{}
-
-	for _, s := range headers {
-		res.Store(s.Key, s.Value)
+// AsKafkaMessage returns the message as a kafka.Message.
+func (m *Message) AsKafkaMessage() *kafka.Message {
+	km := &kafka.Message{
+		TopicPartition: kafka.TopicPartition{
+			Topic:     &m.Topic,
+			Partition: m.Partition,
+		},
+		Key:       m.Key,
+		Value:     m.Value,
+		Timestamp: m.Timestamp,
+		Opaque:    m,
 	}
 
-	return res
+	if m.headers != nil {
+		km.Headers = make([]kafka.Header, 0, len(m.headers))
+
+		for k, v := range m.headers {
+			km.Headers = append(km.Headers, kafka.Header{
+				Key:   k,
+				Value: v,
+			})
+		}
+	}
+
+	return km
+}
+
+func mapHeaders(headers []kafka.Header) map[string][]byte {
+	m := make(map[string][]byte, len(headers))
+
+	for _, h := range headers {
+		m[h.Key] = h.Value
+	}
+
+	return m
 }

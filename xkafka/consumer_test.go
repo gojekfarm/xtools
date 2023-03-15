@@ -33,6 +33,8 @@ func TestNewConsumer(t *testing.T) {
 		PollTimeout(testTimeout),
 		MetadataTimeout(testTimeout),
 		ShutdownTimeout(testTimeout),
+		Concurrency(2),
+		ErrorHandler(NoopErrorHandler),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, consumer)
@@ -43,6 +45,8 @@ func TestNewConsumer(t *testing.T) {
 	assert.EqualValues(t, testTimeout, consumer.config.pollTimeout)
 	assert.EqualValues(t, testTimeout, consumer.config.metadataTimeout)
 	assert.EqualValues(t, testTimeout, consumer.config.shutdownTimeout)
+	assert.EqualValues(t, 2, consumer.config.concurrency)
+	assert.NotNil(t, consumer.config.errorHandler)
 
 	expectedConfig := cfg
 	expectedConfig["bootstrap.servers"] = "localhost:9092"

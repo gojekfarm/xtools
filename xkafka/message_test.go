@@ -21,17 +21,72 @@ func TestNewMessage(t *testing.T) {
 		Value:     []byte("value"),
 		Key:       []byte("key"),
 		Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
+		Headers: []kafka.Header{
+			{
+				Key:   "x-header",
+				Value: []byte("header-value"),
+			},
+		},
+	}
+
+	expectMsg := &Message{
+		Group:     "consumer-group-1",
+		Topic:     topic,
+		Partition: 1,
+		Key:       []byte("key"),
+		Value:     []byte("value"),
+		Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
+		headers: map[string][]byte{
+			"x-header": []byte("header-value"),
+		},
 	}
 
 	m := NewMessage("consumer-group-1", km)
+	assert.Equal(t, expectMsg.Group, m.Group)
+	assert.Equal(t, expectMsg.Topic, m.Topic)
+	assert.Equal(t, expectMsg.Partition, m.Partition)
+	assert.Equal(t, expectMsg.Key, m.Key)
+	assert.Equal(t, expectMsg.Value, m.Value)
+	assert.Equal(t, expectMsg.Timestamp, m.Timestamp)
+	assert.Equal(t, expectMsg.headers, m.headers)
+}
 
-	assert.Equal(t, topic, m.Topic)
-	assert.EqualValues(t, 1, m.Partition)
-	assert.Equal(t, "consumer-group-1", m.Group)
-	assert.Equal(t, []byte("key"), m.Key)
-	assert.Equal(t, []byte("value"), m.Value)
-	assert.Equal(t, Unassigned, m.Status)
-	assert.EqualValues(t, time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC), m.Timestamp)
+func TestMessageAsKafkaMessage(t *testing.T) {
+	expectKafka := &kafka.Message{
+		TopicPartition: kafka.TopicPartition{
+			Topic:     &topic,
+			Partition: 1,
+		},
+		Value:     []byte("value"),
+		Key:       []byte("key"),
+		Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
+		Headers: []kafka.Header{
+			{
+				Key:   "x-header",
+				Value: []byte("header-value"),
+			},
+		},
+	}
+
+	msg := &Message{
+		Group:     "consumer-group-1",
+		Topic:     topic,
+		Partition: 1,
+		Key:       []byte("key"),
+		Value:     []byte("value"),
+		Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
+		headers: map[string][]byte{
+			"x-header": []byte("header-value"),
+		},
+	}
+
+	kmsg := msg.AsKafkaMessage()
+	assert.EqualValues(t, expectKafka.TopicPartition, kmsg.TopicPartition)
+	assert.Equal(t, expectKafka.Value, kmsg.Value)
+	assert.Equal(t, expectKafka.Key, kmsg.Key)
+	assert.Equal(t, expectKafka.Timestamp, kmsg.Timestamp)
+	assert.Equal(t, expectKafka.Headers, kmsg.Headers)
+	assert.NotNil(t, kmsg.Opaque)
 }
 
 func TestAck(t *testing.T) {

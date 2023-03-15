@@ -169,15 +169,10 @@ func (p *Producer) handleEvent(e kafka.Event) error {
 }
 
 func newKafkaMessage(msg *Message) *kafka.Message {
-	return &kafka.Message{
-		TopicPartition: kafka.TopicPartition{
-			Topic:     &msg.Topic,
-			Partition: kafka.PartitionAny,
-		},
-		Key:           msg.Key,
-		Value:         msg.Value,
-		Timestamp:     msg.Timestamp,
-		TimestampType: kafka.TimestampCreateTime,
-		Opaque:        msg,
-	}
+	km := msg.AsKafkaMessage()
+
+	km.TopicPartition.Partition = kafka.PartitionAny
+	km.TimestampType = kafka.TimestampCreateTime
+
+	return km
 }
