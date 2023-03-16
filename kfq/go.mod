@@ -4,13 +4,17 @@ go 1.19
 
 replace github.com/gojekfarm/xtools/xkafka => ../xkafka
 
-require github.com/gojekfarm/xtools/xkafka v0.0.0-00010101000000-000000000000
+require (
+	github.com/confluentinc/confluent-kafka-go v1.9.2
+	github.com/gojekfarm/xtools/xkafka v0.0.0-00010101000000-000000000000
+	github.com/rs/xid v1.4.0
+	github.com/sethvargo/go-retry v0.2.4
+)
 
 require (
 	github.com/cockroachdb/errors v1.9.0 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
-	github.com/confluentinc/confluent-kafka-go v1.9.2 // indirect
 	github.com/getsentry/sentry-go v0.13.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/kr/pretty v0.3.0 // indirect

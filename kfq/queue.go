@@ -4,6 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/rs/xid"
+	"github.com/sethvargo/go-retry"
+
 	"github.com/gojekfarm/xtools/xkafka"
 )
 
@@ -21,43 +24,98 @@ type MessageStorer interface {
 type Queue struct {
 	name  string
 	store MessageStorer
+	retry retry.Backoff
 
 	// retry config
 	maxRetries  int
 	delay       time.Duration
 	jitter      time.Duration
 	maxDuration time.Duration
+
+	// error handling
+	isErrorRetriable IsErrorRetriable
 }
 
 // NewQueue creates a new queue.
-func NewQueue(name string, opts ...Option) *Queue {
+func NewQueue(name string, opts ...Option) (*Queue, error) {
 	q := &Queue{
-		name:        name,
-		maxRetries:  10,
-		delay:       200 * time.Millisecond,
-		jitter:      50 * time.Millisecond,
-		maxDuration: 5 * time.Minute,
+		name:             name,
+		maxRetries:       10,
+		delay:            200 * time.Millisecond,
+		jitter:           50 * time.Millisecond,
+		maxDuration:      5 * time.Minute,
+		isErrorRetriable: isErrRetriable,
 	}
 
 	for _, opt := range opts {
 		opt.apply(q)
 	}
 
-	return q
+	expBackoff := retry.NewExponential(q.delay)
+	expBackoff = retry.WithJitter(q.jitter, expBackoff)
+	expBackoff = retry.WithMaxDuration(q.maxDuration, expBackoff)
+	expBackoff = retry.WithMaxRetries(uint64(q.maxRetries), expBackoff)
+
+	q.retry = expBackoff
+
+	return q, nil
 }
 
 // Middleware returns a middleware which handles message lifecycle.
 func (q *Queue) Middleware() xkafka.MiddlewareFunc {
 	return func(next xkafka.Handler) xkafka.Handler {
 		return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
-			// TODO: add retry logic
+			ensureID(msg)
 
-			return next.Handle(ctx, msg)
+			if err := q.store.Put(ctx, msg); err != nil {
+				return err
+			}
+
+			err := retry.Do(ctx, q.retry, func(ctx context.Context) error {
+				err := next.Handle(ctx, msg)
+				if err != nil && q.isErrorRetriable(err) {
+					return retry.RetryableError(err)
+				} else if err != nil {
+					return err
+				}
+
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+
+			_ = q.store.Delete(ctx, msg.ID)
+
+			return nil
 		})
 	}
 }
 
 // Run manages the lifecycle of the queue.
 func (q *Queue) Run(ctx context.Context) error {
-	return nil
+	defer q.Close()
+
+	return q.Start(ctx)
+}
+
+// Start starts the queue.
+func (q *Queue) Start(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+// Close closes the queue.
+func (q *Queue) Close() {
+
+}
+
+func ensureID(msg *xkafka.Message) {
+	if msg.ID == "" {
+		msg.ID = xid.New().String()
+	}
 }

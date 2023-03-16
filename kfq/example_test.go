@@ -12,14 +12,20 @@ func ExampleQueue_producer() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Create a new queue with default options.
-	q := NewQueue("producer-queue")
+	q, err := NewQueue("producer-queue")
+	if err != nil {
+		panic(err)
+	}
 
 	// Create a new queue with custom options.
-	q = NewQueue(
+	q, err = NewQueue(
 		"producer-queue",
 		MaxRetries(10),
 		MaxDuration(1*time.Minute),
 	)
+	if err != nil {
+		panic(err)
+	}
 
 	// Create a new message.
 	msg := &xkafka.Message{
@@ -69,14 +75,20 @@ func ExampleQueue_consumer() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Create a new queue with default options.
-	q := NewQueue("consumer-queue")
+	q, err := NewQueue("consumer-queue")
+	if err != nil {
+		panic(err)
+	}
 
 	// Create a new queue with custom options.
-	q = NewQueue(
+	q, err = NewQueue(
 		"consumer-queue",
 		MaxRetries(10),
 		MaxDuration(1*time.Minute),
 	)
+	if err != nil {
+		panic(err)
+	}
 
 	handler := func(ctx context.Context, msg *xkafka.Message) error {
 		return nil
