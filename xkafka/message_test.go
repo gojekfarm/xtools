@@ -41,7 +41,7 @@ func TestNewMessage(t *testing.T) {
 		},
 	}
 
-	m := NewMessage("consumer-group-1", km)
+	m := newMessage("consumer-group-1", km)
 	assert.Equal(t, expectMsg.Group, m.Group)
 	assert.Equal(t, expectMsg.Topic, m.Topic)
 	assert.Equal(t, expectMsg.Partition, m.Partition)
@@ -101,7 +101,7 @@ func TestAck(t *testing.T) {
 	}
 
 	t.Run("FirstAckSuccess", func(t *testing.T) {
-		m := NewMessage("consumer-1", km)
+		m := newMessage("consumer-1", km)
 		res := m.AckSuccess()
 
 		assert.True(t, res)
@@ -109,7 +109,7 @@ func TestAck(t *testing.T) {
 	})
 
 	t.Run("FirstAckSkip", func(t *testing.T) {
-		m := NewMessage("consumer-1", km)
+		m := newMessage("consumer-1", km)
 		res := m.AckSkip()
 
 		assert.True(t, res)
@@ -117,7 +117,7 @@ func TestAck(t *testing.T) {
 	})
 
 	t.Run("FirstAckFail", func(t *testing.T) {
-		m := NewMessage("consumer-1", km)
+		m := newMessage("consumer-1", km)
 		err := errors.New("some-err")
 		res := m.AckFail(err)
 
@@ -127,7 +127,7 @@ func TestAck(t *testing.T) {
 	})
 
 	t.Run("SuccessAfterFailure", func(t *testing.T) {
-		m := NewMessage("consumer-1", km)
+		m := newMessage("consumer-1", km)
 
 		m.AckFail(errors.New("error"))
 		res := m.AckSuccess()
@@ -137,7 +137,7 @@ func TestAck(t *testing.T) {
 	})
 
 	t.Run("FailureAfterSuccess", func(t *testing.T) {
-		m := NewMessage("consumer-1", km)
+		m := newMessage("consumer-1", km)
 		m.AckSuccess()
 
 		res := m.AckFail(errors.New("new-found-error"))
@@ -148,7 +148,7 @@ func TestAck(t *testing.T) {
 	})
 
 	t.Run("SkipAfterSuccess", func(t *testing.T) {
-		m := NewMessage("consumer-1", km)
+		m := newMessage("consumer-1", km)
 		m.AckSuccess()
 
 		res := m.AckSkip()
@@ -264,7 +264,7 @@ func TestHeaders(t *testing.T) {
 		Timestamp: time.Date(2020, 1, 1, 23, 59, 59, 0, time.UTC),
 	}
 
-	m := NewMessage("consumer-group-1", km)
+	m := newMessage("consumer-group-1", km)
 
 	m.SetHeader("foo", []byte("bar"))
 	assert.Equal(t, m.Headers(), map[string][]byte{"foo": []byte("bar")})

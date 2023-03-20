@@ -45,8 +45,8 @@ type Message struct {
 	err          error
 }
 
-// NewMessage creates a new message from a kafka message.
-func NewMessage(group string, raw *kafka.Message) *Message {
+// newMessage creates a new message from a kafka message.
+func newMessage(group string, raw *kafka.Message) *Message {
 	return &Message{
 		Topic:     *raw.TopicPartition.Topic,
 		Partition: raw.TopicPartition.Partition,

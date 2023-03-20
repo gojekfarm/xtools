@@ -121,7 +121,7 @@ func (c *Consumer) Start(ctx context.Context) error {
 }
 
 func (c *Consumer) runHandler(ctx context.Context, handler Handler, km *kafka.Message, errChan chan error) {
-	msg := NewMessage(c.name, km)
+	msg := newMessage(c.name, km)
 
 	err := handler.Handle(ctx, msg)
 
