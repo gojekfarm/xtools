@@ -84,7 +84,7 @@ func (p *Producer) Start(ctx context.Context) error {
 
 // Run manages both starting and stopping the producer.
 func (p *Producer) Run(ctx context.Context) error {
-	defer p.Close(ctx)
+	defer p.Close()
 
 	return p.Start(ctx)
 }
@@ -95,13 +95,13 @@ func (p *Producer) AsyncPublish(ctx context.Context, msg *Message) error {
 }
 
 func (p *Producer) asyncPublish() HandlerFunc {
-	return HandlerFunc(func(ctx context.Context, msg *Message) error {
+	return func(ctx context.Context, msg *Message) error {
 		km := newKafkaMessage(msg)
 
 		p.kafka.ProduceChannel() <- km
 
 		return nil
-	})
+	}
 }
 
 // Publish sends messages to the kafka topic synchronously.
@@ -111,7 +111,7 @@ func (p *Producer) Publish(ctx context.Context, msg *Message) error {
 }
 
 func (p *Producer) publish() HandlerFunc {
-	return HandlerFunc(func(ctx context.Context, msg *Message) error {
+	return func(ctx context.Context, msg *Message) error {
 		deliveryChan := make(chan kafka.Event)
 		defer close(deliveryChan)
 
@@ -134,11 +134,11 @@ func (p *Producer) publish() HandlerFunc {
 		e := <-deliveryChan
 
 		return p.handleEvent(e)
-	})
+	}
 }
 
 // Close waits for all messages to be delivered and closes the producer.
-func (p *Producer) Close(ctx context.Context) {
+func (p *Producer) Close() {
 	p.kafka.Flush(int(p.config.shutdownTimeout.Milliseconds()))
 
 	p.kafka.Close()
