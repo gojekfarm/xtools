@@ -270,3 +270,22 @@ func TestHeaders(t *testing.T) {
 	assert.Equal(t, m.Headers(), map[string][]byte{"foo": []byte("bar")})
 	assert.Equal(t, m.Header("foo"), []byte("bar"))
 }
+
+func TestStatus_String(t *testing.T) {
+	tests := []struct {
+		name string
+		s    Status
+		want string
+	}{
+		{name: "Unassigned", s: Unassigned, want: "UNASSIGNED"},
+		{name: "Success", s: Success, want: "SUCCESS"},
+		{name: "Fail", s: Fail, want: "FAIL"},
+		{name: "Skip", s: Skip, want: "SKIP"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, tt.s.String(), "String()")
+		})
+	}
+}
