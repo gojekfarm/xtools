@@ -31,12 +31,14 @@ func TestNewProducer(t *testing.T) {
 	assert.EqualValues(t, testBrokers, producer.config.brokers)
 	assert.EqualValues(t, testTimeout, producer.config.shutdownTimeout)
 
-	expectedConfig := cfg
-	expectedConfig["bootstrap.servers"] = "localhost:9092"
-	expectedConfig["client.id"] = "test-producer"
-	expectedConfig["default.topic.config"] = kafka.ConfigMap{
-		"acks":        1,
-		"partitioner": "consistent_random",
+	expectedConfig := ConfigMap{
+		"socket.keepalive.enable": true,
+		"bootstrap.servers":       "localhost:9092",
+		"client.id":               "test-producer",
+		"default.topic.config": kafka.ConfigMap{
+			"acks":        1,
+			"partitioner": "consistent_random",
+		},
 	}
 
 	assert.EqualValues(t, expectedConfig, producer.config.configMap)
@@ -60,8 +62,6 @@ func TestNewProducerError(t *testing.T) {
 }
 
 func TestProducerPublish(t *testing.T) {
-	producer, mockKafka := newTestProducer(t)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	msg := newFakeMessage()
 	km := &kafka.Message{
@@ -80,8 +80,7 @@ func TestProducerPublish(t *testing.T) {
 		assert.Equal(t, km.Value, m.Value)
 		assert.Equal(t, Success, m.Status)
 	}
-
-	producer.config.deliveryCb = DeliveryCallback(callback)
+	producer, mockKafka := newTestProducer(t, DeliveryCallback(callback))
 
 	msg.AddCallback(callback)
 
@@ -111,8 +110,6 @@ func TestProducerPublish(t *testing.T) {
 }
 
 func TestProducerPublishError(t *testing.T) {
-	producer, mockKafka := newTestProducer(t)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	msg := newFakeMessage()
 	km := &kafka.Message{
@@ -127,11 +124,14 @@ func TestProducerPublishError(t *testing.T) {
 	}
 	expectErr := fmt.Errorf("kafka error")
 
-	msg.AddCallback(func(m *Message) {
+	callback := func(m *Message) {
 		assert.Equal(t, km.Key, m.Key)
 		assert.Equal(t, km.Value, m.Value)
 		assert.Equal(t, Fail, m.Status)
-	})
+	}
+	producer, mockKafka := newTestProducer(t, DeliveryCallback(callback))
+
+	msg.AddCallback(callback)
 
 	mockKafka.On("Produce", km, mock.Anything).Run(func(args mock.Arguments) {
 		go func() {
@@ -163,8 +163,6 @@ func TestProducerPublishError(t *testing.T) {
 }
 
 func TestProducerPublishRetryableError(t *testing.T) {
-	producer, mockKafka := newTestProducer(t)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	msg := newFakeMessage()
 	km := &kafka.Message{
@@ -184,6 +182,7 @@ func TestProducerPublishRetryableError(t *testing.T) {
 		assert.Equal(t, km.Value, m.Value)
 		assert.Equal(t, Fail, m.Status)
 	}
+	producer, mockKafka := newTestProducer(t, DeliveryCallback(callback))
 	msg.AddCallback(callback)
 
 	mockKafka.On("Produce", km, mock.Anything).Run(func(args mock.Arguments) {
@@ -203,8 +202,6 @@ func TestProducerPublishRetryableError(t *testing.T) {
 }
 
 func TestProducerAsyncPublish(t *testing.T) {
-	producer, mockKafka := newTestProducer(t)
-
 	msg := newFakeMessage()
 	expect := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{
@@ -223,8 +220,7 @@ func TestProducerAsyncPublish(t *testing.T) {
 		assert.Equal(t, expect.Value, m.Value)
 		assert.Equal(t, Success, m.Status)
 	}
-
-	producer.config.deliveryCb = DeliveryCallback(callback)
+	producer, mockKafka := newTestProducer(t, DeliveryCallback(callback))
 
 	msg.AddCallback(callback)
 
@@ -262,8 +258,6 @@ func TestProducerAsyncPublish(t *testing.T) {
 }
 
 func TestProducerAsyncPublishError(t *testing.T) {
-	producer, mockKafka := newTestProducer(t)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	msg := newFakeMessage()
 	expect := &kafka.Message{
@@ -282,8 +276,7 @@ func TestProducerAsyncPublishError(t *testing.T) {
 		assert.Equal(t, expect.Value, m.Value)
 		assert.Equal(t, Fail, m.Status)
 	}
-
-	producer.config.deliveryCb = DeliveryCallback(callback)
+	producer, mockKafka := newTestProducer(t, DeliveryCallback(callback))
 
 	msg.AddCallback(callback)
 
@@ -346,8 +339,8 @@ func TestProducerMiddlewareExecutionOrder(t *testing.T) {
 		}()
 	}).Return(nil)
 
-	preExec := []string{}
-	postExec := []string{}
+	var preExec []string
+	var postExec []string
 
 	middlewares := []MiddlewareFunc{
 		testMiddleware("middleware1", &preExec, &postExec),
@@ -428,18 +421,18 @@ func TestProducerIgnoreOpaqueMessage(t *testing.T) {
 	mockKafka.AssertExpectations(t)
 }
 
-func newTestProducer(t *testing.T) (*Producer, *MockProducerClient) {
+func newTestProducer(t *testing.T, opts ...Option) (*Producer, *MockProducerClient) {
 	mockKafka := &MockProducerClient{}
 
 	mockKafka.On("Events").Return(make(chan kafka.Event, 1))
 	mockKafka.On("Close").Return()
 	mockKafka.On("Flush", mock.Anything).Return(0)
 
+	opts = append(opts, testBrokers, mockProducerFunc(mockKafka), ShutdownTimeout(time.Second))
+
 	producer, err := NewProducer(
 		"producer-id",
-		testBrokers,
-		mockProducerFunc(mockKafka),
-		ShutdownTimeout(1*time.Second),
+		opts...,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, producer)
