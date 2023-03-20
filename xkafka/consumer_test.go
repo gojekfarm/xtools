@@ -15,7 +15,7 @@ import (
 var (
 	testTopics  = Topics{"test-topic"}
 	testBrokers = Brokers{"localhost:9092"}
-	testTimeout = 1 * time.Second
+	testTimeout = time.Second
 )
 
 func TestNewConsumer(t *testing.T) {
@@ -48,9 +48,12 @@ func TestNewConsumer(t *testing.T) {
 	assert.EqualValues(t, 2, consumer.config.concurrency)
 	assert.NotNil(t, consumer.config.errorHandler)
 
-	expectedConfig := cfg
-	expectedConfig["bootstrap.servers"] = "localhost:9092"
-	expectedConfig["group.id"] = "test-consumer"
+	expectedConfig := kafka.ConfigMap{
+		"bootstrap.servers":  "localhost:9092",
+		"group.id":           "test-consumer",
+		"auto.offset.reset":  "earliest",
+		"enable.auto.commit": true,
+	}
 
 	assert.EqualValues(t, expectedConfig, consumer.config.configMap)
 }
@@ -266,8 +269,8 @@ func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 		return nil
 	})
 
-	preExec := []string{}
-	postExec := []string{}
+	var preExec []string
+	var postExec []string
 
 	middlewares := []MiddlewareFunc{
 		testMiddleware("middleware1", &preExec, &postExec),

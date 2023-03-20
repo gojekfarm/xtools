@@ -25,7 +25,7 @@ type Topics []string
 func (t Topics) apply(o *options) { o.topics = t }
 
 // ConfigMap is an option to set kafka.ConfigMap.
-type ConfigMap kafka.ConfigMap
+type ConfigMap map[string]interface{}
 
 func (cm ConfigMap) apply(o *options) {
 	for k, v := range cm {

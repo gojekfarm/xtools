@@ -45,7 +45,7 @@ func NewConsumer(name string, handler Handler, opts ...Option) (*Consumer, error
 }
 
 // GetMetadata returns the metadata for the consumer.
-func (c *Consumer) GetMetadata() (*kafka.Metadata, error) {
+func (c *Consumer) GetMetadata() (*Metadata, error) {
 	return c.kafka.GetMetadata(nil, false, int(c.config.metadataTimeout.Milliseconds()))
 }
 

@@ -31,7 +31,7 @@ func TestNewProducer(t *testing.T) {
 	assert.EqualValues(t, testBrokers, producer.config.brokers)
 	assert.EqualValues(t, testTimeout, producer.config.shutdownTimeout)
 
-	expectedConfig := ConfigMap{
+	expectedConfig := kafka.ConfigMap{
 		"socket.keepalive.enable": true,
 		"bootstrap.servers":       "localhost:9092",
 		"client.id":               "test-producer",

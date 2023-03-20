@@ -169,7 +169,7 @@ func (p *Producer) handleEvent(e kafka.Event) error {
 }
 
 func newKafkaMessage(msg *Message) *kafka.Message {
-	km := msg.AsKafkaMessage()
+	km := msg.asKafkaMessage()
 
 	km.TopicPartition.Partition = kafka.PartitionAny
 	km.TimestampType = kafka.TimestampCreateTime

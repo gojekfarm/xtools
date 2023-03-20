@@ -80,7 +80,7 @@ func TestMessageAsKafkaMessage(t *testing.T) {
 		},
 	}
 
-	kmsg := msg.AsKafkaMessage()
+	kmsg := msg.asKafkaMessage()
 	assert.EqualValues(t, expectKafka.TopicPartition, kmsg.TopicPartition)
 	assert.Equal(t, expectKafka.Value, kmsg.Value)
 	assert.Equal(t, expectKafka.Key, kmsg.Key)

@@ -135,8 +135,8 @@ func (m *Message) Header(key string) []byte {
 	return m.headers[key]
 }
 
-// AsKafkaMessage returns the message as a kafka.Message.
-func (m *Message) AsKafkaMessage() *kafka.Message {
+// asKafkaMessage returns the message as a kafka.Message.
+func (m *Message) asKafkaMessage() *kafka.Message {
 	km := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{
 			Topic:     &m.Topic,
