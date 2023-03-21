@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Added
+- [`xkafka`](./xkafka) Added `xkafka` package with `Producer` and `Consumer` implementations that support middleware & HTTP-like handlers.
+
 ## [0.1.1]
 
 ### Changed
@@ -21,7 +26,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`generic`](./generic) package added
 - [`xproto`](./xproto) package added
 
-[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.2.0
 [0.1.1]: https://github.com/gojekfarm/xtools/releases/tag/v0.1.1
 [0.1.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.1.0
 
