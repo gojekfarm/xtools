@@ -1,12 +1,23 @@
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
+GO_118_MOD_DIRS := $(shell egrep -lir --include=go.mod "go 1.18" . | xargs -I{} dirname {} | sort)
+# extract go minor version from go version output
+GO_MINOR_VERSION := $(shell go version | cut -d' ' -f3 | cut -d'.' -f2)
+
+# set build directory based on go minor version
+ifeq ($(GO_MINOR_VERSION),18)
+GO_BUILD_DIRS := $(GO_118_MOD_DIRS)
+else
+GO_BUILD_DIRS := $(ALL_GO_MOD_DIRS)
+endif
+
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 BIN_DIR := $(PROJECT_DIR)/.bin
 
 fmt:
-	@$(call run-go-mod-dir,go vet ./...,"go fmt")
+	@$(call run-go-mod-dir,go fmt ./...,"go fmt")
 
 gofmt:
-	@$(call run-go-mod-dir,go vet ./...,"gofmt -s -w")
+	@$(call run-go-mod-dir,go fmt ./...,"gofmt -s -w")
 
 vet:
 	@$(call run-go-mod-dir,go vet ./...,"go vet")
@@ -23,6 +34,10 @@ imports: gci
 .PHONY: gomod.tidy
 gomod.tidy:
 	@$(call run-go-mod-dir,go mod tidy,"go mod tidy")
+
+.PHONY: go.generate
+go.generate: mockery protoc
+	@$(call run-go-mod-dir,go generate ./...,"go generate")
 
 ## test: Run all tests
 .PHONY: test
@@ -60,6 +75,14 @@ GOCOVXML = $(BIN_DIR)/gocov-xml
 gocov-xml:
 	$(call go-get-tool,$(GOCOVXML),github.com/AlekSi/gocov-xml@v1.0.0)
 
+MOCKERY = $(BIN_DIR)/mockery
+mockery:
+	$(call go-get-tool,$(MOCKERY),github.com/vektra/mockery/v2@v2.20.0)
+
+PROTOC = $(BIN_DIR)/protoc
+protoc:
+	$(call go-get-tool,$(PROTOC),google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1)
+
 # go-get-tool will 'go get' any package $2 and install it to $1.
 define go-get-tool
 @[ -f $(1) ] || { \
@@ -77,8 +100,8 @@ endef
 # a go.mod file
 define run-go-mod-dir
 set -e; \
-for dir in $(ALL_GO_MOD_DIRS); do \
+for dir in $(GO_BUILD_DIRS); do \
 	[ -z $(2) ] || echo "$(2) $${dir}/..."; \
-	cd "$(PROJECT_DIR)/$${dir}" && $(1); \
+	cd "$(PROJECT_DIR)/$${dir}" && PATH=$(BIN_DIR):$$PATH $(1); \
 done;
 endef
