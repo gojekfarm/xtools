@@ -139,8 +139,11 @@ healthz check passed
 
 			NewProbeHandler(tt.opts).ServeHTTP(rw, req)
 
-			b, err := io.ReadAll(rw.Result().Body)
+			rc := rw.Result().Body
+			b, err := io.ReadAll(rc)
+
 			assert.NoError(t, err)
+			assert.NoError(t, rc.Close())
 
 			assert.Equal(t, tt.want, string(b))
 
