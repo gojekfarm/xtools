@@ -2,8 +2,6 @@ package xpod
 
 import (
 	"errors"
-	"github.com/gojekfarm/xtools/generic/slice"
-	"github.com/stretchr/testify/mock"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +9,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/gojekfarm/xtools/generic/slice"
 )
 
 func TestProbeHandler_serveHealth(t *testing.T) {
