@@ -10,13 +10,13 @@ import (
 func TestRegisterConsumerMetrics(t *testing.T) {
 	r := prometheus.NewRegistry()
 
-	err := RegisterConsumerMetrics(r)
-	assert.NoError(t, err)
+	assert.NoError(t, RegisterConsumerMetrics(r))
+	assert.Error(t, RegisterConsumerMetrics(r))
 }
 
 func TestRegisterProducerMetrics(t *testing.T) {
 	r := prometheus.NewRegistry()
 
-	err := RegisterProducerMetrics(r)
-	assert.NoError(t, err)
+	assert.NoError(t, RegisterProducerMetrics(r))
+	assert.Error(t, RegisterProducerMetrics(r))
 }
