@@ -12,9 +12,9 @@ replace (
 
 require (
 	github.com/gojekfarm/xrun v0.3.0
-	github.com/gojekfarm/xtools/xkafka v0.2.0
-	github.com/gojekfarm/xtools/xkafka/middleware/prometheus v0.0.0-00010101000000-000000000000
-	github.com/gojekfarm/xtools/xkafka/middleware/zerolog v0.0.0-00010101000000-000000000000
+	github.com/gojekfarm/xtools/xkafka v0.3.0
+	github.com/gojekfarm/xtools/xkafka/middleware/prometheus v0.3.0
+	github.com/gojekfarm/xtools/xkafka/middleware/zerolog v0.3.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rs/xid v1.4.0
 	github.com/rs/zerolog v1.29.0
