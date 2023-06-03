@@ -3,6 +3,9 @@ GO_118_MOD_DIRS := $(shell egrep -lir --include=go.mod "go 1.18" . | xargs -I{} 
 # extract go minor version from go version output
 GO_MINOR_VERSION := $(shell go version | cut -d' ' -f3 | cut -d'.' -f2)
 
+EXCLUDE_DIRS := ./examples
+EXCLUDE_GO_MOD_DIRS := $(shell find $(EXCLUDE_DIRS) -type f -name 'go.mod' -exec dirname {} \; | sort)
+
 # set build directory based on go minor version
 ifeq ($(GO_MINOR_VERSION),18)
 GO_BUILD_DIRS := $(GO_118_MOD_DIRS)
@@ -47,8 +50,8 @@ test-run:
 	@$(call run-go-mod-dir,go test -race -covermode=atomic -coverprofile=coverage.out ./...,"go test")
 
 test-cov: gocov
-	@$(call run-go-mod-dir,$(GOCOV) convert coverage.out > coverage.json)
-	@$(call run-go-mod-dir,$(GOCOV) convert coverage.out | $(GOCOV) report)
+	@$(call run-go-mod-dir-exclude,$(GOCOV) convert coverage.out > coverage.json,$(EXCLUDE_GO_MOD_DIRS),"gocov convert")
+	@$(call run-go-mod-dir-exclude,$(GOCOV) convert coverage.out | $(GOCOV) report,$(EXCLUDE_GO_MOD_DIRS),"gocov report")
 
 test-xml: test-cov gocov-xml
 	@jq -n '{ Packages: [ inputs.Packages ] | add }' $(shell find . -type f -name 'coverage.json' | sort) | $(GOCOVXML) > coverage.xml
@@ -102,6 +105,16 @@ define run-go-mod-dir
 set -e; \
 for dir in $(GO_BUILD_DIRS); do \
 	[ -z $(2) ] || echo "$(2) $${dir}/..."; \
+	cd "$(PROJECT_DIR)/$${dir}" && PATH=$(BIN_DIR):$$PATH $(1); \
+done;
+endef
+
+# run-go-mod-dir-exclude runs the given $1 command in all the directories with
+# a go.mod file except the directories in $2
+define run-go-mod-dir-exclude
+set -e; \
+for dir in $(filter-out $(2),$(GO_BUILD_DIRS)); do \
+	[ -z $(3) ] || echo "$(3) $${dir}/..."; \
 	cd "$(PROJECT_DIR)/$${dir}" && PATH=$(BIN_DIR):$$PATH $(1); \
 done;
 endef
