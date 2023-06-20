@@ -103,9 +103,11 @@ package_dirs() {
     #  deeper/package/directory/a
     #  ...
     #
-    find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; \
-        | sed 's/^\.\///' \
-        | sort
+    # Making sure to exclude any packages in the ./x/* subdirectories.
+    find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; |
+        grep -E -v "^\.\/x(\/\w+)?$" |
+        sed 's/^\.\///' |
+        sort
 }
 
 git_tag() {
