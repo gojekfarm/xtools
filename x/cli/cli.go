@@ -142,15 +142,13 @@ func bindFlags(
 
 		if field.Type.Kind() == reflect.Struct {
 			nestedFlagPrefix := flag + "."
+			nestedEnvPrefix := env + "_"
 
 			flagPrefixDetails := strings.Split(field.Tag.Get("flag-prefix"), ",")
-			flagPrefix := flagPrefixDetails[0]
 
-			if flagPrefix != "" {
+			if flagPrefix := flagPrefixDetails[0]; flagPrefix != "" {
 				nestedFlagPrefix = flagPrefix + nestedFlagPrefix
 			}
-
-			nestedEnvPrefix := env + "_"
 
 			if envPrefix := field.Tag.Get("env-prefix"); envPrefix != "" {
 				nestedEnvPrefix = envPrefix + nestedEnvPrefix
