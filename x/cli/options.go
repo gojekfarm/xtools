@@ -15,11 +15,22 @@ type Option interface {
 // ConfigObject is an option that can be used to specify a configuration object.
 func ConfigObject(cfg interface{}) Option { return optionFunc(func(o *options) { o.cfgObj = cfg }) }
 
+// Description is an option that can be used to specify a command description.
+type Description struct {
+	// Short is a short description of the command.
+	Short string
+	// Long is a long description of the command.
+	Long string
+}
+
+func (d Description) apply(o *options) { o.cmdDescription = d }
+
 // Command is an option that can be used to specify a command.
 type Command struct {
-	Name     string
-	Run      CommandRunner
-	Commands []Command
+	Name        string
+	Description Description
+	Run         CommandRunner
+	Commands    []Command
 }
 
 // Commands is an option that can be used to specify multiple commands.
@@ -32,10 +43,9 @@ type optionFunc func(*options)
 func (f optionFunc) apply(o *options) { f(o) }
 
 type options struct {
-	cfgObj       interface{}
-	cmdShortDesc string
-	cmdLongDesc  string
-	cfgFile      string
+	cfgObj         interface{}
+	cmdDescription Description
+	cfgFile        string
 
 	commands []Command
 }

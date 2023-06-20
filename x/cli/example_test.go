@@ -11,10 +11,10 @@ import (
 )
 
 type Config struct {
-	Debug bool `flag:"debug" env:"DEBUG" default:"false" global-flag:"true" flag-usage:"enable debug mode"`
+	Debug bool `flag:"debug,global" env:"DEBUG" default:"false" flag-usage:"enable debug mode"`
 	Log   struct {
 		Level string `flag:"level" env:"LEVEL" default:"info"`
-	} `flag-prefix:"log" env-prefix:"LOG" global-flag:"true"`
+	} `flag-prefix:"log,global" env-prefix:"LOG"`
 	Host     string `flag:"host" env:"HOST" default:"localhost" sub-commands:"server"`
 	Port     int    `flag:"port" env:"PORT" default:"8080" sub-commands:"server"`
 	Database struct {
@@ -32,6 +32,10 @@ func ExampleNew() {
 		cli.Commands{
 			{
 				Name: "migrate",
+				Description: cli.Description{
+					Short: "migrate database",
+					Long:  "migrate database schema",
+				},
 				Run: func(ctx context.Context, cfg interface{}) error {
 					fmt.Println("run migrate")
 					if v, ok := cfg.(*Config); !ok {
