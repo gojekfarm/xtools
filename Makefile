@@ -3,7 +3,7 @@ GO_118_MOD_DIRS := $(shell egrep -lir --include=go.mod "go 1.18" . | xargs -I{} 
 # extract go minor version from go version output
 GO_MINOR_VERSION := $(shell go version | cut -d' ' -f3 | cut -d'.' -f2)
 
-EXCLUDE_DIRS := ./examples,./x
+EXCLUDE_DIRS := ./examples
 EXCLUDE_GO_MOD_DIRS := $(shell find $(EXCLUDE_DIRS) -type f -name 'go.mod' -exec dirname {} \; | sort)
 
 # set build directory based on go minor version
@@ -64,7 +64,7 @@ check: fmt vet imports lint
 
 GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 golangci-lint:
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1)
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3)
 
 GCI = $(BIN_DIR)/gci
 gci:

@@ -29,7 +29,7 @@ func ExampleNew() {
 	c := cli.New(
 		"my-command",
 		cli.ConfigObject(cfg),
-		cli.SubCommands{
+		cli.Commands{
 			{
 				Name: "migrate",
 				Run: func(ctx context.Context, cfg interface{}) error {
@@ -41,7 +41,7 @@ func ExampleNew() {
 					}
 					return nil
 				},
-				Commands: []cli.SubCommand{
+				Commands: []cli.Command{
 					{
 						Name: "up",
 						Run: func(ctx context.Context, cfg interface{}) error {
