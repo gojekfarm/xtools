@@ -53,7 +53,7 @@ func newCLI(pn string, o *options) *CLI {
 	v := viper.New()
 	v.AutomaticEnv()
 
-	_ = bindFlags(rc, rc, reflect.ValueOf(o.cfgObj).Elem(), v, "", "", rc.Name())
+	_ = bindFlags(rc, rc, reflect.ValueOf(o.cfgObj).Elem(), v, "", "", rc.Name(), false)
 
 	rc.AddCommand(&cobra.Command{
 		Use:   "generate-config",
@@ -98,7 +98,7 @@ func addSubCommandsMap(rc *cobra.Command, v *viper.Viper, o *options, cfg interf
 		}
 		rc.AddCommand(newCmd)
 
-		if err := bindFlags(rc, newCmd, reflect.ValueOf(o.cfgObj).Elem(), v, "", "", sc.Name); err != nil {
+		if err := bindFlags(rc, newCmd, reflect.ValueOf(o.cfgObj).Elem(), v, "", "", sc.Name, false); err != nil {
 			panic(err)
 		}
 
@@ -113,6 +113,7 @@ func bindFlags(
 	val reflect.Value,
 	v *viper.Viper,
 	flagPrefix, envPrefix, cmdName string,
+	global bool,
 ) error {
 	typ := val.Type()
 
@@ -123,7 +124,7 @@ func bindFlags(
 		env := envPrefix + field.Tag.Get("env")
 		def := field.Tag.Get("default")
 		usage := field.Tag.Get("flag-usage")
-		global := len(flagDetails) > 1 && flagDetails[1] == "global"
+		localGlobal := global || (len(flagDetails) > 1 && flagDetails[1] == "global")
 		subCommands := strings.Split(field.Tag.Get("sub-commands"), ",")
 		bindToSubCommand := len(subCommands) > 1 || (len(subCommands) == 1 && subCommands[0] != "")
 
@@ -134,7 +135,7 @@ func bindFlags(
 		targetCmd := cmd
 		flagFunc := targetCmd.Flags()
 
-		if global {
+		if localGlobal {
 			targetCmd = rootCmd
 			flagFunc = targetCmd.PersistentFlags()
 		}
@@ -155,7 +156,7 @@ func bindFlags(
 				nestedEnvPrefix = envPrefix + nestedEnvPrefix
 			}
 
-			if err := bindFlags(rootCmd, targetCmd, val.Field(i), v, nestedFlagPrefix, nestedEnvPrefix, cmdName); err != nil {
+			if err := bindFlags(rootCmd, targetCmd, val.Field(i), v, nestedFlagPrefix, nestedEnvPrefix, cmdName, localGlobal); err != nil {
 				return err
 			}
 
