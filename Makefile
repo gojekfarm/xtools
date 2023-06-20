@@ -2,7 +2,7 @@ ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | s
 # extract go minor version from go version output
 GO_MINOR_VERSION := $(shell go version | cut -d' ' -f3 | cut -d'.' -f2)
 
-EXCLUDE_DIRS := ./examples,./x
+EXCLUDE_DIRS := ./examples
 EXCLUDE_GO_MOD_DIRS := $(shell find $(EXCLUDE_DIRS) -type f -name 'go.mod' -exec dirname {} \; | sort)
 
 # set build directory based on go minor version
@@ -38,8 +38,7 @@ go.generate: mockery protoc
 	@$(call run-go-mod-dir,go generate ./...,"go generate")
 
 ## test: Run all tests
-.PHONY: test test-run test-cov test-xml
-
+.PHONY: test
 test: check test-run
 
 test-run:

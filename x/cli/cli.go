@@ -5,16 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"reflect"
 	"strings"
+	"unsafe"
 )
 
+// CLI implements cobra.Command that also plays nicely with viper.
 type CLI struct {
 	preStart func()
 	cmd      *cobra.Command
 }
 
+// New creates a new CLI.
 func New(programName string, opts ...Option) *CLI {
 	o := defaultOptions()
 
@@ -25,10 +29,13 @@ func New(programName string, opts ...Option) *CLI {
 	return newCLI(programName, o)
 }
 
+// SetArgs sets the arguments for the CLI.
 func (c *CLI) SetArgs(args []string) { c.cmd.SetArgs(args) }
 
+// Run runs the CLI.
 func (c *CLI) Run(ctx context.Context) error {
 	c.preStart()
+
 	return c.cmd.ExecuteContext(ctx)
 }
 
@@ -53,6 +60,7 @@ func newCLI(pn string, o *options) *CLI {
 		Short: "generate command is used to generate default config at the desired location",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			v.SetConfigType("yaml")
+
 			return v.SafeWriteConfig()
 		},
 	})
@@ -78,7 +86,7 @@ func newCLI(pn string, o *options) *CLI {
 	}
 }
 
-func addSubCommandsMap(rc *cobra.Command, v *viper.Viper, o *options, cfg interface{}, commands []SubCommand) {
+func addSubCommandsMap(rc *cobra.Command, v *viper.Viper, o *options, cfg interface{}, commands []Command) {
 	for _, sc := range commands {
 		cr := sc.Run
 
@@ -100,7 +108,12 @@ func addSubCommandsMap(rc *cobra.Command, v *viper.Viper, o *options, cfg interf
 	}
 }
 
-func bindFlags(rootCmd *cobra.Command, cmd *cobra.Command, val reflect.Value, v *viper.Viper, flagPrefix string, envPrefix string, cmdName string) error {
+func bindFlags(
+	rootCmd, cmd *cobra.Command,
+	val reflect.Value,
+	v *viper.Viper,
+	flagPrefix, envPrefix, cmdName string,
+) error {
 	typ := val.Type()
 
 	for i := 0; i < val.NumField(); i++ {
@@ -120,6 +133,7 @@ func bindFlags(rootCmd *cobra.Command, cmd *cobra.Command, val reflect.Value, v 
 
 		targetCmd := cmd
 		flagFunc := targetCmd.Flags()
+
 		if global {
 			targetCmd = rootCmd
 			flagFunc = targetCmd.PersistentFlags()
@@ -127,10 +141,13 @@ func bindFlags(rootCmd *cobra.Command, cmd *cobra.Command, val reflect.Value, v 
 
 		if field.Type.Kind() == reflect.Struct {
 			nestedFlagPrefix := flag + "."
+
 			if flagPrefix := field.Tag.Get("flag-prefix"); flagPrefix != "" {
 				nestedFlagPrefix = flagPrefix + nestedFlagPrefix
 			}
+
 			nestedEnvPrefix := env + "_"
+
 			if envPrefix := field.Tag.Get("env-prefix"); envPrefix != "" {
 				nestedEnvPrefix = envPrefix + nestedEnvPrefix
 			}
@@ -138,37 +155,58 @@ func bindFlags(rootCmd *cobra.Command, cmd *cobra.Command, val reflect.Value, v 
 			if err := bindFlags(rootCmd, targetCmd, val.Field(i), v, nestedFlagPrefix, nestedEnvPrefix, cmdName); err != nil {
 				return err
 			}
+
 			continue
 		}
 
 		v.SetDefault(flag, def)
+
 		if err := v.BindEnv(flag, env); err != nil {
 			return err
 		}
 
-		if f := flagFunc.Lookup(strings.ToLower(flag)); f == nil {
-			switch field.Type.Kind() {
-			case reflect.Int:
-				flagFunc.IntVar((*int)(val.Field(i).Addr().UnsafePointer()), flag, v.GetInt(flag), usage)
-			case reflect.String:
-				flagFunc.StringVar((*string)(val.Field(i).Addr().UnsafePointer()), flag, v.GetString(flag), usage)
-			case reflect.Bool:
-				flagFunc.BoolVar((*bool)(val.Field(i).Addr().UnsafePointer()), flag, v.GetBool(flag), usage)
-			}
-		} else {
-			if err := v.BindPFlag(flag, f); err != nil {
-				return err
-			}
-		}
+		usp := val.Field(i).Addr().UnsafePointer()
+		fld := val.Field(i)
 
+		if err := setValue(flagFunc, flag, field, usp, v, usage, fld); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func setValue(
+	flagFunc *pflag.FlagSet,
+	flag string,
+	field reflect.StructField,
+	usp unsafe.Pointer,
+	v *viper.Viper,
+	usage string,
+	fld reflect.Value,
+) error {
+	if f := flagFunc.Lookup(strings.ToLower(flag)); f == nil {
 		switch field.Type.Kind() {
 		case reflect.Int:
-			val.Field(i).SetInt(int64(v.GetInt(flag)))
+			flagFunc.IntVar((*int)(usp), flag, v.GetInt(flag), usage)
 		case reflect.String:
-			val.Field(i).SetString(v.GetString(flag))
+			flagFunc.StringVar((*string)(usp), flag, v.GetString(flag), usage)
 		case reflect.Bool:
-			val.Field(i).SetBool(v.GetBool(flag))
+			flagFunc.BoolVar((*bool)(usp), flag, v.GetBool(flag), usage)
 		}
+	} else {
+		if err := v.BindPFlag(flag, f); err != nil {
+			return err
+		}
+	}
+
+	switch field.Type.Kind() {
+	case reflect.Int:
+		fld.SetInt(int64(v.GetInt(flag)))
+	case reflect.String:
+		fld.SetString(v.GetString(flag))
+	case reflect.Bool:
+		fld.SetBool(v.GetBool(flag))
 	}
 
 	return nil
@@ -180,5 +218,6 @@ func contains(slice []string, s string) bool {
 			return true
 		}
 	}
+
 	return false
 }
