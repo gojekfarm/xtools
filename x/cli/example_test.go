@@ -13,7 +13,8 @@ import (
 type Config struct {
 	Debug bool `flag:"debug,global" env:"DEBUG" default:"false" flag-usage:"enable debug mode"`
 	Log   struct {
-		Level string `flag:"level" env:"LEVEL" default:"info"`
+		Enabled bool   `flag:"enabled" env:"ENABLED" default:"true" flag-usage:"enable logging"`
+		Level   string `flag:"level" env:"LEVEL" default:"info"`
 	} `flag-prefix:"log,global" env-prefix:"LOG"`
 	Host     string `flag:"host" env:"HOST" default:"localhost" sub-commands:"server"`
 	Port     int    `flag:"port" env:"PORT" default:"8080" sub-commands:"server"`
