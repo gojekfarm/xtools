@@ -42,8 +42,8 @@ func (c *CLI) Run(ctx context.Context) error {
 func newCLI(pn string, o *options) *CLI {
 	rc := &cobra.Command{
 		Use:   pn,
-		Short: o.cmdShortDesc,
-		Long:  o.cmdLongDesc,
+		Short: o.cmdDescription.Short,
+		Long:  o.cmdDescription.Long,
 		Run:   func(_ *cobra.Command, _ []string) { fmt.Printf("%+v\n", o.cfgObj) },
 	}
 
@@ -91,10 +91,10 @@ func addSubCommandsMap(rc *cobra.Command, v *viper.Viper, o *options, cfg interf
 		cr := sc.Run
 
 		newCmd := &cobra.Command{
-			Use: sc.Name,
-			RunE: func(cmd *cobra.Command, _ []string) error {
-				return cr(cmd.Context(), cfg)
-			},
+			Use:   sc.Name,
+			Short: sc.Description.Short,
+			Long:  sc.Description.Long,
+			RunE:  func(cmd *cobra.Command, _ []string) error { return cr(cmd.Context(), cfg) },
 		}
 		rc.AddCommand(newCmd)
 
@@ -142,7 +142,10 @@ func bindFlags(
 		if field.Type.Kind() == reflect.Struct {
 			nestedFlagPrefix := flag + "."
 
-			if flagPrefix := field.Tag.Get("flag-prefix"); flagPrefix != "" {
+			flagPrefixDetails := strings.Split(field.Tag.Get("flag-prefix"), ",")
+			flagPrefix := flagPrefixDetails[0]
+
+			if flagPrefix != "" {
 				nestedFlagPrefix = flagPrefix + nestedFlagPrefix
 			}
 
