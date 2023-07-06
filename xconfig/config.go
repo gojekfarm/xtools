@@ -4,7 +4,7 @@ import "context"
 
 // Load loads the configuration from environment variables.
 func Load(ctx context.Context, cfg any) error {
-	return nil
+	return LoadWith(ctx, cfg, OsLoader())
 }
 
 // LoadWith loads the configuration using the given options.

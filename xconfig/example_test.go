@@ -51,9 +51,9 @@ func ExampleLoadWith_customLoader() {
 	ctx := context.Background()
 	cfg := DefaultConfig()
 
-	loaders := Loaders{
-		LoaderFunc(func(ctx context.Context, key string) ([]byte, error) {
-			return []byte("localhost"), nil
+	loaders := Multi{
+		LoaderFunc(func(ctx context.Context, key string) (string, bool) {
+			return "localhost", true
 		}),
 	}
 
