@@ -18,22 +18,18 @@ func (f LoaderFunc) Load(ctx context.Context, key string) (string, bool) {
 	return f(ctx, key)
 }
 
-type osLoader struct{}
-
-// Load fetches the value from the environment.
-func (o *osLoader) Load(ctx context.Context, key string) (string, bool) {
-	return os.LookupEnv(key)
+// OSLoader loads values from environment variables.
+func OSLoader() Loader {
+	return LoaderFunc(func(ctx context.Context, key string) (string, bool) {
+		return os.LookupEnv(key)
+	})
 }
 
-func (o *osLoader) apply(opts *options) { opts.loader = o }
-
-// OsLoader returns a loader that loads values from environment variables.
-func OsLoader() *osLoader {
-	return &osLoader{}
-}
-
+// Multi sequentially tries to load values from a list of loaders.
+// First available value is returned.
 type Multi []Loader
 
+// Load sequentially tries to load values from a list of loaders.
 func (m Multi) Load(ctx context.Context, key string) (string, bool) {
 	for _, loader := range m {
 		if value, ok := loader.Load(ctx, key); ok {
@@ -44,4 +40,20 @@ func (m Multi) Load(ctx context.Context, key string) (string, bool) {
 	return "", false
 }
 
-func (m Multi) apply(o *options) { o.loader = m }
+// PrefixLoader wraps a loader and adds a prefix to all keys.
+func PrefixLoader(prefix string, loader Loader) Loader {
+	return LoaderFunc(func(ctx context.Context, key string) (string, bool) {
+		return loader.Load(ctx, prefix+key)
+	})
+}
+
+// MapLoader loads values from a map.
+// Mostly used for testing.
+type MapLoader map[string]string
+
+// Load fetches the value from the map.
+func (m MapLoader) Load(ctx context.Context, key string) (string, bool) {
+	value, ok := m[key]
+
+	return value, ok
+}

@@ -64,7 +64,7 @@ check: fmt vet imports lint
 
 GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 golangci-lint:
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1)
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3)
 
 GCI = $(BIN_DIR)/gci
 gci:

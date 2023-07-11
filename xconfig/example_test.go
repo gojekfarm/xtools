@@ -41,7 +41,11 @@ func ExampleLoadWith_prefix() {
 	ctx := context.Background()
 	cfg := DefaultConfig()
 
-	err := LoadWith(ctx, cfg, Prefix("APP"))
+	err := LoadWith(
+		ctx,
+		cfg,
+		CustomLoader(PrefixLoader("MYAPP_", OSLoader())),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +61,7 @@ func ExampleLoadWith_customLoader() {
 		}),
 	}
 
-	err := LoadWith(ctx, cfg, loaders)
+	err := LoadWith(ctx, cfg, CustomLoader(loaders))
 	if err != nil {
 		panic(err)
 	}
