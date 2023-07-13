@@ -34,7 +34,6 @@ const (
 	ErrLoaderNil          = Error("lookuper cannot be nil")
 	ErrMissingKey         = Error("missing key")
 	ErrMissingRequired    = Error("missing required value")
-	ErrNoInitNotPtr       = Error("field must be a pointer to have noinit")
 	ErrNotPtr             = Error("input must be a pointer")
 	ErrNotStruct          = Error("input must be a struct")
 	ErrPrefixNotStruct    = Error("prefix is only valid on struct types")
@@ -220,19 +219,19 @@ func process(ctx context.Context, cfg any, o *options, parentNoInit bool) error 
 }
 
 func parseTag(tag string) (string, *tagOptions, error) {
-	if tag == "" {
-		return "", nil, nil
-	}
-
-	parts := strings.Split(tag, ",")
-	if len(parts) == 0 {
-		return "", nil, nil
-	}
-
 	opts := &tagOptions{
 		prefix:    "",
 		delimiter: defaultDelimiter,
 		separator: defaultSeparator,
+	}
+
+	if tag == "" {
+		return "", opts, nil
+	}
+
+	parts := strings.Split(tag, ",")
+	if len(parts) == 0 {
+		return "", opts, nil
 	}
 
 	key := parts[0]

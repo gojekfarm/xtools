@@ -11,14 +11,34 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadWith(t *testing.T) {
-	testcases := []struct {
-		name   string
-		input  any
-		want   any
-		loader Loader
-		err    error
-	}{
+type App struct {
+	Name    string  `config:"NAME"`
+	Cluster Cluster `config:",prefix=CLUSTER_"`
+}
+
+type Cluster struct {
+	Name    string  `config:"NAME"`
+	Master  Server  `config:",prefix=MASTER_"`
+	Replica *Server `config:",prefix=REPLICA_"`
+}
+
+type Server struct {
+	Host string `config:"HOST"`
+	Port int    `config:"PORT"`
+}
+
+type testcase struct {
+	name   string
+	input  any
+	want   any
+	loader Loader
+	err    error
+}
+
+func TestLoadWith_NativeTypes(t *testing.T) {
+	t.Parallel()
+
+	testcases := []testcase{
 		// nil pointer
 		{
 			name:   "nil pointer",
@@ -334,13 +354,129 @@ func TestLoadWith(t *testing.T) {
 		},
 	}
 
+	runTestcases(t, testcases)
+}
+
+func TestLoadWith_Structs(t *testing.T) {
+	t.Parallel()
+
+	testcases := []testcase{
+		{
+			name:  "nested struct: using prefix",
+			input: &App{},
+			want: &App{
+				Name: "app1",
+				Cluster: Cluster{
+					Name: "cluster1",
+					Master: Server{
+						Host: "master1",
+						Port: 1,
+					},
+					Replica: &Server{
+						Host: "replica1",
+						Port: 2,
+					},
+				},
+			},
+			loader: MapLoader{
+				"NAME":                 "app1",
+				"CLUSTER_NAME":         "cluster1",
+				"CLUSTER_MASTER_HOST":  "master1",
+				"CLUSTER_MASTER_PORT":  "1",
+				"CLUSTER_REPLICA_HOST": "replica1",
+				"CLUSTER_REPLICA_PORT": "2",
+			},
+		},
+		{
+			name: "nested struct: without prefix",
+			input: &struct {
+				Name   string `config:"NAME"`
+				Server Server
+			}{},
+			want: &struct {
+				Name   string `config:"NAME"`
+				Server Server
+			}{
+				Name: "app1",
+				Server: Server{
+					Host: "master1",
+					Port: 1,
+				},
+			},
+			loader: MapLoader{
+				"NAME": "app1",
+				"HOST": "master1",
+				"PORT": "1",
+			},
+		},
+		{
+			name: "non-struct field with prefix",
+			input: &struct {
+				Name string `config:",prefix=CLUSTER"`
+			}{},
+			err:    errors.New("prefix is only valid on struct types"),
+			loader: MapLoader{},
+		},
+	}
+
+	runTestcases(t, testcases)
+}
+
+func TestOption_Required(t *testing.T) {
+	t.Parallel()
+
+	testcases := []testcase{
+		{
+			name: "required option",
+			input: &struct {
+				Name string `config:"NAME,required"`
+			}{},
+			want: &struct{ Name string }{
+				Name: "app1",
+			},
+			loader: MapLoader{"NAME": "app1"},
+		},
+		{
+			name: "required option: missing value",
+			input: &struct {
+				Name string `config:"NAME,required"`
+			}{},
+			err:    errors.New("missing required value"),
+			loader: MapLoader{},
+		},
+		{
+			name: "required option: empty value",
+			input: &struct {
+				Name *string `config:"NAME,required"`
+			}{},
+			want: &struct{ Name *string }{
+				Name: ptr.String(""),
+			},
+			loader: MapLoader{"NAME": ""},
+		},
+		{
+			name: "missing key",
+			input: &struct {
+				Name string `config:",required"`
+			}{},
+			err:    errors.New("missing key"),
+			loader: MapLoader{},
+		},
+	}
+
+	runTestcases(t, testcases)
+}
+
+func runTestcases(t *testing.T, testcases []testcase) {
+	t.Helper()
+
 	for _, tc := range testcases {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := LoadWith(context.TODO(), tc.input, CustomLoader(tc.loader))
+			err := LoadWith(context.Background(), tc.input, CustomLoader(tc.loader))
 			if tc.err != nil {
 				assert.Error(t, err)
 				assert.ErrorContains(t, err, tc.err.Error())
