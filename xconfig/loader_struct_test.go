@@ -21,6 +21,11 @@ type Server struct {
 	Port int    `config:"PORT"`
 }
 
+type User struct {
+	Name  string `json:"NAME"`
+	Email string `json:"EMAIL"`
+}
+
 func TestLoadWith_Structs(t *testing.T) {
 	t.Parallel()
 
@@ -80,6 +85,49 @@ func TestLoadWith_Structs(t *testing.T) {
 			}{},
 			err:    errors.New("prefix is only valid on struct types"),
 			loader: MapLoader{},
+		},
+	}
+
+	runTestcases(t, testcases)
+}
+
+func TestLoadWith_JSON(t *testing.T) {
+	t.Parallel()
+
+	testcases := []testcase{
+		{
+			name: "json object as string",
+			input: &struct {
+				Owner User `config:"OWNER"`
+			}{},
+			want: &struct {
+				Owner User `config:"OWNER"`
+			}{
+				Owner: User{
+					Name:  "user1",
+					Email: "owner@example.com",
+				},
+			},
+			loader: MapLoader{
+				"OWNER": `{"NAME":"user1","EMAIL":"owner@example.com"}`,
+			},
+		},
+		{
+			name: "json array as string",
+			input: &struct {
+				Admins []User `config:"ADMINS"`
+			}{},
+			want: &struct {
+				Admins []User `config:"ADMINS"`
+			}{
+				Admins: []User{
+					{Name: "user1", Email: "owner1@example.com"},
+					{Name: "user2", Email: "owner2@example.com"},
+				},
+			},
+			loader: MapLoader{
+				"ADMINS": `[{"NAME":"user1","EMAIL":"owner1@example.com"},{"NAME":"user2","EMAIL":"owner2@example.com"}]`,
+			},
 		},
 	}
 
