@@ -1,16 +1,8 @@
 package xconfig
 
 import (
-	"errors"
 	"reflect"
 	"strings"
-)
-
-var (
-	// ErrNotStruct is returned when the given config is not a struct.
-	ErrNotStruct = errors.New("xconfig: config must be a struct")
-	// ErrUnknownTagOption is returned when an unknown tag option is used.
-	ErrUnknownTagOption = errors.New("xconfig: unknown tag option")
 )
 
 const (
@@ -23,6 +15,17 @@ type Node struct {
 	name     string
 	required bool
 	prefix   string
+
+	field reflect.Value
+}
+
+// SetVal sets the value of the given node.
+func (n *Node) SetVal(val string) error {
+	if val == "" && n.required {
+		return ErrRequired
+	}
+
+	return setVal(n.field, val)
 }
 
 // parse returns a flattened list of all nodes
@@ -30,6 +33,10 @@ type Node struct {
 // Private fields are ignored.
 func parse(s any, o *options) ([]*Node, error) {
 	v := reflect.ValueOf(s)
+
+	if v.Kind() != reflect.Ptr {
+		return nil, ErrNotPointer
+	}
 
 	e := v.Elem()
 	if e.Kind() != reflect.Struct {
@@ -69,6 +76,8 @@ func parse(s any, o *options) ([]*Node, error) {
 			return nil, err
 		}
 
+		node.field = ef
+
 		if ef.Kind() == reflect.Struct {
 			for ef.CanAddr() {
 				ef = ef.Addr()
@@ -106,6 +115,10 @@ func newNodeFromTag(tag string) (*Node, error) {
 
 		switch {
 		case opt == optRequired:
+			if key == "" {
+				return nil, ErrMissingKey
+			}
+
 			node.required = true
 		case strings.HasPrefix(opt, optPrefix):
 			node.prefix = strings.TrimPrefix(opt, optPrefix)

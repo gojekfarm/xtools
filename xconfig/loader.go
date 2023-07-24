@@ -1,6 +1,9 @@
 package xconfig
 
-import "context"
+import (
+	"context"
+	"os"
+)
 
 // Loader defines the interface for a config loader.
 type Loader interface {
@@ -34,4 +37,16 @@ func (m MapLoader) Load(ctx context.Context, key string) (string, error) {
 	}
 
 	return value, nil
+}
+
+// OSLoader loads values from the OS environment.
+func OSLoader() Loader {
+	return LoaderFunc(func(ctx context.Context, key string) (string, error) {
+		v, ok := os.LookupEnv(key)
+		if !ok {
+			return "", nil
+		}
+
+		return v, nil
+	})
 }

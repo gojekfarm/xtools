@@ -102,7 +102,7 @@ func TestLoadWith_NativeTypes(t *testing.T) {
 				Int int `config:"INT"`
 			}{},
 			loader: MapLoader{"INT": "invalid"},
-			err:    errors.New("invalid syntax"),
+			err:    errors.New("unable to cast"),
 		},
 
 		// unsigned integer values
@@ -142,7 +142,7 @@ func TestLoadWith_NativeTypes(t *testing.T) {
 				Uint uint `config:"UINT"`
 			}{},
 			loader: MapLoader{"UINT": "invalid"},
-			err:    errors.New("invalid syntax"),
+			err:    errors.New("unable to cast"),
 		},
 
 		// floating-point values
@@ -170,7 +170,7 @@ func TestLoadWith_NativeTypes(t *testing.T) {
 				Float float32 `config:"FLOAT"`
 			}{},
 			loader: MapLoader{"FLOAT": "invalid"},
-			err:    errors.New("invalid syntax"),
+			err:    errors.New("unable to cast"),
 		},
 
 		// duration values
@@ -290,7 +290,7 @@ func TestLoadWith_NativeTypes(t *testing.T) {
 				Int64Slice []int64 `config:"INT64_SLICE"`
 			}{},
 			loader: MapLoader{"INT64_SLICE": "invalid,2"},
-			err:    errors.New("invalid syntax"),
+			err:    errors.New("unable to cast"),
 		},
 
 		// map values
@@ -326,7 +326,7 @@ func TestLoadWith_NativeTypes(t *testing.T) {
 				StringMap map[string]string `config:"STRING_MAP"`
 			}{},
 			loader: MapLoader{"STRING_MAP": "key1=value1,key2=value2"},
-			err:    errors.New("invalid map item"),
+			err:    ErrInvalidMapValue,
 		},
 		{
 			name: "map: invalid value",
@@ -334,7 +334,7 @@ func TestLoadWith_NativeTypes(t *testing.T) {
 				Int64Map map[string]int64 `config:"INT64_MAP"`
 			}{},
 			loader: MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
-			err:    errors.New("invalid map item"),
+			err:    ErrInvalidMapValue,
 		},
 	}
 
@@ -360,7 +360,7 @@ func TestOption_Required(t *testing.T) {
 			input: &struct {
 				Name string `config:"NAME,required"`
 			}{},
-			err:    errors.New("missing required value"),
+			err:    ErrRequired,
 			loader: MapLoader{},
 		},
 		{
@@ -368,9 +368,7 @@ func TestOption_Required(t *testing.T) {
 			input: &struct {
 				Name *string `config:"NAME,required"`
 			}{},
-			want: &struct{ Name *string }{
-				Name: ptr.String(""),
-			},
+			err:    ErrRequired,
 			loader: MapLoader{"NAME": ""},
 		},
 		{
@@ -378,7 +376,7 @@ func TestOption_Required(t *testing.T) {
 			input: &struct {
 				Name string `config:",required"`
 			}{},
-			err:    errors.New("missing key"),
+			err:    ErrMissingKey,
 			loader: MapLoader{},
 		},
 	}

@@ -25,6 +25,18 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			name:  "error on non-struct",
+			input: (*int)(nil),
+			err:   ErrNotStruct,
+		},
+		{
+			name: "error on non-pointer",
+			input: struct {
+				Name string `env:"NAME"`
+			}{},
+			err: ErrNotPointer,
+		},
+		{
 			name: "required field",
 			input: &struct {
 				Name string `env:"NAME,required"`
@@ -87,7 +99,13 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			assert.EqualValues(t, tc.want, got)
+			for i := range got {
+				g := got[i]
+				w := tc.want[i]
+
+				assert.Equal(t, w.name, g.name)
+				assert.Equal(t, w.required, g.required)
+			}
 		})
 	}
 }

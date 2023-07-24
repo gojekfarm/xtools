@@ -1,5 +1,7 @@
 package xconfig
 
+const defaultKey = "config"
+
 // Option configures the xconfig behavior.
 type Option interface {
 	apply(*options)
@@ -14,6 +16,19 @@ func (f OptionFunc) apply(opts *options) { f(opts) }
 type options struct {
 	key    string
 	loader Loader
+}
+
+func newOptions(opts ...Option) *options {
+	o := &options{
+		key:    defaultKey,
+		loader: OSLoader(),
+	}
+
+	for _, opt := range opts {
+		opt.apply(o)
+	}
+
+	return o
 }
 
 // Key allows customizing the struct tag name to use.
