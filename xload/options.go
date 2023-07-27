@@ -1,8 +1,8 @@
-package xconfig
+package xload
 
 const defaultKey = "config"
 
-// Option configures the xconfig behavior.
+// Option configures the xload behavior.
 type Option interface {
 	apply(*options)
 }

@@ -1,4 +1,4 @@
-package xconfig
+package xload
 
 import (
 	"context"
@@ -48,5 +48,26 @@ func OSLoader() Loader {
 		}
 
 		return v, nil
+	})
+}
+
+// SerialLoader loads values from multiple loaders.
+// Last non-empty value wins.
+func SerialLoader(loaders ...Loader) Loader {
+	return LoaderFunc(func(ctx context.Context, key string) (string, error) {
+		var lastNonEmpty string
+
+		for _, loader := range loaders {
+			v, err := loader.Load(ctx, key)
+			if err != nil {
+				return "", err
+			}
+
+			if v != "" {
+				lastNonEmpty = v
+			}
+		}
+
+		return lastNonEmpty, nil
 	})
 }

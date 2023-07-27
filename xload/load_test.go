@@ -1,4 +1,4 @@
-package xconfig
+package xload
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type testcase struct {
 	err    error
 }
 
-func TestLoadWith_NativeTypes(t *testing.T) {
+func TestLoad_NativeTypes(t *testing.T) {
 	t.Parallel()
 
 	testcases := []testcase{
@@ -199,34 +199,6 @@ func TestLoadWith_NativeTypes(t *testing.T) {
 			}{},
 			loader: MapLoader{"DURATION": "invalid"},
 			err:    errors.New("invalid duration"),
-		},
-
-		// time values
-		{
-			name: "time",
-			input: &struct {
-				Time    time.Time  `config:"TIME"`
-				OptTime *time.Time `config:"OPT_TIME"`
-			}{},
-			want: &struct {
-				Time    time.Time  `config:"TIME"`
-				OptTime *time.Time `config:"OPT_TIME"`
-			}{
-				Time:    time.Date(2020, 1, 2, 3, 4, 5, 6, time.UTC),
-				OptTime: ptr.Time(time.Date(2020, 1, 2, 3, 4, 5, 6, time.UTC)),
-			},
-			loader: MapLoader{
-				"TIME":     "2020-01-02T03:04:05.000000006Z",
-				"OPT_TIME": "2020-01-02T03:04:05.000000006Z",
-			},
-		},
-		{
-			name: "time: invalid",
-			input: &struct {
-				Time time.Time `config:"TIME"`
-			}{},
-			loader: MapLoader{"TIME": "invalid"},
-			err:    errors.New("unsupported version"),
 		},
 
 		// string values

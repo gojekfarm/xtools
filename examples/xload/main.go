@@ -4,8 +4,21 @@ import (
 	"context"
 	"time"
 
-	"github.com/gojekfarm/xtools/xconfig"
+	"github.com/gojekfarm/xtools/xload"
 )
+
+func BusinessConfigLoader() xload.Loader {
+	return xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
+		// fetch from remote config
+		return "", nil
+	})
+}
+
+func YAMLLoader(filename string) xload.Loader {
+	// read into a flattened map
+	// return a MapLoader
+	return xload.MapLoader{}
+}
 
 func main() {
 	ctx := context.Background()
@@ -14,12 +27,14 @@ func main() {
 	// from yaml, and then from environment variables
 	cfg := NewAppConfig()
 
-	err := xconfig.Load(
+	err := xload.Load(
 		ctx,
 		cfg,
-		xconfig.Series(
-			xconfig.YAMLLoader("application.yaml"),
-			xconfig.OSLoader(),
+		xload.WithLoader(
+			xload.SerialLoader(
+				YAMLLoader("application.yaml"),
+				xload.OSLoader(),
+			),
 		),
 	)
 	if err != nil {
@@ -34,12 +49,14 @@ func main() {
 	// middleware.
 	rcfg := NewRequestConfig()
 
-	err = xconfig.Load(
+	err = xload.Load(
 		ctx,
 		rcfg,
-		xconfig.Series(
-			xconfig.YAMLLoader("request.yaml"),
-			BusinessConfigLoader(),
+		xload.WithLoader(
+			xload.SerialLoader(
+				YAMLLoader("request.yaml"),
+				BusinessConfigLoader(),
+			),
 		),
 	)
 	if err != nil {
@@ -49,7 +66,7 @@ func main() {
 
 func NewAppConfig() *AppConfig {
 	return &AppConfig{
-		Name: "xconfig",
+		Name: "xload",
 		HTTP: HTTPConfig{
 			Host:  "localhost",
 			Port:  8080,

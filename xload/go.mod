@@ -1,4 +1,4 @@
-module github.com/gojekfarm/xtools/xconfig
+module github.com/gojekfarm/xtools/xload
 
 go 1.20
 
