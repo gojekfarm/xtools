@@ -7,14 +7,14 @@ import (
 	"github.com/gojekfarm/xtools/xload"
 )
 
-func BusinessConfigLoader() xload.Loader {
+func businessConfigLoader() xload.Loader {
 	return xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
 		// fetch from remote config
 		return "", nil
 	})
 }
 
-func YAMLLoader(filename string) xload.Loader {
+func yamlLoader(filename string) xload.Loader {
 	// read into a flattened map
 	// return a MapLoader
 	return xload.MapLoader{}
@@ -25,14 +25,14 @@ func main() {
 
 	// application config is loaded once at startup
 	// from yaml, and then from environment variables
-	cfg := NewAppConfig()
+	cfg := newAppConfig()
 
 	err := xload.Load(
 		ctx,
 		cfg,
 		xload.WithLoader(
 			xload.SerialLoader(
-				YAMLLoader("application.yaml"),
+				yamlLoader("application.yaml"),
 				xload.OSLoader(),
 			),
 		),
@@ -47,15 +47,15 @@ func main() {
 	//
 	// This can be used in HTTP, GRPC, handlers or
 	// middleware.
-	rcfg := NewRequestConfig()
+	rcfg := newRequestConfig()
 
 	err = xload.Load(
 		ctx,
 		rcfg,
 		xload.WithLoader(
 			xload.SerialLoader(
-				YAMLLoader("request.yaml"),
-				BusinessConfigLoader(),
+				yamlLoader("request.yaml"),
+				businessConfigLoader(),
 			),
 		),
 	)
@@ -64,7 +64,7 @@ func main() {
 	}
 }
 
-func NewAppConfig() *AppConfig {
+func newAppConfig() *AppConfig {
 	return &AppConfig{
 		Name: "xload",
 		HTTP: HTTPConfig{
@@ -83,7 +83,7 @@ func NewAppConfig() *AppConfig {
 	}
 }
 
-func NewRequestConfig() *RequestConfig {
+func newRequestConfig() *RequestConfig {
 	return &RequestConfig{
 		Timeout:     5 * time.Second,
 		FeatureFlag: true,

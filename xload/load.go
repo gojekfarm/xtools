@@ -53,6 +53,7 @@ func Load(ctx context.Context, v any, opts ...Option) error {
 	return nil
 }
 
+//nolint:funlen,nestif
 func process(ctx context.Context, obj any, tagKey string, loader Loader) error {
 	v := reflect.ValueOf(obj)
 
@@ -99,10 +100,9 @@ func process(ctx context.Context, obj any, tagKey string, loader Loader) error {
 					original.Set(v)
 				}
 			}
-
 		}
 
-		// initialize pointer to structs
+		// initialise pointer to structs
 		for fVal.Kind() == reflect.Ptr {
 			if fVal.IsNil() && fVal.Type().Elem().Kind() != reflect.Struct {
 				break
@@ -213,12 +213,12 @@ func parseField(tag string) (*field, error) {
 		default:
 			return nil, ErrUnknownTagOption
 		}
-
 	}
 
 	return f, nil
 }
 
+//nolint:funlen,nestif
 func setVal(field reflect.Value, val string) error {
 	for field.Kind() == reflect.Ptr {
 		if field.IsNil() {
@@ -309,12 +309,14 @@ func setVal(field reflect.Value, val string) error {
 			k, v := strings.TrimSpace(kv[0]), strings.TrimSpace(kv[1])
 
 			key := reflect.New(ty.Key()).Elem()
+
 			err := setVal(key, k)
 			if err != nil {
 				return err
 			}
 
 			value := reflect.New(ty.Elem()).Elem()
+
 			err = setVal(value, v)
 			if err != nil {
 				return err
@@ -365,6 +367,8 @@ type Decoder interface {
 // - json.Unmarshaler
 // - encoding.BinaryUnmarshaler
 // - encoding.GobDecoder
+//
+//nolint:nestif
 func decode(field reflect.Value, val string) (bool, error) {
 	for field.CanAddr() {
 		field = field.Addr()
