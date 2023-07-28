@@ -42,7 +42,7 @@ func LoadEnv(ctx context.Context, v any) error {
 }
 
 // Load loads values into the given struct using the given options.
-func Load(ctx context.Context, v any, opts ...option) error {
+func Load(ctx context.Context, v any, opts ...Option) error {
 	o := newOptions(opts...)
 
 	err := process(ctx, v, o.tagName, o.loader)

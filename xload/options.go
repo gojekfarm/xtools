@@ -2,12 +2,10 @@ package xload
 
 const defaultKey = "config"
 
-// option configures the xload behaviour.
-type option interface {
-	apply(*options)
-}
+// Option configures the xload behaviour.
+type Option interface{ apply(*options) }
 
-// optionFunc allows using a function as an option.
+// optionFunc allows using a function as an Option.
 type optionFunc func(*options)
 
 func (f optionFunc) apply(opts *options) { f(opts) }
@@ -18,7 +16,7 @@ type options struct {
 	loader  Loader
 }
 
-func newOptions(opts ...option) *options {
+func newOptions(opts ...Option) *options {
 	o := &options{
 		tagName: defaultKey,
 		loader:  OSLoader(),
@@ -39,8 +37,6 @@ func (k FieldTagName) apply(opts *options) { opts.tagName = string(k) }
 // WithLoader allows customising the loader to use.
 //
 //nolint:golint
-func WithLoader(loader Loader) option {
-	return optionFunc(func(opts *options) {
-		opts.loader = loader
-	})
+func WithLoader(loader Loader) Option {
+	return optionFunc(func(opts *options) { opts.loader = loader })
 }
