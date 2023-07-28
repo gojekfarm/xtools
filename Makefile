@@ -6,7 +6,6 @@ EXCLUDE_DIRS := ./examples
 EXCLUDE_GO_MOD_DIRS := $(shell find $(EXCLUDE_DIRS) -type f -name 'go.mod' -exec dirname {} \; | sort)
 
 # set build directory based on go minor version
-GO_MINOR_VERSION := $(shell go version | cut -d' ' -f3 | cut -d'.' -f2)
 GO_BUILD_DIRS := $(foreach dir,$(ALL_GO_MOD_DIRS),$(shell GO_MOD_VERSION=$$(grep "go 1.[0-9]*" $(dir)/go.mod | cut -d' ' -f2 | cut -d'.' -f2) && [ -n "$$GO_MOD_VERSION" ] && [ $(GO_MINOR_VERSION) -ge $$GO_MOD_VERSION ] && echo $(dir)))
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -58,9 +57,19 @@ check: fmt vet imports lint
 
 # ========= Helpers ===========
 
+## Determine the golangci-lint version based on $(GO_MINOR_VERSION)
+###################
+GOLANGCI_LINT_V18 := v1.50.1
+GOLANGCI_LINT_DEFAULT := v1.53.3
+
+get-golangci-lint-version = $(or $(value GOLANGCI_LINT_V$(1)), $(GOLANGCI_LINT_DEFAULT))
+GOLANGCI_LINT_VERSION := $(call get-golangci-lint-version,$(GO_MINOR_VERSION))
+
+###################
+
 GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 golangci-lint:
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3)
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION))
 
 GCI = $(BIN_DIR)/gci
 gci:
