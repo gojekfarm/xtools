@@ -1,0 +1,6 @@
+TIMEOUT: 500ms
+FEATURE_FLAG: true
+LAUNCH_V3:
+  ENABLED: true
+  SEARCH_RADIUS: 5.5
+  CUISINES: '[{"code":"ASIAN","name":"Asian"},{"code":"CHINESE","name":"Chinese"},{"code":"INDIAN","name":"Indian"}]'

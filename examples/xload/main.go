@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/gojekfarm/xtools/xload"
+	"github.com/gojekfarm/xtools/xload/providers/yaml"
 )
 
 func businessConfigLoader() xload.Loader {
@@ -14,12 +16,6 @@ func businessConfigLoader() xload.Loader {
 	})
 }
 
-func yamlLoader(filename string) xload.Loader {
-	// read into a flattened map
-	// return a MapLoader
-	return xload.MapLoader{}
-}
-
 func main() {
 	ctx := context.Background()
 
@@ -27,13 +23,15 @@ func main() {
 	// from yaml, and then from environment variables
 	cfg := newAppConfig()
 
+	yamlLoader, _ := yaml.NewFileLoader("application.yaml", "_")
+
 	err := xload.Load(
 		ctx,
 		cfg,
 		xload.FieldTagName("env"),
 		xload.WithLoader(
 			xload.SerialLoader(
-				yamlLoader("application.yaml"),
+				yamlLoader,
 				xload.OSLoader(),
 			),
 		),
@@ -41,6 +39,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	prettyPrint(cfg)
 
 	// request config is loaded for every request
 	// defaults are set in the code, and then
@@ -50,13 +50,18 @@ func main() {
 	// middleware.
 	rcfg := newRequestConfig()
 
+	reqYamlLoader, err := yaml.NewFileLoader("request.default.yaml", "_")
+	if err != nil {
+		panic(err)
+	}
+
 	err = xload.Load(
 		ctx,
 		rcfg,
 		xload.FieldTagName("env"),
 		xload.WithLoader(
 			xload.SerialLoader(
-				yamlLoader("request.yaml"),
+				reqYamlLoader,
 				businessConfigLoader(),
 			),
 		),
@@ -64,6 +69,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	prettyPrint(rcfg)
+}
+
+func prettyPrint(v interface{}) {
+	out, _ := json.MarshalIndent(v, "", "  ")
+	println(string(out))
 }
 
 func newAppConfig() *AppConfig {
