@@ -30,6 +30,7 @@ func main() {
 	err := xload.Load(
 		ctx,
 		cfg,
+		xload.FieldTagName("env"),
 		xload.WithLoader(
 			xload.SerialLoader(
 				yamlLoader("application.yaml"),
@@ -52,6 +53,7 @@ func main() {
 	err = xload.Load(
 		ctx,
 		rcfg,
+		xload.FieldTagName("env"),
 		xload.WithLoader(
 			xload.SerialLoader(
 				yamlLoader("request.yaml"),

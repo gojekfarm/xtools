@@ -42,10 +42,10 @@ func LoadEnv(ctx context.Context, v any) error {
 }
 
 // Load loads values into the given struct using the given options.
-func Load(ctx context.Context, v any, opts ...Option) error {
+func Load(ctx context.Context, v any, opts ...option) error {
 	o := newOptions(opts...)
 
-	err := process(ctx, v, o.key, o.loader)
+	err := process(ctx, v, o.tagName, o.loader)
 	if err != nil {
 		return err
 	}
@@ -367,34 +367,23 @@ type Decoder interface {
 // - json.Unmarshaler
 // - encoding.BinaryUnmarshaler
 // - encoding.GobDecoder
-//
-//nolint:nestif
 func decode(field reflect.Value, val string) (bool, error) {
 	for field.CanAddr() {
 		field = field.Addr()
 	}
 
 	if field.CanInterface() {
-		iface := field.Interface()
-
-		if dec, ok := iface.(Decoder); ok {
-			return true, dec.Decode(val)
-		}
-
-		if txt, ok := iface.(encoding.TextUnmarshaler); ok {
-			return true, txt.UnmarshalText([]byte(val))
-		}
-
-		if json, ok := iface.(json.Unmarshaler); ok {
-			return true, json.UnmarshalJSON([]byte(val))
-		}
-
-		if bin, ok := iface.(encoding.BinaryUnmarshaler); ok {
-			return true, bin.UnmarshalBinary([]byte(val))
-		}
-
-		if gob, ok := iface.(gob.GobDecoder); ok {
-			return true, gob.GobDecode([]byte(val))
+		switch iface := field.Interface().(type) {
+		case Decoder:
+			return true, iface.Decode(val)
+		case encoding.TextUnmarshaler:
+			return true, iface.UnmarshalText([]byte(val))
+		case json.Unmarshaler:
+			return true, iface.UnmarshalJSON([]byte(val))
+		case encoding.BinaryUnmarshaler:
+			return true, iface.UnmarshalBinary([]byte(val))
+		case gob.GobDecoder:
+			return true, iface.GobDecode([]byte(val))
 		}
 	}
 
