@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"time"
 
 	"github.com/gojekfarm/xtools/xload"
@@ -23,16 +24,24 @@ func main() {
 	// from yaml, and then from environment variables
 	cfg := newAppConfig()
 
-	yamlLoader, _ := yaml.NewFileLoader("application.yaml", "_")
+	f, err := os.Open("application.yaml")
+	if err != nil {
+		panic(err)
+	}
 
-	err := xload.Load(
+	yamlLoader, err := yaml.NewLoader(f, "_")
+	if err != nil {
+		panic(err)
+	}
+
+	err = xload.Load(
 		ctx,
 		cfg,
 		xload.FieldTagName("env"),
 		xload.WithLoader(
 			xload.SerialLoader(
 				yamlLoader,
-				xload.OSLoader(),
+				xload.OSLoader(), // OSLoader values take precedence over yaml
 			),
 		),
 	)
@@ -50,7 +59,12 @@ func main() {
 	// middleware.
 	rcfg := newRequestConfig()
 
-	reqYamlLoader, err := yaml.NewFileLoader("request.default.yaml", "_")
+	rf, err := os.Open("request.default.yaml")
+	if err != nil {
+		panic(err)
+	}
+
+	reqYamlLoader, err := yaml.NewLoader(rf, "_")
 	if err != nil {
 		panic(err)
 	}
@@ -62,7 +76,7 @@ func main() {
 		xload.WithLoader(
 			xload.SerialLoader(
 				reqYamlLoader,
-				businessConfigLoader(),
+				businessConfigLoader(), // businessConfigLoader values take precedence over yaml
 			),
 		),
 	)
@@ -71,6 +85,9 @@ func main() {
 	}
 
 	prettyPrint(rcfg)
+
+	_ = rf.Close()
+	_ = f.Close()
 }
 
 func prettyPrint(v interface{}) {

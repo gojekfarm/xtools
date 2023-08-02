@@ -25,7 +25,7 @@ func TestLoadEnv(t *testing.T) {
 		Host string `config:"XLOAD_HOST"`
 	}{}
 
-	os.Setenv("XLOAD_HOST", "localhost")
+	_ = os.Setenv("XLOAD_HOST", "localhost")
 
 	err := LoadEnv(context.Background(), cfg)
 	require.NoError(t, err)

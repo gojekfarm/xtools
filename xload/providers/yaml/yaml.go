@@ -2,7 +2,7 @@
 package yaml
 
 import (
-	"os"
+	"io"
 
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v3"
@@ -10,21 +10,16 @@ import (
 	"github.com/gojekfarm/xtools/xload"
 )
 
-// NewFileLoader reads YAML file and returns a xload.Loader
-func NewFileLoader(filename string, delim string) (xload.Loader, error) {
-	b, err := os.ReadFile(filename)
+// NewLoader reads YAML from the given io.Reader and returns a xload.Loader
+func NewLoader(r io.Reader, delim string) (xload.Loader, error) {
+	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewBytesLoader(b, delim)
-}
-
-// NewBytesLoader reads YAML bytes and returns a xload.Loader
-func NewBytesLoader(b []byte, delim string) (xload.Loader, error) {
 	var out map[string]interface{}
 
-	err := yaml.Unmarshal(b, &out)
+	err = yaml.Unmarshal(b, &out)
 	if err != nil {
 		return nil, err
 	}
