@@ -38,7 +38,8 @@ go.generate: mockery protoc
 	@$(call run-go-mod-dir,go generate ./...,"go generate")
 
 ## test: Run all tests
-.PHONY: test
+.PHONY: test test-run test-cov test-xml
+
 test: check test-run
 
 test-run:

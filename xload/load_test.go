@@ -3,6 +3,7 @@ package xload
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -19,18 +20,106 @@ type testcase struct {
 	err    error
 }
 
-func TestLoad_NativeTypes(t *testing.T) {
+func TestLoadEnv(t *testing.T) {
+	cfg := &struct {
+		Host string `config:"XLOAD_HOST"`
+	}{}
+
+	os.Setenv("XLOAD_HOST", "localhost")
+
+	err := LoadEnv(context.Background(), cfg)
+	require.NoError(t, err)
+	assert.Equal(t, "localhost", cfg.Host)
+}
+
+func TestLoad_Errors(t *testing.T) {
 	t.Parallel()
 
 	testcases := []testcase{
-		// nil pointer
+		// not a pointer
 		{
-			name:   "nil pointer",
-			input:  (*struct{})(nil),
+			name: "nil pointer",
+			input: struct {
+				Host string `config:"HOST"`
+			}{},
+			loader: MapLoader{},
+			err:    ErrNotPointer,
+		},
+
+		// not a struct
+		{
+			name:   "not a struct",
+			input:  ptr.String(""),
 			loader: MapLoader{},
 			err:    ErrNotStruct,
 		},
 
+		// private fields
+		{
+			name: "private fields",
+			input: &struct {
+				host string `config:"HOST"`
+			}{
+				host: "localhost",
+			},
+			want: &struct {
+				host string `config:"HOST"`
+			}{
+				host: "localhost",
+			},
+			loader: MapLoader{
+				"HOST": "192.0.0.1",
+			},
+		},
+
+		// skip fields
+		{
+			name: "skip fields",
+			input: &struct {
+				Host string `config:"-"`
+			}{
+				Host: "localhost",
+			},
+			want: &struct {
+				Host string `config:"-"`
+			}{
+				Host: "localhost",
+			},
+			loader: MapLoader{
+				"HOST": "192.0.0.1",
+			},
+		},
+
+		// loader error
+		{
+			name: "loader error",
+			input: &struct {
+				Host string `config:"HOST"`
+			}{},
+			loader: LoaderFunc(func(ctx context.Context, k string) (string, error) {
+				return "", errors.New("loader error")
+			}),
+			err: errors.New("loader error"),
+		},
+
+		// unknown tag option
+		{
+			name: "unknown tag option",
+			input: &struct {
+				Host string `config:"HOST,unknown"`
+			}{},
+			loader: MapLoader{},
+			err:    ErrUnknownTagOption,
+		},
+	}
+
+	runTestcases(t, testcases)
+}
+
+func TestLoad_NativeTypes(t *testing.T) {
+	t.Parallel()
+
+	testcases := []testcase{
 		// boolean value
 		{
 			name: "bool: true",
@@ -221,6 +310,22 @@ func TestLoad_NativeTypes(t *testing.T) {
 			},
 		},
 
+		// byte values
+		{
+			name: "byte array",
+			input: &struct {
+				Bytes []byte `config:"BYTES"`
+			}{},
+			want: &struct {
+				Bytes []byte `config:"BYTES"`
+			}{
+				Bytes: []byte("bytes"),
+			},
+			loader: MapLoader{
+				"BYTES": "bytes",
+			},
+		},
+
 		// slice values
 		{
 			name: "slice",
@@ -301,12 +406,81 @@ func TestLoad_NativeTypes(t *testing.T) {
 			err:    ErrInvalidMapValue,
 		},
 		{
-			name: "map: invalid value",
+			name: "map: invalid delimiter",
 			input: &struct {
 				Int64Map map[string]int64 `config:"INT64_MAP"`
 			}{},
 			loader: MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
 			err:    ErrInvalidMapValue,
+		},
+		{
+			name: "map: invalid value",
+			input: &struct {
+				Int64Map map[string]int64 `config:"INT64_MAP"`
+			}{},
+			loader: MapLoader{"INT64_MAP": "key1:1,key2:invalid"},
+			err:    errors.New("unable to cast"),
+		},
+		{
+			name: "map: invalid key",
+			input: &struct {
+				Int64Map map[int]int64 `config:"INT64_MAP"`
+			}{},
+			loader: MapLoader{"INT64_MAP": "key1:1,key2:2"},
+			err:    errors.New("unable to cast"),
+		},
+	}
+
+	runTestcases(t, testcases)
+}
+
+type CustomBinary string
+
+func (c *CustomBinary) UnmarshalBinary(data []byte) error {
+	val := CustomBinary("binary-" + string(data))
+
+	*c = val
+
+	return nil
+}
+
+type CustomGob string
+
+func (c *CustomGob) GobDecode(data []byte) error {
+	val := CustomGob("gob-" + string(data))
+
+	*c = val
+
+	return nil
+}
+
+func TestLoad_CustomType(t *testing.T) {
+	t.Parallel()
+
+	testcases := []testcase{
+		{
+			name: "custom type: binary",
+			input: &struct {
+				Binary CustomBinary `config:"BINARY"`
+			}{},
+			want: &struct {
+				Binary CustomBinary `config:"BINARY"`
+			}{
+				Binary: CustomBinary("binary-value"),
+			},
+			loader: MapLoader{"BINARY": "value"},
+		},
+		{
+			name: "custom type: gob",
+			input: &struct {
+				Gob CustomGob `config:"GOB"`
+			}{},
+			want: &struct {
+				Gob CustomGob `config:"GOB"`
+			}{
+				Gob: CustomGob("gob-value"),
+			},
+			loader: MapLoader{"GOB": "value"},
 		},
 	}
 
