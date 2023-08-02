@@ -2,6 +2,7 @@ package xload
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
@@ -151,6 +152,35 @@ func ExampleLoadEnv_customDecoder() {
 	var conf AppConf
 
 	err := LoadEnv(context.Background(), &conf)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ExampleLoadEnv_transformFieldName() {
+	type AppConf struct {
+		Host    string        `config:"MYAPP_HOST"`
+		Debug   bool          `config:"MYAPP_DEBUG"`
+		Timeout time.Duration `config:"MYAPP_TIMEOUT"`
+	}
+
+	var conf AppConf
+
+	// transform converts key from MYAPP_HOST to myapp.host
+	transform := func(next Loader) Loader {
+		return LoaderFunc(func(ctx context.Context, key string) (string, error) {
+			newKey := strings.ReplaceAll(key, "_", ".")
+			newKey = strings.ToLower(newKey)
+
+			return next.Load(ctx, newKey)
+		})
+	}
+
+	err := Load(
+		context.Background(),
+		&conf,
+		WithLoader(transform(OSLoader())),
+	)
 	if err != nil {
 		panic(err)
 	}
