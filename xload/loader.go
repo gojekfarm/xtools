@@ -25,20 +25,6 @@ func PrefixLoader(prefix string, loader Loader) Loader {
 	})
 }
 
-// MapLoader loads values from a map.
-// Mostly used for testing.
-type MapLoader map[string]string
-
-// Load fetches the value from the map.
-func (m MapLoader) Load(ctx context.Context, key string) (string, error) {
-	value, ok := m[key]
-	if !ok {
-		return "", nil
-	}
-
-	return value, nil
-}
-
 // OSLoader loads values from the OS environment.
 func OSLoader() Loader {
 	return LoaderFunc(func(ctx context.Context, key string) (string, error) {
