@@ -10,9 +10,9 @@ import (
 
 func ExampleLoadEnv() {
 	type AppConf struct {
-		Host    string        `config:"HOST"`
-		Debug   bool          `config:"DEBUG"`
-		Timeout time.Duration `config:"TIMEOUT"`
+		Host    string        `env:"HOST"`
+		Debug   bool          `env:"DEBUG"`
+		Timeout time.Duration `env:"TIMEOUT"`
 	}
 
 	var conf AppConf
@@ -65,9 +65,9 @@ func ExampleLoad_customLoader() {
 
 func ExampleLoad_prefixLoader() {
 	type AppConf struct {
-		Host    string        `config:"HOST"`
-		Debug   bool          `config:"DEBUG"`
-		Timeout time.Duration `config:"TIMEOUT"`
+		Host    string        `env:"HOST"`
+		Debug   bool          `env:"DEBUG"`
+		Timeout time.Duration `env:"TIMEOUT"`
 	}
 
 	var conf AppConf
@@ -84,9 +84,9 @@ func ExampleLoad_prefixLoader() {
 
 func ExampleLoadEnv_required() {
 	type AppConf struct {
-		Host    string        `config:"HOST,required"`
-		Debug   bool          `config:"DEBUG"`
-		Timeout time.Duration `config:"TIMEOUT"`
+		Host    string        `env:"HOST,required"`
+		Debug   bool          `env:"DEBUG"`
+		Timeout time.Duration `env:"TIMEOUT"`
 	}
 
 	var conf AppConf
@@ -100,17 +100,17 @@ func ExampleLoadEnv_required() {
 
 func ExampleLoadEnv_structs() {
 	type DBConf struct {
-		Host string `config:"HOST"` // will be loaded from DB_HOST
-		Port int    `config:"PORT"` // will be loaded from DB_PORT
+		Host string `env:"HOST"` // will be loaded from DB_HOST
+		Port int    `env:"PORT"` // will be loaded from DB_PORT
 	}
 
 	type HTTPConf struct {
-		Host string `config:"HTTP_HOST"` // will be loaded from HTTP_HOST
-		Port int    `config:"HTTP_PORT"` // will be loaded from HTTP_PORT
+		Host string `env:"HTTP_HOST"` // will be loaded from HTTP_HOST
+		Port int    `env:"HTTP_PORT"` // will be loaded from HTTP_PORT
 	}
 
 	type AppConf struct {
-		DB   DBConf   `config:",prefix=DB_"` // example of prefix for nested struct
+		DB   DBConf   `env:",prefix=DB_"` // example of prefix for nested struct
 		HTTP HTTPConf // example of embedded struct
 	}
 
@@ -141,9 +141,9 @@ func ExampleLoadEnv_customDecoder() {
 	// implements the Decoder interface.
 
 	type AppConf struct {
-		Host    Host          `config:"HOST"`
-		Debug   bool          `config:"DEBUG"`
-		Timeout time.Duration `config:"TIMEOUT"`
+		Host    Host          `env:"HOST"`
+		Debug   bool          `env:"DEBUG"`
+		Timeout time.Duration `env:"TIMEOUT"`
 	}
 
 	var conf AppConf
@@ -156,9 +156,9 @@ func ExampleLoadEnv_customDecoder() {
 
 func ExampleLoadEnv_transformFieldName() {
 	type AppConf struct {
-		Host    string        `config:"MYAPP_HOST"`
-		Debug   bool          `config:"MYAPP_DEBUG"`
-		Timeout time.Duration `config:"MYAPP_TIMEOUT"`
+		Host    string        `env:"MYAPP_HOST"`
+		Debug   bool          `env:"MYAPP_DEBUG"`
+		Timeout time.Duration `env:"MYAPP_TIMEOUT"`
 	}
 
 	var conf AppConf
@@ -178,6 +178,36 @@ func ExampleLoadEnv_transformFieldName() {
 		&conf,
 		xload.WithLoader(transform(xload.OSLoader())),
 	)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ExampleLoadEnv_arrayDelimiter() {
+	type AppConf struct {
+		// value will be split by |, instead of ,
+		// e.g. HOSTS=host1|host2|host3
+		Hosts []string `env:"HOSTS,delimiter=|"`
+	}
+
+	var conf AppConf
+
+	err := xload.LoadEnv(context.Background(), &conf)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ExampleLoadEnv_mapSeparator() {
+	type AppConf struct {
+		// key value pair will be split by :, instead of =
+		// e.g. HOSTS=db:localhost,cache:localhost
+		Hosts map[string]string `env:"HOSTS,separator=:"`
+	}
+
+	var conf AppConf
+
+	err := xload.LoadEnv(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}

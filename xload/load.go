@@ -32,8 +32,13 @@ var (
 )
 
 const (
-	optRequired = "required"
-	optPrefix   = "prefix="
+	optRequired  = "required"
+	optPrefix    = "prefix="
+	optDelimiter = "delimiter="
+	optSeparator = "separator="
+
+	defaultDelimiter = ","
+	defaultSeparator = "="
 )
 
 // LoadEnv loads values from OS environment using default options.
@@ -175,7 +180,7 @@ func process(ctx context.Context, obj any, tagKey string, loader Loader) error {
 		}
 
 		// set value
-		err = setVal(fVal, val)
+		err = setVal(fVal, val, meta)
 		if err != nil {
 			return err
 		}
@@ -185,9 +190,11 @@ func process(ctx context.Context, obj any, tagKey string, loader Loader) error {
 }
 
 type field struct {
-	name     string
-	prefix   string
-	required bool
+	name      string
+	prefix    string
+	required  bool
+	delimiter string
+	separator string
 }
 
 func parseField(tag string) (*field, error) {
@@ -195,7 +202,9 @@ func parseField(tag string) (*field, error) {
 	key, tagOpts := strings.TrimSpace(parts[0]), parts[1:]
 
 	f := &field{
-		name: key,
+		name:      key,
+		delimiter: defaultDelimiter,
+		separator: defaultSeparator,
 	}
 
 	for _, opt := range tagOpts {
@@ -210,6 +219,10 @@ func parseField(tag string) (*field, error) {
 			f.required = true
 		case strings.HasPrefix(opt, optPrefix):
 			f.prefix = strings.TrimPrefix(opt, optPrefix)
+		case strings.HasPrefix(opt, optDelimiter):
+			f.delimiter = strings.TrimPrefix(opt, optDelimiter)
+		case strings.HasPrefix(opt, optSeparator):
+			f.separator = strings.TrimPrefix(opt, optSeparator)
 		default:
 			return nil, ErrUnknownTagOption
 		}
@@ -219,7 +232,7 @@ func parseField(tag string) (*field, error) {
 }
 
 //nolint:funlen,nestif
-func setVal(field reflect.Value, val string) error {
+func setVal(field reflect.Value, val string, meta *field) error {
 	for field.Kind() == reflect.Ptr {
 		if field.IsNil() {
 			field.Set(reflect.New(field.Type().Elem()))
@@ -297,11 +310,11 @@ func setVal(field reflect.Value, val string) error {
 		field.SetFloat(f)
 
 	case reflect.Map:
-		vals := strings.Split(val, ",")
+		vals := strings.Split(val, meta.delimiter)
 		m := reflect.MakeMapWithSize(ty, len(vals))
 
 		for _, v := range vals {
-			kv := strings.Split(v, ":")
+			kv := strings.Split(v, meta.separator)
 			if len(kv) != 2 {
 				return ErrInvalidMapValue
 			}
@@ -310,14 +323,14 @@ func setVal(field reflect.Value, val string) error {
 
 			key := reflect.New(ty.Key()).Elem()
 
-			err := setVal(key, k)
+			err := setVal(key, k, meta)
 			if err != nil {
 				return err
 			}
 
 			value := reflect.New(ty.Elem()).Elem()
 
-			err = setVal(value, v)
+			err = setVal(value, v, meta)
 			if err != nil {
 				return err
 			}
@@ -335,13 +348,13 @@ func setVal(field reflect.Value, val string) error {
 			return nil
 		}
 
-		vals := strings.Split(val, ",")
+		vals := strings.Split(val, meta.delimiter)
 		slice := reflect.MakeSlice(ty, len(vals), len(vals))
 
 		for i, v := range vals {
 			v = strings.TrimSpace(v)
 
-			err := setVal(slice.Index(i), v)
+			err := setVal(slice.Index(i), v, meta)
 			if err != nil {
 				return err
 			}
