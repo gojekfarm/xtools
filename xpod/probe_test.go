@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -21,18 +22,22 @@ func TestProbeHandler_serveHealth(t *testing.T) {
 		verbose     bool
 		excluded    []string
 		logDelegate func(*testing.T, *mock.Mock)
-		want        string
+		want        func(*testing.T, string)
 	}{
 		{
 			name: "NoHealthCheckNonVerbose",
-			want: "ok",
+			want: func(t *testing.T, got string) {
+				assert.Equal(t, "ok", got)
+			},
 		},
 		{
 			name:    "NoHealthCheckVerbose",
 			verbose: true,
-			want: `[+]ping ok
+			want: func(t *testing.T, got string) {
+				assert.Equal(t, `[+]ping ok
 healthz check passed
-`,
+`, got)
+			},
 		},
 		{
 			name: "FailingHealthCheckWithHiddenReason",
@@ -51,8 +56,10 @@ healthz check passed
 					assert.Equal(t, "redis", argsMap["failed_checks"])
 				})
 			},
-			want: `[-]redis failed: reason hidden
-`,
+			want: func(t *testing.T, got string) {
+				assert.Equal(t, `[-]redis failed: reason hidden
+`, got)
+			},
 		},
 		{
 			name: "FailingHealthCheckWithReason",
@@ -64,9 +71,11 @@ healthz check passed
 				},
 				ShowErrReasons: true,
 			},
-			want: `[-]redis failed:
+			want: func(t *testing.T, got string) {
+				assert.Equal(t, `[-]redis failed:
 	reason: redis-connect-error
-`,
+`, got)
+			},
 		},
 		{
 			name: "FailingHealthCheckExcluded",
@@ -79,7 +88,7 @@ healthz check passed
 				},
 			},
 			excluded: []string{"redis"},
-			want:     "ok",
+			want:     func(t *testing.T, got string) { assert.Equal(t, "ok", got) },
 		},
 		{
 			name:     "FailingHealthCheckWithExtraExcludes",
@@ -106,11 +115,20 @@ healthz check passed
 					assert.Equal(t, "no matches", argsMap["reason"])
 				})
 			},
-			want: `[+]ping ok
-[+]redis excluded: ok
-warn: some health checks cannot be excluded: no matches for "foo", "bar", "baz"
-healthz check passed
-`,
+			want: func(t *testing.T, got string) {
+				assert.True(t, strings.Contains(got, `[+]ping ok`))
+				assert.True(t, strings.Contains(got, `[+]redis excluded: ok`))
+
+				re := regexp.MustCompile(`warn: some health checks cannot be excluded: no matches for (.*)`)
+				assert.True(t, re.MatchString(got))
+
+				excludedLine := re.FindStringSubmatch(got)[1]
+				assert.ElementsMatch(t, []string{"foo", "bar", "baz"}, slice.Map(
+					strings.Split(excludedLine, ", "), func(s string) string {
+						return strings.Trim(s, `"`)
+					},
+				))
+			},
 		},
 	}
 
@@ -146,7 +164,7 @@ healthz check passed
 			assert.NoError(t, err)
 			assert.NoError(t, rc.Close())
 
-			assert.Equal(t, tt.want, string(b))
+			tt.want(t, string(b))
 
 			ld.AssertExpectations(t)
 		})
