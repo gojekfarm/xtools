@@ -13,16 +13,16 @@ func TestSerialLoader(t *testing.T) {
 		{
 			name: "serial loader",
 			input: &struct {
-				A string `config:"A"`
-				B string `config:"B"`
-				C string `config:"C"`
-				D string `config:"D"`
+				A string `env:"A"`
+				B string `env:"B"`
+				C string `env:"C"`
+				D string `env:"D"`
 			}{},
 			want: &struct {
-				A string `config:"A"`
-				B string `config:"B"`
-				C string `config:"C"`
-				D string `config:"D"`
+				A string `env:"A"`
+				B string `env:"B"`
+				C string `env:"C"`
+				D string `env:"D"`
 			}{
 				A: "loader-1: 1",
 				B: "loader-2: 2",
@@ -37,8 +37,8 @@ func TestSerialLoader(t *testing.T) {
 		{
 			name: "serial loader: error",
 			input: &struct {
-				A string `config:"A"`
-				B string `config:"B"`
+				A string `env:"A"`
+				B string `env:"B"`
 			}{},
 			loader: SerialLoader(
 				MapLoader{"A": "loader-1: 1", "B": "loader-1: 2"},

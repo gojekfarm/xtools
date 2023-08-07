@@ -10,24 +10,24 @@ import (
 )
 
 type House struct {
-	Name    string `config:"NAME"`
+	Name    string `env:"NAME"`
 	Address Address
-	Living  Room  `config:",prefix=LIVING_"`
-	Bedroom *Room `config:",prefix=BEDROOM_"`
-	Plot    Plot  `config:"PLOT"`
+	Living  Room  `env:",prefix=LIVING_"`
+	Bedroom *Room `env:",prefix=BEDROOM_"`
+	Plot    Plot  `env:"PLOT"`
 }
 
 type Address struct {
-	Street    string   `config:"STREET"`
-	City      string   `config:"CITY"`
-	Longitute *float64 `config:"LONGITUTE"`
-	Latitude  *float64 `config:"LATITUDE"`
+	Street    string   `env:"STREET"`
+	City      string   `env:"CITY"`
+	Longitute *float64 `env:"LONGITUTE"`
+	Latitude  *float64 `env:"LATITUDE"`
 }
 
 type Room struct {
-	Name   string `config:"NAME" json:"name,omitempty"`
-	Width  int    `config:"WIDTH" json:"width,omitempty"`
-	Length int    `config:"LENGTH" json:"length,omitempty"`
+	Name   string `env:"NAME" json:"name,omitempty"`
+	Width  int    `env:"WIDTH" json:"width,omitempty"`
+	Length int    `env:"LENGTH" json:"length,omitempty"`
 }
 
 type Plot struct {
@@ -71,18 +71,18 @@ func TestLoad_Structs(t *testing.T) {
 		{
 			name: "nested struct: using prefix",
 			input: &struct {
-				Name       string `config:"NAME"`
-				Living     Room   `config:",prefix=LIVING_"`
+				Name       string `env:"NAME"`
+				Living     Room   `env:",prefix=LIVING_"`
 				FirstLevel struct {
-					Bedroom Room `config:",prefix=BEDROOM_"`
-				} `config:",prefix=FIRST_LEVEL_"`
+					Bedroom Room `env:",prefix=BEDROOM_"`
+				} `env:",prefix=FIRST_LEVEL_"`
 			}{},
 			want: &struct {
-				Name       string `config:"NAME"`
-				Living     Room   `config:",prefix=LIVING_"`
+				Name       string `env:"NAME"`
+				Living     Room   `env:",prefix=LIVING_"`
 				FirstLevel struct {
-					Bedroom Room `config:",prefix=BEDROOM_"`
-				} `config:",prefix=FIRST_LEVEL_"`
+					Bedroom Room `env:",prefix=BEDROOM_"`
+				} `env:",prefix=FIRST_LEVEL_"`
 			}{
 				Name: "app1",
 				Living: Room{
@@ -91,7 +91,7 @@ func TestLoad_Structs(t *testing.T) {
 					Length: 2,
 				},
 				FirstLevel: struct {
-					Bedroom Room `config:",prefix=BEDROOM_"`
+					Bedroom Room `env:",prefix=BEDROOM_"`
 				}{
 					Bedroom: Room{
 						Name:   "bedroom",
@@ -113,11 +113,11 @@ func TestLoad_Structs(t *testing.T) {
 		{
 			name: "nested struct: without prefix",
 			input: &struct {
-				Name    string `config:"NAME"`
+				Name    string `env:"NAME"`
 				Address Address
 			}{},
 			want: &struct {
-				Name    string `config:"NAME"`
+				Name    string `env:"NAME"`
 				Address Address
 			}{
 				Name: "house1",
@@ -139,7 +139,7 @@ func TestLoad_Structs(t *testing.T) {
 		{
 			name: "non-struct field with prefix",
 			input: &struct {
-				Name string `config:",prefix=CLUSTER"`
+				Name string `env:",prefix=CLUSTER"`
 			}{},
 			err:    ErrInvalidPrefix,
 			loader: MapLoader{},
@@ -157,12 +157,12 @@ func TestLoad_Decoder(t *testing.T) {
 		{
 			name: "time",
 			input: &struct {
-				Time    time.Time  `config:"TIME"`
-				OptTime *time.Time `config:"OPT_TIME"`
+				Time    time.Time  `env:"TIME"`
+				OptTime *time.Time `env:"OPT_TIME"`
 			}{},
 			want: &struct {
-				Time    time.Time  `config:"TIME"`
-				OptTime *time.Time `config:"OPT_TIME"`
+				Time    time.Time  `env:"TIME"`
+				OptTime *time.Time `env:"OPT_TIME"`
 			}{
 				Time:    time.Date(2020, 1, 2, 3, 4, 5, 6, time.UTC),
 				OptTime: ptr.Time(time.Date(2020, 1, 2, 3, 4, 5, 6, time.UTC)),
@@ -175,7 +175,7 @@ func TestLoad_Decoder(t *testing.T) {
 		{
 			name: "time: invalid",
 			input: &struct {
-				Time time.Time `config:"TIME"`
+				Time time.Time `env:"TIME"`
 			}{},
 			loader: MapLoader{"TIME": "invalid"},
 			err:    errors.New("cannot parse"),
@@ -192,10 +192,10 @@ func TestLoad_JSON(t *testing.T) {
 		{
 			name: "json object as string",
 			input: &struct {
-				Plot Plot `config:"PLOT"`
+				Plot Plot `env:"PLOT"`
 			}{},
 			want: &struct {
-				Plot Plot `config:"PLOT"`
+				Plot Plot `env:"PLOT"`
 			}{
 				Plot: Plot{
 					Width:  100,
@@ -210,10 +210,10 @@ func TestLoad_JSON(t *testing.T) {
 		{
 			name: "json array as string",
 			input: &struct {
-				Plots Plots `config:"PLOTS"`
+				Plots Plots `env:"PLOTS"`
 			}{},
 			want: &struct {
-				Plots Plots `config:"PLOTS"`
+				Plots Plots `env:"PLOTS"`
 			}{
 				Plots: Plots{
 					{
@@ -235,7 +235,7 @@ func TestLoad_JSON(t *testing.T) {
 		{
 			name: "json: invalid",
 			input: &struct {
-				Plot Plot `config:"PLOT"`
+				Plot Plot `env:"PLOT"`
 			}{},
 			err:    errors.New("invalid character"),
 			loader: MapLoader{"PLOT": `invalid`},

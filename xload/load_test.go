@@ -22,7 +22,7 @@ type testcase struct {
 
 func TestLoadEnv(t *testing.T) {
 	cfg := &struct {
-		Host string `config:"XLOAD_HOST"`
+		Host string `env:"XLOAD_HOST"`
 	}{}
 
 	_ = os.Setenv("XLOAD_HOST", "localhost")
@@ -40,7 +40,7 @@ func TestLoad_Errors(t *testing.T) {
 		{
 			name: "nil pointer",
 			input: struct {
-				Host string `config:"HOST"`
+				Host string `env:"HOST"`
 			}{},
 			loader: MapLoader{},
 			err:    ErrNotPointer,
@@ -58,12 +58,12 @@ func TestLoad_Errors(t *testing.T) {
 		{
 			name: "private fields",
 			input: &struct {
-				host string `config:"HOST"`
+				host string `env:"HOST"`
 			}{
 				host: "localhost",
 			},
 			want: &struct {
-				host string `config:"HOST"`
+				host string `env:"HOST"`
 			}{
 				host: "localhost",
 			},
@@ -76,12 +76,12 @@ func TestLoad_Errors(t *testing.T) {
 		{
 			name: "skip fields",
 			input: &struct {
-				Host string `config:"-"`
+				Host string `env:"-"`
 			}{
 				Host: "localhost",
 			},
 			want: &struct {
-				Host string `config:"-"`
+				Host string `env:"-"`
 			}{
 				Host: "localhost",
 			},
@@ -94,7 +94,7 @@ func TestLoad_Errors(t *testing.T) {
 		{
 			name: "loader error",
 			input: &struct {
-				Host string `config:"HOST"`
+				Host string `env:"HOST"`
 			}{},
 			loader: LoaderFunc(func(ctx context.Context, k string) (string, error) {
 				return "", errors.New("loader error")
@@ -106,7 +106,7 @@ func TestLoad_Errors(t *testing.T) {
 		{
 			name: "unknown tag option",
 			input: &struct {
-				Host string `config:"HOST,unknown"`
+				Host string `env:"HOST,unknown"`
 			}{},
 			loader: MapLoader{},
 			err:    ErrUnknownTagOption,
@@ -124,10 +124,10 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "bool: true",
 			input: &struct {
-				Bool bool `config:"BOOL"`
+				Bool bool `env:"BOOL"`
 			}{},
 			want: &struct {
-				Bool bool `config:"BOOL"`
+				Bool bool `env:"BOOL"`
 			}{
 				Bool: true,
 			},
@@ -136,10 +136,10 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "bool: false",
 			input: &struct {
-				Bool bool `config:"BOOL"`
+				Bool bool `env:"BOOL"`
 			}{},
 			want: &struct {
-				Bool bool `config:"BOOL"`
+				Bool bool `env:"BOOL"`
 			}{
 				Bool: false,
 			},
@@ -148,7 +148,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "bool: invalid",
 			input: &struct {
-				Bool bool `config:"BOOL"`
+				Bool bool `env:"BOOL"`
 			}{},
 			loader: MapLoader{"BOOL": "invalid"},
 			err:    errors.New("invalid syntax"),
@@ -158,18 +158,18 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "int, int8, int16, int32, int64",
 			input: &struct {
-				Int   int   `config:"INT"`
-				Int8  int8  `config:"INT8"`
-				Int16 int16 `config:"INT16"`
-				Int32 int32 `config:"INT32"`
-				Int64 int64 `config:"INT64"`
+				Int   int   `env:"INT"`
+				Int8  int8  `env:"INT8"`
+				Int16 int16 `env:"INT16"`
+				Int32 int32 `env:"INT32"`
+				Int64 int64 `env:"INT64"`
 			}{},
 			want: &struct {
-				Int   int   `config:"INT"`
-				Int8  int8  `config:"INT8"`
-				Int16 int16 `config:"INT16"`
-				Int32 int32 `config:"INT32"`
-				Int64 int64 `config:"INT64"`
+				Int   int   `env:"INT"`
+				Int8  int8  `env:"INT8"`
+				Int16 int16 `env:"INT16"`
+				Int32 int32 `env:"INT32"`
+				Int64 int64 `env:"INT64"`
 			}{
 				Int:   1,
 				Int8:  12,
@@ -188,7 +188,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "int: invalid",
 			input: &struct {
-				Int int `config:"INT"`
+				Int int `env:"INT"`
 			}{},
 			loader: MapLoader{"INT": "invalid"},
 			err:    errors.New("unable to cast"),
@@ -198,18 +198,18 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "uint, uint8, uint16, uint32, uint64",
 			input: &struct {
-				Uint   uint   `config:"UINT"`
-				Uint8  uint8  `config:"UINT8"`
-				Uint16 uint16 `config:"UINT16"`
-				Uint32 uint32 `config:"UINT32"`
-				Uint64 uint64 `config:"UINT64"`
+				Uint   uint   `env:"UINT"`
+				Uint8  uint8  `env:"UINT8"`
+				Uint16 uint16 `env:"UINT16"`
+				Uint32 uint32 `env:"UINT32"`
+				Uint64 uint64 `env:"UINT64"`
 			}{},
 			want: &struct {
-				Uint   uint   `config:"UINT"`
-				Uint8  uint8  `config:"UINT8"`
-				Uint16 uint16 `config:"UINT16"`
-				Uint32 uint32 `config:"UINT32"`
-				Uint64 uint64 `config:"UINT64"`
+				Uint   uint   `env:"UINT"`
+				Uint8  uint8  `env:"UINT8"`
+				Uint16 uint16 `env:"UINT16"`
+				Uint32 uint32 `env:"UINT32"`
+				Uint64 uint64 `env:"UINT64"`
 			}{
 				Uint:   1,
 				Uint8:  12,
@@ -228,7 +228,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "uint: invalid",
 			input: &struct {
-				Uint uint `config:"UINT"`
+				Uint uint `env:"UINT"`
 			}{},
 			loader: MapLoader{"UINT": "invalid"},
 			err:    errors.New("unable to cast"),
@@ -238,12 +238,12 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "float32, float64",
 			input: &struct {
-				Float32 float32 `config:"FLOAT32"`
-				Float64 float64 `config:"FLOAT64"`
+				Float32 float32 `env:"FLOAT32"`
+				Float64 float64 `env:"FLOAT64"`
 			}{},
 			want: &struct {
-				Float32 float32 `config:"FLOAT32"`
-				Float64 float64 `config:"FLOAT64"`
+				Float32 float32 `env:"FLOAT32"`
+				Float64 float64 `env:"FLOAT64"`
 			}{
 				Float32: 1.23,
 				Float64: 1.2345,
@@ -256,7 +256,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "float: invalid",
 			input: &struct {
-				Float float32 `config:"FLOAT"`
+				Float float32 `env:"FLOAT"`
 			}{},
 			loader: MapLoader{"FLOAT": "invalid"},
 			err:    errors.New("unable to cast"),
@@ -266,12 +266,12 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "duration",
 			input: &struct {
-				Duration    time.Duration  `config:"DURATION"`
-				OptDuration *time.Duration `config:"OPT_DURATION"`
+				Duration    time.Duration  `env:"DURATION"`
+				OptDuration *time.Duration `env:"OPT_DURATION"`
 			}{},
 			want: &struct {
-				Duration    time.Duration  `config:"DURATION"`
-				OptDuration *time.Duration `config:"OPT_DURATION"`
+				Duration    time.Duration  `env:"DURATION"`
+				OptDuration *time.Duration `env:"OPT_DURATION"`
 			}{
 				Duration:    10 * time.Second,
 				OptDuration: ptr.Duration(10 * time.Second),
@@ -284,7 +284,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "duration: invalid",
 			input: &struct {
-				Duration time.Duration `config:"DURATION"`
+				Duration time.Duration `env:"DURATION"`
 			}{},
 			loader: MapLoader{"DURATION": "invalid"},
 			err:    errors.New("invalid duration"),
@@ -294,12 +294,12 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "string",
 			input: &struct {
-				String    string  `config:"STRING"`
-				OptString *string `config:"OPT_STRING"`
+				String    string  `env:"STRING"`
+				OptString *string `env:"OPT_STRING"`
 			}{},
 			want: &struct {
-				String    string  `config:"STRING"`
-				OptString *string `config:"OPT_STRING"`
+				String    string  `env:"STRING"`
+				OptString *string `env:"OPT_STRING"`
 			}{
 				String:    "string",
 				OptString: ptr.String("string"),
@@ -314,10 +314,10 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "byte array",
 			input: &struct {
-				Bytes []byte `config:"BYTES"`
+				Bytes []byte `env:"BYTES"`
 			}{},
 			want: &struct {
-				Bytes []byte `config:"BYTES"`
+				Bytes []byte `env:"BYTES"`
 			}{
 				Bytes: []byte("bytes"),
 			},
@@ -330,20 +330,20 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "slice",
 			input: &struct {
-				StringSlice    []string  `config:"STRING_SLICE"`
-				OptStringSlice []*string `config:"OPT_STRING_SLICE"`
-				PtrStringSlice *[]string `config:"PTR_STRING_SLICE"`
-				Int64Slice     []int64   `config:"INT64_SLICE"`
-				OptInt64Slice  []*int64  `config:"OPT_INT64_SLICE"`
-				PtrInt64Slice  *[]int64  `config:"PTR_INT64_SLICE"`
+				StringSlice    []string  `env:"STRING_SLICE"`
+				OptStringSlice []*string `env:"OPT_STRING_SLICE"`
+				PtrStringSlice *[]string `env:"PTR_STRING_SLICE"`
+				Int64Slice     []int64   `env:"INT64_SLICE"`
+				OptInt64Slice  []*int64  `env:"OPT_INT64_SLICE"`
+				PtrInt64Slice  *[]int64  `env:"PTR_INT64_SLICE"`
 			}{},
 			want: &struct {
-				StringSlice    []string  `config:"STRING_SLICE"`
-				OptStringSlice []*string `config:"OPT_STRING_SLICE"`
-				PtrStringSlice *[]string `config:"PTR_STRING_SLICE"`
-				Int64Slice     []int64   `config:"INT64_SLICE"`
-				OptInt64Slice  []*int64  `config:"OPT_INT64_SLICE"`
-				PtrInt64Slice  *[]int64  `config:"PTR_INT64_SLICE"`
+				StringSlice    []string  `env:"STRING_SLICE"`
+				OptStringSlice []*string `env:"OPT_STRING_SLICE"`
+				PtrStringSlice *[]string `env:"PTR_STRING_SLICE"`
+				Int64Slice     []int64   `env:"INT64_SLICE"`
+				OptInt64Slice  []*int64  `env:"OPT_INT64_SLICE"`
+				PtrInt64Slice  *[]int64  `env:"PTR_INT64_SLICE"`
 			}{
 				StringSlice:    []string{"string1", "string2"},
 				OptStringSlice: []*string{ptr.String("string3"), ptr.String("string4")},
@@ -364,7 +364,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "slice: invalid value",
 			input: &struct {
-				Int64Slice []int64 `config:"INT64_SLICE"`
+				Int64Slice []int64 `env:"INT64_SLICE"`
 			}{},
 			loader: MapLoader{"INT64_SLICE": "invalid,2"},
 			err:    errors.New("unable to cast"),
@@ -374,16 +374,16 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "map",
 			input: &struct {
-				StringMap    map[string]string  `config:"STRING_MAP"`
-				PtrStringMap *map[string]string `config:"PTR_STRING_MAP"`
-				Int64Map     map[string]int64   `config:"INT64_MAP"`
-				PtrInt64Map  *map[string]int64  `config:"PTR_INT64_MAP"`
+				StringMap    map[string]string  `env:"STRING_MAP"`
+				PtrStringMap *map[string]string `env:"PTR_STRING_MAP"`
+				Int64Map     map[string]int64   `env:"INT64_MAP"`
+				PtrInt64Map  *map[string]int64  `env:"PTR_INT64_MAP"`
 			}{},
 			want: &struct {
-				StringMap    map[string]string  `config:"STRING_MAP"`
-				PtrStringMap *map[string]string `config:"PTR_STRING_MAP"`
-				Int64Map     map[string]int64   `config:"INT64_MAP"`
-				PtrInt64Map  *map[string]int64  `config:"PTR_INT64_MAP"`
+				StringMap    map[string]string  `env:"STRING_MAP"`
+				PtrStringMap *map[string]string `env:"PTR_STRING_MAP"`
+				Int64Map     map[string]int64   `env:"INT64_MAP"`
+				PtrInt64Map  *map[string]int64  `env:"PTR_INT64_MAP"`
 			}{
 				StringMap:    map[string]string{"key1": "value1", "key2": "value2"},
 				PtrStringMap: &map[string]string{"key3": "value3", "key4": "value4"},
@@ -400,7 +400,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "map: invalid delimiter",
 			input: &struct {
-				StringMap map[string]string `config:"STRING_MAP"`
+				StringMap map[string]string `env:"STRING_MAP"`
 			}{},
 			loader: MapLoader{"STRING_MAP": "key1=value1,key2=value2"},
 			err:    ErrInvalidMapValue,
@@ -408,7 +408,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "map: invalid delimiter",
 			input: &struct {
-				Int64Map map[string]int64 `config:"INT64_MAP"`
+				Int64Map map[string]int64 `env:"INT64_MAP"`
 			}{},
 			loader: MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
 			err:    ErrInvalidMapValue,
@@ -416,7 +416,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "map: invalid value",
 			input: &struct {
-				Int64Map map[string]int64 `config:"INT64_MAP"`
+				Int64Map map[string]int64 `env:"INT64_MAP"`
 			}{},
 			loader: MapLoader{"INT64_MAP": "key1:1,key2:invalid"},
 			err:    errors.New("unable to cast"),
@@ -424,7 +424,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "map: invalid key",
 			input: &struct {
-				Int64Map map[int]int64 `config:"INT64_MAP"`
+				Int64Map map[int]int64 `env:"INT64_MAP"`
 			}{},
 			loader: MapLoader{"INT64_MAP": "key1:1,key2:2"},
 			err:    errors.New("unable to cast"),
@@ -461,10 +461,10 @@ func TestLoad_CustomType(t *testing.T) {
 		{
 			name: "custom type: binary",
 			input: &struct {
-				Binary CustomBinary `config:"BINARY"`
+				Binary CustomBinary `env:"BINARY"`
 			}{},
 			want: &struct {
-				Binary CustomBinary `config:"BINARY"`
+				Binary CustomBinary `env:"BINARY"`
 			}{
 				Binary: CustomBinary("binary-value"),
 			},
@@ -473,10 +473,10 @@ func TestLoad_CustomType(t *testing.T) {
 		{
 			name: "custom type: gob",
 			input: &struct {
-				Gob CustomGob `config:"GOB"`
+				Gob CustomGob `env:"GOB"`
 			}{},
 			want: &struct {
-				Gob CustomGob `config:"GOB"`
+				Gob CustomGob `env:"GOB"`
 			}{
 				Gob: CustomGob("gob-value"),
 			},
@@ -494,7 +494,7 @@ func TestOption_Required(t *testing.T) {
 		{
 			name: "required option",
 			input: &struct {
-				Name string `config:"NAME,required"`
+				Name string `env:"NAME,required"`
 			}{},
 			want: &struct{ Name string }{
 				Name: "app1",
@@ -504,7 +504,7 @@ func TestOption_Required(t *testing.T) {
 		{
 			name: "required option: missing value",
 			input: &struct {
-				Name string `config:"NAME,required"`
+				Name string `env:"NAME,required"`
 			}{},
 			err:    ErrRequired,
 			loader: MapLoader{},
@@ -512,7 +512,7 @@ func TestOption_Required(t *testing.T) {
 		{
 			name: "required option: empty value",
 			input: &struct {
-				Name *string `config:"NAME,required"`
+				Name *string `env:"NAME,required"`
 			}{},
 			err:    ErrRequired,
 			loader: MapLoader{"NAME": ""},
@@ -520,7 +520,7 @@ func TestOption_Required(t *testing.T) {
 		{
 			name: "missing key",
 			input: &struct {
-				Name string `config:",required"`
+				Name string `env:",required"`
 			}{},
 			err:    ErrMissingKey,
 			loader: MapLoader{},

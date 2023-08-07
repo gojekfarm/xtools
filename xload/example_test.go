@@ -1,9 +1,11 @@
-package xload
+package xload_test
 
 import (
 	"context"
 	"strings"
 	"time"
+
+	"github.com/gojekfarm/xtools/xload"
 )
 
 func ExampleLoadEnv() {
@@ -15,7 +17,7 @@ func ExampleLoadEnv() {
 
 	var conf AppConf
 
-	err := LoadEnv(context.Background(), &conf)
+	err := xload.LoadEnv(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}
@@ -23,14 +25,14 @@ func ExampleLoadEnv() {
 
 func ExampleLoad_customTagNames() {
 	type AppConf struct {
-		Host    string        `env:"HOST"`
-		Debug   bool          `env:"DEBUG"`
-		Timeout time.Duration `env:"TIMEOUT"`
+		Host    string        `custom:"HOST"`
+		Debug   bool          `custom:"DEBUG"`
+		Timeout time.Duration `custom:"TIMEOUT"`
 	}
 
 	var conf AppConf
 
-	err := Load(context.Background(), &conf, FieldTagName("env"))
+	err := xload.Load(context.Background(), &conf, xload.FieldTagName("custom"))
 	if err != nil {
 		panic(err)
 	}
@@ -45,16 +47,16 @@ func ExampleLoad_customLoader() {
 
 	var conf AppConf
 
-	loader := LoaderFunc(func(ctx context.Context, key string) (string, error) {
+	loader := xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
 		// lookup value from somewhere
 		return "", nil
 	})
 
-	err := Load(
+	err := xload.Load(
 		context.Background(),
 		&conf,
-		FieldTagName("env"),
-		WithLoader(loader),
+		xload.FieldTagName("env"),
+		xload.WithLoader(loader),
 	)
 	if err != nil {
 		panic(err)
@@ -70,15 +72,10 @@ func ExampleLoad_prefixLoader() {
 
 	var conf AppConf
 
-	loader := LoaderFunc(func(ctx context.Context, key string) (string, error) {
-		// lookup value from somewhere
-		return "", nil
-	})
-
-	err := Load(
+	err := xload.Load(
 		context.Background(),
 		&conf,
-		WithLoader(PrefixLoader("MYAPP_", loader)),
+		xload.WithLoader(xload.PrefixLoader("MYAPP_", xload.OSLoader())),
 	)
 	if err != nil {
 		panic(err)
@@ -95,7 +92,7 @@ func ExampleLoadEnv_required() {
 	var conf AppConf
 
 	// if HOST is not set, Load will return ErrRequired
-	err := LoadEnv(context.Background(), &conf)
+	err := xload.LoadEnv(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}
@@ -119,7 +116,7 @@ func ExampleLoadEnv_structs() {
 
 	var conf AppConf
 
-	err := LoadEnv(context.Background(), &conf)
+	err := xload.LoadEnv(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}
@@ -151,7 +148,7 @@ func ExampleLoadEnv_customDecoder() {
 
 	var conf AppConf
 
-	err := LoadEnv(context.Background(), &conf)
+	err := xload.LoadEnv(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}
@@ -167,8 +164,8 @@ func ExampleLoadEnv_transformFieldName() {
 	var conf AppConf
 
 	// transform converts key from MYAPP_HOST to myapp.host
-	transform := func(next Loader) Loader {
-		return LoaderFunc(func(ctx context.Context, key string) (string, error) {
+	transform := func(next xload.Loader) xload.Loader {
+		return xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
 			newKey := strings.ReplaceAll(key, "_", ".")
 			newKey = strings.ToLower(newKey)
 
@@ -176,10 +173,10 @@ func ExampleLoadEnv_transformFieldName() {
 		})
 	}
 
-	err := Load(
+	err := xload.Load(
 		context.Background(),
 		&conf,
-		WithLoader(transform(OSLoader())),
+		xload.WithLoader(transform(xload.OSLoader())),
 	)
 	if err != nil {
 		panic(err)

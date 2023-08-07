@@ -10,6 +10,7 @@ import (
 )
 
 // NewLoader reads YAML from the given io.Reader and returns a xload.Loader
+// Nested keys are flattened using the given separator.
 func NewLoader(r io.Reader, sep string) (xload.Loader, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {

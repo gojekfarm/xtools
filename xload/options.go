@@ -1,6 +1,6 @@
 package xload
 
-const defaultKey = "config"
+const defaultKey = "env"
 
 // Option configures the xload behaviour.
 type Option interface{ apply(*options) }
