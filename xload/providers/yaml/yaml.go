@@ -3,11 +3,29 @@ package yaml
 
 import (
 	"io"
+	"os"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/gojekfarm/xtools/xload"
 )
+
+// NewFileLoader reads YAML from the given file and returns a xload.Loader
+// Nested keys are flattened using the given separator.
+func NewFileLoader(path, sep string) (xload.Loader, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	close := func() {
+		_ = f.Close()
+	}
+
+	defer close()
+
+	return NewLoader(f, sep)
+}
 
 // NewLoader reads YAML from the given io.Reader and returns a xload.Loader
 // Nested keys are flattened using the given separator.

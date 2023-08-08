@@ -11,18 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewLoader(t *testing.T) {
-	yaml := `
-NAME: "Bombay Bob"
-AGE: 30
-ADDRESS:
-  STREET: "123 Main St"
-  CITY: "Bombay"
-`
-
-	b := bytes.NewBufferString(yaml)
-
-	l, err := NewLoader(b, "_")
+func TestFileLoader(t *testing.T) {
+	l, err := NewFileLoader("data_test.yml", "_")
 	assert.NoError(t, err)
 	assert.NotNil(t, l)
 
@@ -39,6 +29,12 @@ ADDRESS:
 	phone, err := l.Load(ctx, "PHONE")
 	assert.NoError(t, err)
 	assert.Equal(t, "", phone)
+}
+
+func TestFileLoader_InvalidPath(t *testing.T) {
+	l, err := NewFileLoader("invalid_path.yml", "_")
+	assert.Error(t, err)
+	assert.Nil(t, l)
 }
 
 func TestNewLoader_InvalidYAML(t *testing.T) {
