@@ -261,7 +261,7 @@ func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		cancel()
@@ -283,8 +283,13 @@ func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 
 	err := consumer.Run(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"middleware1", "middleware2", "middleware3"}, preExec)
-	assert.Equal(t, []string{"middleware3", "middleware2", "middleware1"}, postExec)
+
+	// middleware execution order should be FIFO
+	// but we only test the first 3 values because the
+	// consumer keeps reading messages until the context
+	// is canceled
+	assert.Equal(t, []string{"middleware1", "middleware2", "middleware3"}, preExec[:3])
+	assert.Equal(t, []string{"middleware3", "middleware2", "middleware1"}, postExec[:3])
 
 	mockKafka.AssertExpectations(t)
 }
