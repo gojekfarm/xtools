@@ -20,14 +20,14 @@ type testcase struct {
 	err    error
 }
 
-func TestLoadEnv(t *testing.T) {
+func TestLoad_Default(t *testing.T) {
 	cfg := &struct {
 		Host string `env:"XLOAD_HOST"`
 	}{}
 
 	_ = os.Setenv("XLOAD_HOST", "localhost")
 
-	err := LoadEnv(context.Background(), cfg)
+	err := Load(context.Background(), cfg)
 	require.NoError(t, err)
 	assert.Equal(t, "localhost", cfg.Host)
 }

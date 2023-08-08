@@ -8,7 +8,7 @@ import (
 	"github.com/gojekfarm/xtools/xload"
 )
 
-func ExampleLoadEnv() {
+func ExampleLoad_default() {
 	type AppConf struct {
 		Host    string        `env:"HOST"`
 		Debug   bool          `env:"DEBUG"`
@@ -17,7 +17,7 @@ func ExampleLoadEnv() {
 
 	var conf AppConf
 
-	err := xload.LoadEnv(context.Background(), &conf)
+	err := xload.Load(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}
@@ -82,7 +82,7 @@ func ExampleLoad_prefixLoader() {
 	}
 }
 
-func ExampleLoadEnv_required() {
+func ExampleLoad_required() {
 	type AppConf struct {
 		Host    string        `env:"HOST,required"`
 		Debug   bool          `env:"DEBUG"`
@@ -92,13 +92,13 @@ func ExampleLoadEnv_required() {
 	var conf AppConf
 
 	// if HOST is not set, Load will return ErrRequired
-	err := xload.LoadEnv(context.Background(), &conf)
+	err := xload.Load(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func ExampleLoadEnv_structs() {
+func ExampleLoad_structs() {
 	type DBConf struct {
 		Host string `env:"HOST"` // will be loaded from DB_HOST
 		Port int    `env:"PORT"` // will be loaded from DB_PORT
@@ -116,7 +116,7 @@ func ExampleLoadEnv_structs() {
 
 	var conf AppConf
 
-	err := xload.LoadEnv(context.Background(), &conf)
+	err := xload.Load(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}
@@ -129,7 +129,7 @@ func (h *Host) Decode(val string) error {
 	return nil
 }
 
-func ExampleLoadEnv_customDecoder() {
+func ExampleLoad_customDecoder() {
 	// type Host string
 	//
 	// func (h *Host) Decode(val string) error {
@@ -148,13 +148,13 @@ func ExampleLoadEnv_customDecoder() {
 
 	var conf AppConf
 
-	err := xload.LoadEnv(context.Background(), &conf)
+	err := xload.Load(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func ExampleLoadEnv_transformFieldName() {
+func ExampleLoad_transformFieldName() {
 	type AppConf struct {
 		Host    string        `env:"MYAPP_HOST"`
 		Debug   bool          `env:"MYAPP_DEBUG"`
@@ -183,7 +183,7 @@ func ExampleLoadEnv_transformFieldName() {
 	}
 }
 
-func ExampleLoadEnv_arrayDelimiter() {
+func ExampleLoad_arrayDelimiter() {
 	type AppConf struct {
 		// value will be split by |, instead of ,
 		// e.g. HOSTS=host1|host2|host3
@@ -192,13 +192,13 @@ func ExampleLoadEnv_arrayDelimiter() {
 
 	var conf AppConf
 
-	err := xload.LoadEnv(context.Background(), &conf)
+	err := xload.Load(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func ExampleLoadEnv_mapSeparator() {
+func ExampleLoad_mapSeparator() {
 	type AppConf struct {
 		// key value pair will be split by :, instead of =
 		// e.g. HOSTS=db:localhost,cache:localhost
@@ -207,7 +207,7 @@ func ExampleLoadEnv_mapSeparator() {
 
 	var conf AppConf
 
-	err := xload.LoadEnv(context.Background(), &conf)
+	err := xload.Load(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}

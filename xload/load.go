@@ -41,12 +41,9 @@ const (
 	defaultSeparator = "="
 )
 
-// LoadEnv loads values from OS environment using default options.
-func LoadEnv(ctx context.Context, v any) error {
-	return Load(ctx, v)
-}
-
 // Load loads values into the given struct using the given options.
+// "env" is used as the default tag name.
+// xload.OSLoader is used as the default loader.
 func Load(ctx context.Context, v any, opts ...Option) error {
 	o := newOptions(opts...)
 
