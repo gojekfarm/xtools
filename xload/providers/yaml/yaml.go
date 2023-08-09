@@ -12,6 +12,9 @@ import (
 
 // NewFileLoader reads YAML from the given file and returns a xload.Loader
 // Nested keys are flattened using the given separator.
+//
+// IMPORTANT: The separator must be consistent with prefix used in the struct
+// tags.
 func NewFileLoader(path, sep string) (xload.Loader, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -29,6 +32,9 @@ func NewFileLoader(path, sep string) (xload.Loader, error) {
 
 // NewLoader reads YAML from the given io.Reader and returns a xload.Loader
 // Nested keys are flattened using the given separator.
+//
+// IMPORTANT: The separator must be consistent with prefix used in the struct
+// tags.
 func NewLoader(r io.Reader, sep string) (xload.Loader, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {

@@ -208,6 +208,30 @@ func TestLoad_JSON(t *testing.T) {
 			},
 		},
 		{
+			name: "override json default value",
+			input: &struct {
+				Plot Plot `env:"PLOT"`
+			}{
+				Plot: Plot{
+					Width:  10,
+					Length: 20,
+					Number: "default",
+				},
+			},
+			want: &struct {
+				Plot Plot `env:"PLOT"`
+			}{
+				Plot: Plot{
+					Width:  100,
+					Length: 200,
+					Number: "plot1",
+				},
+			},
+			loader: MapLoader{
+				"PLOT": `{"width":100,"length":200,"number":"plot1"}`,
+			},
+		},
+		{
 			name: "json array as string",
 			input: &struct {
 				Plots Plots `env:"PLOTS"`

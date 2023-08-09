@@ -2,6 +2,7 @@ package xload_test
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -130,13 +131,6 @@ func (h *Host) Decode(val string) error {
 }
 
 func ExampleLoad_customDecoder() {
-	// type Host string
-	//
-	// func (h *Host) Decode(val string) error {
-	// 	// custom decode logic or validation
-	// 	return nil
-	// }
-	//
 	// Custom decoder can be used for any type that
 	// implements the Decoder interface.
 
@@ -203,6 +197,45 @@ func ExampleLoad_mapSeparator() {
 		// key value pair will be split by :, instead of =
 		// e.g. HOSTS=db:localhost,cache:localhost
 		Hosts map[string]string `env:"HOSTS,separator=:"`
+	}
+
+	var conf AppConf
+
+	err := xload.Load(context.Background(), &conf)
+	if err != nil {
+		panic(err)
+	}
+}
+
+type ServiceAccount struct {
+	ProjectID string `json:"project_id"`
+	ClientID  string `json:"client_id"`
+}
+
+func (sa *ServiceAccount) UnmarshalJSON(data []byte) error {
+	type Alias ServiceAccount
+
+	var alias Alias
+
+	err := json.Unmarshal(data, &alias)
+	if err != nil {
+		return err
+	}
+
+	*sa = ServiceAccount(alias)
+
+	return nil
+}
+
+func ExampleLoad_decodingJSONValue() {
+	// Decoding JSON value can be done by implementing
+	// the json.Unmarshaler interface.
+	//
+	// If using json.Unmarshaler, use type alias to avoid
+	// infinite recursion.
+
+	type AppConf struct {
+		ServiceAccount ServiceAccount `env:"SERVICE_ACCOUNT"`
 	}
 
 	var conf AppConf
