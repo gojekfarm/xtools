@@ -5,7 +5,7 @@ go 1.19
 replace github.com/gojekfarm/xtools/xkafka => ../../
 
 require (
-	github.com/gojekfarm/xtools/xkafka v0.3.0
+	github.com/gojekfarm/xtools/xkafka v0.4.0
 	github.com/rs/zerolog v1.29.0
 )
 
