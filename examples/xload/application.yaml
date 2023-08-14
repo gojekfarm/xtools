@@ -1,0 +1,10 @@
+NAME: xload-app
+HTTP:
+  PORT: 8080
+  HOST: 192.168.0.1
+  DEBUG: false
+GRPC:
+  PORT: 8081
+  HOST: 192.168.0.1
+  DEBUG: false
+DB_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
