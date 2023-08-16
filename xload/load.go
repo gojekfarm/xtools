@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/sourcegraph/conc/pool"
 	"github.com/spf13/cast"
 )
 
@@ -47,12 +48,17 @@ const (
 func Load(ctx context.Context, v any, opts ...Option) error {
 	o := newOptions(opts...)
 
-	err := process(ctx, v, o.tagName, o.loader)
+	p := processor{
+		pool: pool.New().WithErrors().WithMaxGoroutines(o.concurrency),
+		opts: o,
+	}
+
+	err := p.run(ctx, v, o.loader)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return p.pool.Wait()
 }
 
 //nolint:funlen,nestif

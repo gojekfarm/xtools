@@ -12,14 +12,16 @@ func (f optionFunc) apply(opts *options) { f(opts) }
 
 // options holds the configuration.
 type options struct {
-	tagName string
-	loader  Loader
+	tagName     string
+	loader      Loader
+	concurrency int
 }
 
 func newOptions(opts ...Option) *options {
 	o := &options{
-		tagName: defaultKey,
-		loader:  OSLoader(),
+		tagName:     defaultKey,
+		loader:      OSLoader(),
+		concurrency: 1,
 	}
 
 	for _, opt := range opts {
@@ -33,6 +35,12 @@ func newOptions(opts ...Option) *options {
 type FieldTagName string
 
 func (k FieldTagName) apply(opts *options) { opts.tagName = string(k) }
+
+// Concurrency allows customising the number of goroutines to use.
+// Default is 1.
+type Concurrency int
+
+func (c Concurrency) apply(opts *options) { opts.concurrency = int(c) }
 
 // WithLoader allows customising the loader to use.
 //
