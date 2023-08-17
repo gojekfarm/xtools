@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/sourcegraph/conc/pool"
 	"github.com/spf13/cast"
 )
 
@@ -48,17 +47,7 @@ const (
 func Load(ctx context.Context, v any, opts ...Option) error {
 	o := newOptions(opts...)
 
-	p := processor{
-		pool: pool.New().WithErrors().WithMaxGoroutines(o.concurrency),
-		opts: o,
-	}
-
-	err := p.run(ctx, v, o.loader)
-	if err != nil {
-		return err
-	}
-
-	return p.pool.Wait()
+	return process(ctx, v, o.tagName, o.loader)
 }
 
 //nolint:funlen,nestif
@@ -404,4 +393,19 @@ func decode(field reflect.Value, val string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func hasDecoder(field reflect.Value) bool {
+	for field.CanAddr() {
+		field = field.Addr()
+	}
+
+	if field.CanInterface() {
+		switch field.Interface().(type) {
+		case Decoder, encoding.TextUnmarshaler, json.Unmarshaler, encoding.BinaryUnmarshaler, gob.GobDecoder:
+			return true
+		}
+	}
+
+	return false
 }

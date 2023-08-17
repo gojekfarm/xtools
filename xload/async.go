@@ -3,8 +3,7 @@ package xload
 import (
 	"context"
 	"reflect"
-
-	"github.com/sourcegraph/conc/pool"
+	"sync"
 )
 
 // LoadAsync loads values concurrently by calling Loader in parallel.
@@ -12,25 +11,11 @@ import (
 func LoadAsync(ctx context.Context, v any, opts ...Option) error {
 	o := newOptions(opts...)
 
-	p := processor{
-		pool: pool.New().WithErrors().WithMaxGoroutines(o.concurrency),
-		opts: o,
-	}
-
-	err := p.run(ctx, v, o.loader)
-	if err != nil {
-		return err
-	}
-
-	return p.pool.Wait()
+	return processAsync(ctx, v, o.tagName, o.loader)
 }
 
-type processor struct {
-	pool *pool.ErrorPool
-	opts *options
-}
-
-func (p *processor) run(ctx context.Context, obj any, loader Loader) error {
+//nolint:funlen,nestif
+func processAsync(ctx context.Context, obj any, tagKey string, loader Loader) error {
 	v := reflect.ValueOf(obj)
 
 	if v.Kind() != reflect.Ptr {
@@ -44,6 +29,10 @@ func (p *processor) run(ctx context.Context, obj any, loader Loader) error {
 
 	typ := value.Type()
 
+	var wg sync.WaitGroup
+
+	errors := make([]error, 0)
+
 	for i := 0; i < typ.NumField(); i++ {
 		fTyp := typ.Field(i)
 		fVal := value.Field(i)
@@ -53,117 +42,140 @@ func (p *processor) run(ctx context.Context, obj any, loader Loader) error {
 			continue
 		}
 
-		p.pool.Go(func() error {
-			return p.processField(ctx, fTyp, fVal, loader)
-		})
-	}
+		tag := fTyp.Tag.Get(tagKey)
 
-	return nil
-}
-
-func (p *processor) processField(ctx context.Context, fTyp reflect.StructField, fVal reflect.Value, loader Loader) error {
-
-	tag := fTyp.Tag.Get(p.opts.tagName)
-
-	if tag == "-" {
-		return nil
-	}
-
-	meta, err := parseField(tag)
-	if err != nil {
-		return err
-	}
-
-	// handle pointers to structs
-	isNilStructPtr := false
-	setNilStructPtr := func(v reflect.Value) {
-		original := fVal
-
-		if isNilStructPtr {
-			empty := reflect.New(original.Type().Elem()).Interface()
-
-			if !reflect.DeepEqual(empty, v.Interface()) {
-				original.Set(v)
-			}
-		}
-	}
-
-	// initialise pointer to structs
-	for fVal.Kind() == reflect.Ptr {
-		if fVal.IsNil() && fVal.Type().Elem().Kind() != reflect.Struct {
-			break
+		if tag == "-" {
+			continue
 		}
 
-		if fVal.IsNil() {
-			isNilStructPtr = true
-			fVal = reflect.New(fVal.Type().Elem())
-		}
-
-		fVal = fVal.Elem()
-	}
-
-	// handle structs
-	if fVal.Kind() == reflect.Struct {
-		for fVal.CanAddr() {
-			fVal = fVal.Addr()
-		}
-
-		// if the struct has a key, load it
-		// and set the value to the struct
-		if meta.name != "" {
-			val, err := loader.Load(ctx, meta.name)
-			if err != nil {
-				return err
-			}
-
-			if val == "" && meta.required {
-				return ErrRequired
-			}
-
-			if ok, err := decode(fVal, val); ok {
-				if err != nil {
-					return err
-				}
-
-				setNilStructPtr(fVal)
-
-				return nil
-			}
-		}
-
-		pld := loader
-		if meta.prefix != "" {
-			pld = PrefixLoader(meta.prefix, loader)
-		}
-
-		err := p.run(ctx, fVal.Interface(), pld)
+		meta, err := parseField(tag)
 		if err != nil {
 			return err
 		}
 
-		setNilStructPtr(fVal)
+		// handle pointers to structs
+		isNilStructPtr := false
+		setNilStructPtr := func(original reflect.Value, v reflect.Value, isNilStructPtr bool) {
+			if isNilStructPtr {
+				empty := reflect.New(original.Type().Elem()).Interface()
 
-		return nil
+				if !reflect.DeepEqual(empty, v.Interface()) {
+					original.Set(v)
+				}
+			}
+		}
+
+		// initialise pointer to structs
+		for fVal.Kind() == reflect.Ptr {
+			if fVal.IsNil() && fVal.Type().Elem().Kind() != reflect.Struct {
+				break
+			}
+
+			if fVal.IsNil() {
+				isNilStructPtr = true
+				fVal = reflect.New(fVal.Type().Elem())
+			}
+
+			fVal = fVal.Elem()
+		}
+
+		// handle structs
+		if fVal.Kind() == reflect.Struct {
+			for fVal.CanAddr() {
+				fVal = fVal.Addr()
+			}
+
+			// if the struct has a key, load it
+			// and set the value to the struct
+			if meta.name != "" && hasDecoder(fVal) {
+				loadAndSet := func(original reflect.Value, fVal reflect.Value, isNilStructPtr bool) {
+					defer wg.Done()
+
+					val, err := loader.Load(ctx, meta.name)
+					if err != nil {
+						errors = append(errors, err)
+
+						return
+					}
+
+					if val == "" && meta.required {
+						errors = append(errors, ErrRequired)
+
+						return
+					}
+
+					if ok, err := decode(fVal, val); ok {
+						if err != nil {
+							errors = append(errors, err)
+
+							return
+						}
+
+						setNilStructPtr(original, fVal, isNilStructPtr)
+					}
+				}
+
+				wg.Add(1)
+
+				go loadAndSet(value.Field(i), fVal, isNilStructPtr)
+
+				continue
+			}
+
+			pld := loader
+			if meta.prefix != "" {
+				pld = PrefixLoader(meta.prefix, loader)
+			}
+
+			err := processAsync(ctx, fVal.Interface(), tagKey, pld)
+			if err != nil {
+				return err
+			}
+
+			setNilStructPtr(value.Field(i), fVal, isNilStructPtr)
+
+			continue
+		}
+
+		if meta.prefix != "" {
+			return ErrInvalidPrefix
+		}
+
+		loadAndSet := func(fVal reflect.Value) {
+			defer wg.Done()
+
+			// lookup value
+			val, err := loader.Load(ctx, meta.name)
+			if err != nil {
+				errors = append(errors, err)
+
+				return
+			}
+
+			if val == "" && meta.required {
+				errors = append(errors, ErrRequired)
+
+				return
+			}
+
+			// set value
+			err = setVal(fVal, val, meta)
+			if err != nil {
+				errors = append(errors, err)
+
+				return
+			}
+		}
+
+		wg.Add(1)
+
+		go loadAndSet(fVal)
 	}
 
-	if meta.prefix != "" {
-		return ErrInvalidPrefix
-	}
+	wg.Wait()
 
-	// lookup value
-	val, err := loader.Load(ctx, meta.name)
-	if err != nil {
-		return err
-	}
-
-	if val == "" && meta.required {
-		return ErrRequired
-	}
-
-	// set value
-	err = setVal(fVal, val, meta)
-	if err != nil {
-		return err
+	if len(errors) > 0 {
+		return errors[0]
 	}
 
 	return nil
