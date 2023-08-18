@@ -14,9 +14,7 @@ type Loader interface {
 type LoaderFunc func(ctx context.Context, key string) (string, error)
 
 // Load returns the config value for the given key.
-func (f LoaderFunc) Load(ctx context.Context, key string) (string, error) {
-	return f(ctx, key)
-}
+func (f LoaderFunc) Load(ctx context.Context, key string) (string, error) { return f(ctx, key) }
 
 // PrefixLoader wraps a loader and adds a prefix to all keys.
 func PrefixLoader(prefix string, loader Loader) Loader {

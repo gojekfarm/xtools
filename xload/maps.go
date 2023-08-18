@@ -13,7 +13,7 @@ import (
 type MapLoader map[string]string
 
 // Load fetches the value from the map.
-func (m MapLoader) Load(ctx context.Context, key string) (string, error) {
+func (m MapLoader) Load(_ context.Context, key string) (string, error) {
 	value, ok := m[key]
 	if !ok {
 		return "", nil
