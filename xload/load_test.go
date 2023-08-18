@@ -23,13 +23,18 @@ type testcase struct {
 func TestLoad_Default(t *testing.T) {
 	cfg := &struct {
 		Host string `env:"XLOAD_HOST"`
-	}{}
+		Port int    `env:"XLOAD_PORT"`
+	}{
+		Port: 8080,
+	}
 
 	_ = os.Setenv("XLOAD_HOST", "localhost")
+	// Port is intentionally not set using env var.
 
 	err := Load(context.Background(), cfg)
 	require.NoError(t, err)
 	assert.Equal(t, "localhost", cfg.Host)
+	assert.Equal(t, 8080, cfg.Port)
 }
 
 func TestLoad_Errors(t *testing.T) {

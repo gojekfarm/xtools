@@ -43,8 +43,6 @@ type Concurrency int
 func (c Concurrency) apply(opts *options) { opts.concurrency = int(c) }
 
 // WithLoader allows customising the loader to use.
-//
-//nolint:golint
 func WithLoader(loader Loader) Option {
 	return optionFunc(func(opts *options) { opts.loader = loader })
 }
