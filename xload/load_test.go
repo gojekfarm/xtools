@@ -674,10 +674,21 @@ func runTestcases(t *testing.T, testcases []testcase) {
 	for _, tc := range testcases {
 		tc := tc
 
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
+		t.Run("Load_"+tc.name, func(t *testing.T) {
 			err := Load(context.Background(), tc.input, WithLoader(tc.loader))
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, tc.err.Error())
+
+				return
+			}
+
+			require.NoError(t, err)
+			assert.EqualValues(t, tc.want, tc.input)
+		})
+
+		t.Run("LoadAsync_"+tc.name, func(t *testing.T) {
+			err := Load(context.Background(), tc.input, Concurrency(5), WithLoader(tc.loader))
 			if tc.err != nil {
 				assert.Error(t, err)
 				assert.ErrorContains(t, err, tc.err.Error())

@@ -3,19 +3,12 @@ package xload
 import (
 	"context"
 	"reflect"
-	"sync"
+
+	"github.com/sourcegraph/conc/pool"
 )
 
-// LoadAsync loads values concurrently by calling Loader in parallel.
-// Number of goroutines can be controlled with xload.Concurrency.
-func LoadAsync(ctx context.Context, v any, opts ...Option) error {
-	o := newOptions(opts...)
-
-	return processAsync(ctx, v, o.tagName, o.loader)
-}
-
 //nolint:funlen,nestif
-func processAsync(ctx context.Context, obj any, tagKey string, loader Loader) error {
+func processAsync(ctx context.Context, obj any, o *options, loader Loader) error {
 	v := reflect.ValueOf(obj)
 
 	if v.Kind() != reflect.Ptr {
@@ -29,9 +22,7 @@ func processAsync(ctx context.Context, obj any, tagKey string, loader Loader) er
 
 	typ := value.Type()
 
-	var wg sync.WaitGroup
-
-	errors := make([]error, 0)
+	p := pool.New().WithErrors().WithMaxGoroutines(o.concurrency)
 
 	for i := 0; i < typ.NumField(); i++ {
 		fTyp := typ.Field(i)
@@ -42,7 +33,7 @@ func processAsync(ctx context.Context, obj any, tagKey string, loader Loader) er
 			continue
 		}
 
-		tag := fTyp.Tag.Get(tagKey)
+		tag := fTyp.Tag.Get(o.tagName)
 
 		if tag == "-" {
 			continue
@@ -88,36 +79,32 @@ func processAsync(ctx context.Context, obj any, tagKey string, loader Loader) er
 			// if the struct has a key, load it
 			// and set the value to the struct
 			if meta.name != "" && hasDecoder(fVal) {
-				loadAndSet := func(original reflect.Value, fVal reflect.Value, isNilStructPtr bool) {
-					defer wg.Done()
-
+				loadAndSet := func(original reflect.Value, fVal reflect.Value, isNilStructPtr bool) error {
 					val, err := loader.Load(ctx, meta.name)
 					if err != nil {
-						errors = append(errors, err)
-
-						return
+						return err
 					}
 
 					if val == "" && meta.required {
-						errors = append(errors, ErrRequired)
-
-						return
+						return ErrRequired
 					}
 
 					if ok, err := decode(fVal, val); ok {
 						if err != nil {
-							errors = append(errors, err)
-
-							return
+							return err
 						}
 
 						setNilStructPtr(original, fVal, isNilStructPtr)
 					}
+
+					return nil
 				}
 
-				wg.Add(1)
+				original := value.Field(i)
 
-				go loadAndSet(value.Field(i), fVal, isNilStructPtr)
+				p.Go(func() error {
+					return loadAndSet(original, fVal, isNilStructPtr)
+				})
 
 				continue
 			}
@@ -127,7 +114,7 @@ func processAsync(ctx context.Context, obj any, tagKey string, loader Loader) er
 				pld = PrefixLoader(meta.prefix, loader)
 			}
 
-			err := processAsync(ctx, fVal.Interface(), tagKey, pld)
+			err := processAsync(ctx, fVal.Interface(), o, pld)
 			if err != nil {
 				return err
 			}
@@ -141,42 +128,30 @@ func processAsync(ctx context.Context, obj any, tagKey string, loader Loader) er
 			return ErrInvalidPrefix
 		}
 
-		loadAndSet := func(fVal reflect.Value) {
-			defer wg.Done()
-
+		loadAndSet := func(fVal reflect.Value) error {
 			// lookup value
 			val, err := loader.Load(ctx, meta.name)
 			if err != nil {
-				errors = append(errors, err)
-
-				return
+				return err
 			}
 
 			if val == "" && meta.required {
-				errors = append(errors, ErrRequired)
-
-				return
+				return ErrRequired
 			}
 
 			// set value
 			err = setVal(fVal, val, meta)
 			if err != nil {
-				errors = append(errors, err)
-
-				return
+				return err
 			}
+
+			return nil
 		}
 
-		wg.Add(1)
-
-		go loadAndSet(fVal)
+		p.Go(func() error {
+			return loadAndSet(fVal)
+		})
 	}
 
-	wg.Wait()
-
-	if len(errors) > 0 {
-		return errors[0]
-	}
-
-	return nil
+	return p.Wait()
 }
