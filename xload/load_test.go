@@ -426,6 +426,16 @@ func TestLoad_NativeTypes(t *testing.T) {
 			loader: MapLoader{"INT64_MAP": "key1=1,key2=2"},
 			err:    errors.New("unable to cast"),
 		},
+
+		// unknown field type
+		{
+			name: "unknown field type",
+			input: &struct {
+				Unknown interface{} `env:"UNKNOWN"`
+			}{},
+			loader: MapLoader{"UNKNOWN": "1+2i"},
+			err:    ErrUnknownFieldType,
+		},
 	}
 
 	runTestcases(t, testcases)
