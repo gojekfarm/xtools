@@ -245,3 +245,33 @@ func ExampleLoad_decodingJSONValue() {
 		panic(err)
 	}
 }
+
+func ExampleLoad_concurrentLoading() {
+	type AppConf struct {
+		Host    string        `env:"HOST"`
+		Debug   bool          `env:"DEBUG"`
+		Timeout time.Duration `env:"TIMEOUT"`
+	}
+
+	var conf AppConf
+
+	loader := xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
+		// lookup value from a remote service
+
+		// NOTE: this function is called for each key concurrently
+		// so make sure it is thread-safe.
+		// Using a pooled client is recommended.
+		return "", nil
+	})
+
+	err := xload.Load(
+		context.Background(),
+		&conf,
+		xload.Concurrency(3), // load 3 keys concurrently
+		xload.FieldTagName("env"),
+		xload.WithLoader(loader),
+	)
+	if err != nil {
+		panic(err)
+	}
+}
