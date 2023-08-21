@@ -144,6 +144,14 @@ func TestLoad_Structs(t *testing.T) {
 			err:    ErrInvalidPrefix,
 			loader: MapLoader{},
 		},
+		{
+			name: "struct field with name and prefix",
+			input: &struct {
+				Address Address `env:"ADDRESS,prefix=CLUSTER"`
+			}{},
+			err:    ErrInvalidPrefixAndKey,
+			loader: MapLoader{},
+		},
 	}
 
 	runTestcases(t, testcases)

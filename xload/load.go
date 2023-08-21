@@ -29,6 +29,8 @@ var (
 	ErrMissingKey = errors.New("xload: missing key")
 	// ErrInvalidPrefix is returned when the prefix option is used on a non-struct field.
 	ErrInvalidPrefix = errors.New("xload: prefix is only valid on struct types")
+	// ErrInvalidPrefixAndKey is returned when the prefix option is used with a key.
+	ErrInvalidPrefixAndKey = errors.New("xload: prefix cannot be used when field name is set")
 )
 
 const (
@@ -215,6 +217,10 @@ func parseField(tag string) (*field, error) {
 			f.required = true
 		case strings.HasPrefix(opt, optPrefix):
 			f.prefix = strings.TrimPrefix(opt, optPrefix)
+
+			if key != "" && f.prefix != "" {
+				return nil, ErrInvalidPrefixAndKey
+			}
 		case strings.HasPrefix(opt, optDelimiter):
 			f.delimiter = strings.TrimPrefix(opt, optDelimiter)
 		case strings.HasPrefix(opt, optSeparator):
