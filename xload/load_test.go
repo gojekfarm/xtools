@@ -436,6 +436,16 @@ func TestLoad_NativeTypes(t *testing.T) {
 			loader: MapLoader{"UNKNOWN": "1+2i"},
 			err:    ErrUnknownFieldType,
 		},
+		{
+			name: "nested unknown field type",
+			input: &struct {
+				Nested struct {
+					Unknown interface{} `env:"UNKNOWN"`
+				} `env:",prefix=NESTED_"`
+			}{},
+			loader: MapLoader{"NESTED_UNKNOWN": "1+2i"},
+			err:    ErrUnknownFieldType,
+		},
 	}
 
 	runTestcases(t, testcases)
@@ -658,6 +668,14 @@ func TestOption_Required(t *testing.T) {
 			name: "required option: missing value",
 			input: &struct {
 				Name string `env:"NAME,required"`
+			}{},
+			err:    ErrRequired,
+			loader: MapLoader{},
+		},
+		{
+			name: "required custom decoder",
+			input: &struct {
+				Name CustomGob `env:"NAME,required"`
 			}{},
 			err:    ErrRequired,
 			loader: MapLoader{},
