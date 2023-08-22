@@ -50,7 +50,7 @@ func Load(ctx context.Context, v any, opts ...Option) error {
 	o := newOptions(opts...)
 
 	if o.concurrency > 1 {
-		return processAsync(ctx, v, o, o.loader)
+		return processConcurrently(ctx, v, o)
 	}
 
 	return process(ctx, v, o.tagName, o.loader)

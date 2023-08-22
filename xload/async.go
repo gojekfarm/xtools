@@ -7,8 +7,32 @@ import (
 	"github.com/sourcegraph/conc/pool"
 )
 
+type loadAndSet func(context.Context, reflect.Value) error
+
+func processConcurrently(ctx context.Context, v any, opts *options) error {
+	doneCh := make(chan struct{}, 1)
+	defer close(doneCh)
+
+	p := pool.New().WithContext(ctx).WithMaxGoroutines(opts.concurrency).WithCancelOnError()
+
+	err := processAsync(p, opts, opts.loader, v, func() {
+		doneCh <- struct{}{}
+	})
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-doneCh:
+		return err
+	}
+}
+
 //nolint:funlen,nestif
-func processAsync(ctx context.Context, obj any, o *options, loader Loader) error {
+func processAsync(p *pool.ContextPool, o *options, loader Loader, obj any, cb func()) error {
+	if cb != nil {
+		defer cb()
+	}
+
 	v := reflect.ValueOf(obj)
 
 	if v.Kind() != reflect.Ptr {
@@ -21,8 +45,6 @@ func processAsync(ctx context.Context, obj any, o *options, loader Loader) error
 	}
 
 	typ := value.Type()
-
-	p := pool.New().WithErrors().WithMaxGoroutines(o.concurrency)
 
 	for i := 0; i < typ.NumField(); i++ {
 		fTyp := typ.Field(i)
@@ -46,15 +68,6 @@ func processAsync(ctx context.Context, obj any, o *options, loader Loader) error
 
 		// handle pointers to structs
 		isNilStructPtr := false
-		setNilStructPtr := func(original reflect.Value, v reflect.Value, isNilStructPtr bool) {
-			if isNilStructPtr {
-				empty := reflect.New(original.Type().Elem()).Interface()
-
-				if !reflect.DeepEqual(empty, v.Interface()) {
-					original.Set(v)
-				}
-			}
-		}
 
 		// initialise pointer to structs
 		for fVal.Kind() == reflect.Ptr {
@@ -79,32 +92,11 @@ func processAsync(ctx context.Context, obj any, o *options, loader Loader) error
 			// if the struct has a key, load it
 			// and set the value to the struct
 			if meta.name != "" && hasDecoder(fVal) {
-				loadAndSet := func(original reflect.Value, fVal reflect.Value, isNilStructPtr bool) error {
-					val, err := loader.Load(ctx, meta.name)
-					if err != nil {
-						return err
-					}
-
-					if val == "" && meta.required {
-						return ErrRequired
-					}
-
-					if ok, err := decode(fVal, val); ok {
-						if err != nil {
-							return err
-						}
-
-						setNilStructPtr(original, fVal, isNilStructPtr)
-					}
-
-					return nil
-				}
+				las := loadAndSetWithOriginal(loader, meta)
 
 				original := value.Field(i)
 
-				p.Go(func() error {
-					return loadAndSet(original, fVal, isNilStructPtr)
-				})
+				p.Go(func(ctx context.Context) error { return las(ctx, original, fVal, isNilStructPtr) })
 
 				continue
 			}
@@ -114,7 +106,7 @@ func processAsync(ctx context.Context, obj any, o *options, loader Loader) error
 				pld = PrefixLoader(meta.prefix, loader)
 			}
 
-			err := processAsync(ctx, fVal.Interface(), o, pld)
+			err := processAsync(p, o, pld, fVal.Interface(), nil)
 			if err != nil {
 				return err
 			}
@@ -128,30 +120,71 @@ func processAsync(ctx context.Context, obj any, o *options, loader Loader) error
 			return ErrInvalidPrefix
 		}
 
-		loadAndSet := func(fVal reflect.Value) error {
-			// lookup value
-			val, err := loader.Load(ctx, meta.name)
-			if err != nil {
-				return err
-			}
+		las := loadAndSetVal(loader, meta)
 
-			if val == "" && meta.required {
-				return ErrRequired
-			}
+		p.Go(func(ctx context.Context) error { return las(ctx, fVal) })
+	}
 
-			// set value
-			err = setVal(fVal, val, meta)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		}
-
-		p.Go(func() error {
-			return loadAndSet(fVal)
-		})
+	if cb == nil {
+		return nil
 	}
 
 	return p.Wait()
+}
+
+func setNilStructPtr(original reflect.Value, v reflect.Value, isNilStructPtr bool) {
+	if isNilStructPtr {
+		empty := reflect.New(original.Type().Elem()).Interface()
+
+		if !reflect.DeepEqual(empty, v.Interface()) {
+			original.Set(v)
+		}
+	}
+}
+
+func loadAndSetWithOriginal(loader Loader, meta *field) func(
+	context.Context, reflect.Value, reflect.Value, bool,
+) error {
+	return func(ctx context.Context, original reflect.Value, fVal reflect.Value, isNilStructPtr bool) error {
+		val, err := loader.Load(ctx, meta.name)
+		if err != nil {
+			return err
+		}
+
+		if val == "" && meta.required {
+			return ErrRequired
+		}
+
+		if ok, err := decode(fVal, val); ok {
+			if err != nil {
+				return err
+			}
+
+			setNilStructPtr(original, fVal, isNilStructPtr)
+		}
+
+		return nil
+	}
+}
+
+func loadAndSetVal(loader Loader, meta *field) loadAndSet {
+	return func(ctx context.Context, fVal reflect.Value) error {
+		// lookup value
+		val, err := loader.Load(ctx, meta.name)
+		if err != nil {
+			return err
+		}
+
+		if val == "" && meta.required {
+			return ErrRequired
+		}
+
+		// set value
+		err = setVal(fVal, val, meta)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
 }
