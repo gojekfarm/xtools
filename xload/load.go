@@ -383,6 +383,10 @@ type Decoder interface {
 // - encoding.BinaryUnmarshaler
 // - encoding.GobDecoder
 func decode(field reflect.Value, val string) (bool, error) {
+	if val == "" {
+		return false, nil
+	}
+
 	for field.CanAddr() {
 		field = field.Addr()
 	}

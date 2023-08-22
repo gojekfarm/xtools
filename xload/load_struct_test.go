@@ -17,6 +17,12 @@ type House struct {
 	Plot    Plot  `env:"PLOT"`
 }
 
+type Villa struct {
+	House
+
+	Floors int `env:"FLOORS"`
+}
+
 type Address struct {
 	Street    string   `env:"STREET"`
 	City      string   `env:"CITY"`
@@ -134,6 +140,30 @@ func TestLoad_Structs(t *testing.T) {
 				"CITY":      "city1",
 				"LONGITUTE": "1.1",
 				"LATITUDE":  "-2.2",
+			},
+		},
+		{
+			name:  "inheritance: using prefix",
+			input: &Villa{},
+			want: &Villa{
+				House: House{
+					Name: "villa1",
+					Address: Address{
+						Street:    "street1",
+						City:      "city1",
+						Longitute: ptr.Float64(1.1),
+						Latitude:  ptr.Float64(-2.2),
+					},
+				},
+				Floors: 2,
+			},
+			loader: MapLoader{
+				"NAME":      "villa1",
+				"STREET":    "street1",
+				"CITY":      "city1",
+				"LONGITUTE": "1.1",
+				"LATITUDE":  "-2.2",
+				"FLOORS":    "2",
 			},
 		},
 		{
