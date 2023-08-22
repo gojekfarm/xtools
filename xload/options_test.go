@@ -1,7 +1,6 @@
 package xload
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +14,9 @@ func Test_defaultOptions(t *testing.T) {
 	}
 	opts := newOptions()
 
-	assert.Equal(t, fmt.Sprintf("%+v", want), fmt.Sprintf("%+v", opts))
+	assert.Equal(t, want.tagName, opts.tagName)
+	assert.Equal(t, want.concurrency, opts.concurrency)
+	assert.IsType(t, want.loader, opts.loader)
 }
 
 func TestOptions(t *testing.T) {
@@ -56,7 +57,10 @@ func TestOptions(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			opts := newOptions(tc.opts...)
-			assert.Equal(t, fmt.Sprintf("%+v", tc.want), fmt.Sprintf("%+v", opts))
+
+			assert.Equal(t, tc.want.tagName, opts.tagName)
+			assert.Equal(t, tc.want.concurrency, opts.concurrency)
+			assert.IsType(t, tc.want.loader, opts.loader)
 		})
 	}
 }
