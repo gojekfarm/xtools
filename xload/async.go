@@ -8,6 +8,7 @@ import (
 )
 
 type loadAndSet func(context.Context, reflect.Value) error
+type loadAndSetPointer func(context.Context, reflect.Value, reflect.Value, bool) error
 
 func processConcurrently(ctx context.Context, v any, opts *options) error {
 	doneCh := make(chan struct{}, 1)
@@ -142,9 +143,7 @@ func setNilStructPtr(original reflect.Value, v reflect.Value, isNilStructPtr boo
 	}
 }
 
-func loadAndSetWithOriginal(loader Loader, meta *field) func(
-	context.Context, reflect.Value, reflect.Value, bool,
-) error {
+func loadAndSetWithOriginal(loader Loader, meta *field) loadAndSetPointer {
 	return func(ctx context.Context, original reflect.Value, fVal reflect.Value, isNilStructPtr bool) error {
 		val, err := loader.Load(ctx, meta.name)
 		if err != nil {
