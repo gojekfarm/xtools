@@ -3,6 +3,7 @@ package xload
 import (
 	"context"
 	"errors"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -45,9 +46,10 @@ func TestLoad_Async(t *testing.T) {
 
 func TestLoad_Async_Error(t *testing.T) {
 	errMap := map[string]error{
-		"NAME": errors.New("error: NAME"),
-		"AGE":  errors.New("error: AGE"),
-		"BIO":  errors.New("error: BIO"),
+		"NAME":       errors.New("error: NAME"),
+		"AGE":        errors.New("error: AGE"),
+		"BIO":        errors.New("error: BIO"),
+		"NESTED_VAL": errors.New("error: NESTED_VAL"),
 	}
 
 	loader := func(ctx context.Context, key string) (string, error) {
@@ -55,9 +57,12 @@ func TestLoad_Async_Error(t *testing.T) {
 	}
 
 	cfg := struct {
-		Name string `env:"NAME"`
-		Age  int    `env:"AGE"`
-		Bio  string `env:"BIO"`
+		Name   string `env:"NAME"`
+		Age    int    `env:"AGE"`
+		Bio    string `env:"BIO"`
+		Nested struct {
+			Val string `env:"VAL"`
+		} `env:",prefix=NESTED_"`
 	}{}
 
 	err := Load(context.Background(), &cfg,
@@ -69,4 +74,64 @@ func TestLoad_Async_Error(t *testing.T) {
 	for _, want := range errMap {
 		assert.True(t, errors.Is(err, want))
 	}
+}
+
+type CustomString string
+
+func (cs *CustomString) Decode(s string) error {
+	*cs = CustomString(s)
+	return nil
+}
+
+func Test_loadAndSetWithOriginal(t *testing.T) {
+	type Args struct {
+		Nest *struct {
+			Val CustomString `env:"VAL,required"`
+		}
+	}
+
+	t.Run("successful load and set", func(t *testing.T) {
+		meta := &field{name: "testName", required: true}
+
+		obj := &Args{
+			Nest: &struct {
+				Val CustomString `env:"VAL,required"`
+			}{},
+		}
+
+		original := reflect.ValueOf(&obj.Nest.Val)
+		fVal := reflect.ValueOf(&obj.Nest.Val).Elem()
+
+		loader := LoaderFunc(func(ctx context.Context, key string) (string, error) {
+			return "loadedValue", nil
+		})
+
+		err := loadAndSetWithOriginal(loader, meta)(context.Background(), original, fVal, true)
+		assert.Nil(t, err)
+		assert.EqualValues(t, "loadedValue", string(obj.Nest.Val))
+	})
+
+	t.Run("loader returns error", func(t *testing.T) {
+		meta := &field{name: "testName", required: true}
+		original := reflect.ValueOf(new(string))
+		fVal := reflect.ValueOf(new(string))
+
+		err := loadAndSetWithOriginal(LoaderFunc(func(ctx context.Context, key string) (string, error) {
+			return "", errors.New("load error")
+		}), meta)(context.Background(), original, fVal, true)
+		assert.NotNil(t, err)
+		assert.Equal(t, "load error", err.Error())
+	})
+
+	t.Run("field is required but loader val is empty", func(t *testing.T) {
+		meta := &field{name: "testName", required: true}
+		original := reflect.ValueOf(new(string))
+		fVal := reflect.ValueOf(new(string))
+
+		err := loadAndSetWithOriginal(LoaderFunc(func(ctx context.Context, key string) (string, error) {
+			return "", nil
+		}), meta)(context.Background(), original, fVal, true)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrRequired, err)
+	})
 }

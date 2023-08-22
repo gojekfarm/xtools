@@ -137,7 +137,7 @@ func setNilStructPtr(original reflect.Value, v reflect.Value, isNilStructPtr boo
 	if isNilStructPtr {
 		empty := reflect.New(original.Type().Elem()).Interface()
 
-		if !reflect.DeepEqual(empty, v.Interface()) {
+		if !reflect.DeepEqual(empty, v.Interface()) && original.CanSet() {
 			original.Set(v)
 		}
 	}
