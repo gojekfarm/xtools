@@ -77,7 +77,7 @@ func ExampleLoad_prefixLoader() {
 	err := xload.Load(
 		context.Background(),
 		&conf,
-		xload.WithLoader(xload.PrefixLoader("MYAPP_", xload.OSLoader())),
+		xload.PrefixLoader("MYAPP_", xload.OSLoader()),
 	)
 	if err != nil {
 		panic(err)

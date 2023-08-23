@@ -15,17 +15,15 @@ import (
 //
 // IMPORTANT: The separator must be consistent with prefix used in the struct
 // tags.
-func NewFileLoader(path, sep string) (xload.Loader, error) {
+func NewFileLoader(path, sep string) (_ xload.MapLoader, err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	close := func() {
-		_ = f.Close()
-	}
-
-	defer close()
+	defer func() {
+		err = f.Close()
+	}()
 
 	return NewLoader(f, sep)
 }
@@ -35,7 +33,7 @@ func NewFileLoader(path, sep string) (xload.Loader, error) {
 //
 // IMPORTANT: The separator must be consistent with prefix used in the struct
 // tags.
-func NewLoader(r io.Reader, sep string) (xload.Loader, error) {
+func NewLoader(r io.Reader, sep string) (xload.MapLoader, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -48,5 +46,5 @@ func NewLoader(r io.Reader, sep string) (xload.Loader, error) {
 		return nil, err
 	}
 
-	return xload.MapLoader(xload.FlattenMap(out, sep)), nil
+	return xload.FlattenMap(out, sep), nil
 }

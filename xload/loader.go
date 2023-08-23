@@ -17,10 +17,10 @@ type LoaderFunc func(ctx context.Context, key string) (string, error)
 func (f LoaderFunc) Load(ctx context.Context, key string) (string, error) { return f(ctx, key) }
 
 // PrefixLoader wraps a loader and adds a prefix to all keys.
-func PrefixLoader(prefix string, loader Loader) Loader {
-	return LoaderFunc(func(ctx context.Context, key string) (string, error) {
+func PrefixLoader(prefix string, loader Loader) LoaderFunc {
+	return func(ctx context.Context, key string) (string, error) {
 		return loader.Load(ctx, prefix+key)
-	})
+	}
 }
 
 // OSLoader loads values from the OS environment.
