@@ -56,13 +56,18 @@ func TestLoad_Async_Error(t *testing.T) {
 
 		err := Load(ctx, &dest, Concurrency(2),
 			LoaderFunc(func(ctx context.Context, key string) (string, error) {
-				<-time.After(100 * time.Millisecond)
-				return "", nil
+				// simulate a slow loader
+				select {
+				case <-ctx.Done():
+					return "", ctx.Err()
+				case <-time.After(100 * time.Millisecond):
+					return "name", nil
+				}
 			}),
 		)
 
-		assert.Error(t, err)
-		assert.True(t, errors.Is(err, context.Canceled))
+		assert.NotEqual(t, "name", dest.Name)
+		assert.EqualError(t, err, context.Canceled.Error())
 	})
 
 	errMap := map[string]error{
