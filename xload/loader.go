@@ -55,3 +55,5 @@ func SerialLoader(loaders ...Loader) Loader {
 		return lastNonEmpty, nil
 	})
 }
+
+func (f LoaderFunc) apply(opts *options) { opts.loader = f }

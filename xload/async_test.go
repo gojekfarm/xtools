@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -45,6 +46,25 @@ func TestLoad_Async(t *testing.T) {
 }
 
 func TestLoad_Async_Error(t *testing.T) {
+	t.Run("cancelled context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		dest := struct {
+			Name string `env:"NAME"`
+		}{}
+
+		err := Load(ctx, &dest, Concurrency(2),
+			LoaderFunc(func(ctx context.Context, key string) (string, error) {
+				<-time.After(100 * time.Millisecond)
+				return "", nil
+			}),
+		)
+
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, context.Canceled))
+	})
+
 	errMap := map[string]error{
 		"NAME":       errors.New("error: NAME"),
 		"AGE":        errors.New("error: AGE"),
