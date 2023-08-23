@@ -408,18 +408,3 @@ func decode(field reflect.Value, val string) (bool, error) {
 
 	return false, nil
 }
-
-func hasDecoder(field reflect.Value) bool {
-	for field.CanAddr() {
-		field = field.Addr()
-	}
-
-	if field.CanInterface() {
-		switch field.Interface().(type) {
-		case Decoder, encoding.TextUnmarshaler, json.Unmarshaler, encoding.BinaryUnmarshaler, gob.GobDecoder:
-			return true
-		}
-	}
-
-	return false
-}

@@ -2,6 +2,9 @@ package xload
 
 import (
 	"context"
+	"encoding"
+	"encoding/gob"
+	"encoding/json"
 	"reflect"
 
 	"github.com/sourcegraph/conc/pool"
@@ -186,4 +189,19 @@ func loadAndSetVal(loader Loader, meta *field) loadAndSet {
 
 		return nil
 	}
+}
+
+func hasDecoder(field reflect.Value) bool {
+	for field.CanAddr() {
+		field = field.Addr()
+	}
+
+	if field.CanInterface() {
+		switch field.Interface().(type) {
+		case Decoder, encoding.TextUnmarshaler, json.Unmarshaler, encoding.BinaryUnmarshaler, gob.GobDecoder:
+			return true
+		}
+	}
+
+	return false
 }
