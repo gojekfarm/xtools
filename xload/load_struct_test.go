@@ -1,6 +1,7 @@
 package xload
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -301,6 +302,24 @@ func TestLoad_JSON(t *testing.T) {
 			}{},
 			err:    errors.New("invalid character"),
 			loader: MapLoader{"PLOT": `invalid`},
+		},
+		{
+			name: "json: loader error",
+			input: &struct {
+				Plot Plot `env:"PLOT"`
+			}{},
+			err: errors.New("loader error"),
+			loader: LoaderFunc(func(ctx context.Context, key string) (string, error) {
+				return "", errors.New("loader error")
+			}),
+		},
+		{
+			name: "json: empty required value",
+			input: &struct {
+				Plot Plot `env:"PLOT,required"`
+			}{},
+			err:    ErrRequired,
+			loader: MapLoader{},
 		},
 	}
 
