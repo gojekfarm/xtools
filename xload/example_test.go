@@ -3,6 +3,7 @@ package xload_test
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 	"strings"
 	"time"
 
@@ -271,6 +272,36 @@ func ExampleLoad_concurrentLoading() {
 		xload.FieldTagName("env"),
 		xload.WithLoader(loader),
 	)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ExampleLoad_extendingStructs() {
+	type Host struct {
+		URL       url.URL `env:"URL"`
+		Telemetry bool    `env:"TELEMETRY"`
+	}
+
+	type DB struct {
+		Host
+		Username string `env:"USERNAME"`
+		Password string `env:"PASSWORD"`
+	}
+
+	type HTTP struct {
+		Host
+		Timeout time.Duration `env:"TIMEOUT"`
+	}
+
+	type AppConf struct {
+		DB   DB   `env:",prefix=DB_"`
+		HTTP HTTP `env:",prefix=HTTP_"`
+	}
+
+	var conf AppConf
+
+	err := xload.Load(context.Background(), &conf)
 	if err != nil {
 		panic(err)
 	}

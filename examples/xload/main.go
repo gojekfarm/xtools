@@ -72,6 +72,7 @@ func main() {
 	err = xload.Load(
 		ctx,
 		rcfg,
+		xload.Concurrency(5), // use xload.Concurrency to load values concurrently
 		xload.FieldTagName("env"),
 		xload.WithLoader(
 			xload.SerialLoader(
