@@ -58,7 +58,7 @@ func ExampleLoad_customLoader() {
 		context.Background(),
 		&conf,
 		xload.FieldTagName("env"),
-		xload.WithLoader(loader),
+		loader,
 	)
 	if err != nil {
 		panic(err)
@@ -159,19 +159,19 @@ func ExampleLoad_transformFieldName() {
 	var conf AppConf
 
 	// transform converts key from MYAPP_HOST to myapp.host
-	transform := func(next xload.Loader) xload.Loader {
-		return xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
+	transform := func(next xload.Loader) xload.LoaderFunc {
+		return func(ctx context.Context, key string) (string, error) {
 			newKey := strings.ReplaceAll(key, "_", ".")
 			newKey = strings.ToLower(newKey)
 
 			return next.Load(ctx, newKey)
-		})
+		}
 	}
 
 	err := xload.Load(
 		context.Background(),
 		&conf,
-		xload.WithLoader(transform(xload.OSLoader())),
+		transform(xload.OSLoader()),
 	)
 	if err != nil {
 		panic(err)
@@ -270,7 +270,7 @@ func ExampleLoad_concurrentLoading() {
 		&conf,
 		xload.Concurrency(3), // load 3 keys concurrently
 		xload.FieldTagName("env"),
-		xload.WithLoader(loader),
+		loader,
 	)
 	if err != nil {
 		panic(err)

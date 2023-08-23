@@ -32,7 +32,7 @@ func Example() {
 		panic(err)
 	}
 
-	err = xload.Load(ctx, &cfg, xload.WithLoader(loader))
+	err = xload.Load(ctx, &cfg, loader)
 	if err != nil {
 		panic(err)
 	}
@@ -73,7 +73,7 @@ func Example_nestedStruct() {
 		panic(err)
 	}
 
-	err = xload.Load(ctx, &cfg, xload.WithLoader(loader))
+	err = xload.Load(ctx, &cfg, loader)
 	if err != nil {
 		panic(err)
 	}

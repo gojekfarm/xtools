@@ -28,6 +28,8 @@ func FlattenMap(m map[string]interface{}, sep string) map[string]string {
 	return flatten(m, "", sep)
 }
 
+func (m MapLoader) apply(opts *options) { opts.loader = m }
+
 func flatten(m map[string]interface{}, prefix string, sep string) map[string]string {
 	flattened := make(map[string]string)
 

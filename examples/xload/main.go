@@ -38,11 +38,9 @@ func main() {
 		ctx,
 		cfg,
 		xload.FieldTagName("env"),
-		xload.WithLoader(
-			xload.SerialLoader(
-				yamlLoader,
-				xload.OSLoader(), // OSLoader values take precedence over yaml
-			),
+		xload.SerialLoader(
+			yamlLoader,
+			xload.OSLoader(), // OSLoader values take precedence over yaml
 		),
 	)
 	if err != nil {
@@ -74,11 +72,9 @@ func main() {
 		rcfg,
 		xload.Concurrency(5), // use xload.Concurrency to load values concurrently
 		xload.FieldTagName("env"),
-		xload.WithLoader(
-			xload.SerialLoader(
-				reqYamlLoader,
-				businessConfigLoader(), // businessConfigLoader values take precedence over yaml
-			),
+		xload.SerialLoader(
+			reqYamlLoader,
+			businessConfigLoader(), // businessConfigLoader values take precedence over yaml
 		),
 	)
 	if err != nil {

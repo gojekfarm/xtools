@@ -36,7 +36,7 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name: "loader",
-			opts: []Option{WithLoader(MapLoader{"A": "1"})},
+			opts: []Option{MapLoader{"A": "1"}},
 			want: &options{
 				tagName:     defaultKey,
 				loader:      MapLoader{"A": "1"},

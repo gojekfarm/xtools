@@ -33,7 +33,7 @@ func TestLoad_Async(t *testing.T) {
 
 	err := Load(context.Background(), &cfg,
 		Concurrency(3),
-		WithLoader(LoaderFunc(loader)),
+		LoaderFunc(loader),
 	)
 	assert.NoError(t, err)
 
@@ -87,7 +87,7 @@ func TestLoad_Async_Error(t *testing.T) {
 
 	err := Load(context.Background(), &cfg,
 		Concurrency(2),
-		WithLoader(LoaderFunc(loader)),
+		LoaderFunc(loader),
 	)
 	assert.Error(t, err)
 

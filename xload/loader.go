@@ -24,21 +24,21 @@ func PrefixLoader(prefix string, loader Loader) LoaderFunc {
 }
 
 // OSLoader loads values from the OS environment.
-func OSLoader() Loader {
-	return LoaderFunc(func(ctx context.Context, key string) (string, error) {
+func OSLoader() LoaderFunc {
+	return func(ctx context.Context, key string) (string, error) {
 		v, ok := os.LookupEnv(key)
 		if !ok {
 			return "", nil
 		}
 
 		return v, nil
-	})
+	}
 }
 
 // SerialLoader loads values from multiple loaders.
 // Last non-empty value wins.
-func SerialLoader(loaders ...Loader) Loader {
-	return LoaderFunc(func(ctx context.Context, key string) (string, error) {
+func SerialLoader(loaders ...Loader) LoaderFunc {
+	return func(ctx context.Context, key string) (string, error) {
 		var lastNonEmpty string
 
 		for _, loader := range loaders {
@@ -53,7 +53,7 @@ func SerialLoader(loaders ...Loader) Loader {
 		}
 
 		return lastNonEmpty, nil
-	})
+	}
 }
 
 func (f LoaderFunc) apply(opts *options) { opts.loader = f }
