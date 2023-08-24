@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.4.1]
+
+### Changed
+
+- [`xload`](./xload) `xload.Load` supports concurrent loading with `xload.Concurrency` option.
+- [`xmap`](./xmap) Added `xmap.Values` function to get values from a map.
+
 ## [0.4.0]
 
 ### Added
@@ -50,7 +57,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`generic`](./generic) package added
 - [`xproto`](./xproto) package added
 
-[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.4.1...HEAD
+[0.4.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.1
 [0.4.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.0
 [0.3.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.3.0
 [0.2.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.2.0
