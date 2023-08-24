@@ -23,13 +23,18 @@ type testcase struct {
 func TestLoad_Default(t *testing.T) {
 	cfg := &struct {
 		Host string `env:"XLOAD_HOST"`
-	}{}
+		Port int    `env:"XLOAD_PORT"`
+	}{
+		Port: 8080,
+	}
 
 	_ = os.Setenv("XLOAD_HOST", "localhost")
+	// Port is intentionally not set using env var.
 
 	err := Load(context.Background(), cfg)
 	require.NoError(t, err)
 	assert.Equal(t, "localhost", cfg.Host)
+	assert.Equal(t, 8080, cfg.Port)
 }
 
 func TestLoad_Errors(t *testing.T) {
@@ -421,6 +426,26 @@ func TestLoad_NativeTypes(t *testing.T) {
 			loader: MapLoader{"INT64_MAP": "key1=1,key2=2"},
 			err:    errors.New("unable to cast"),
 		},
+
+		// unknown field type
+		{
+			name: "unknown field type",
+			input: &struct {
+				Unknown interface{} `env:"UNKNOWN"`
+			}{},
+			loader: MapLoader{"UNKNOWN": "1+2i"},
+			err:    ErrUnknownFieldType,
+		},
+		{
+			name: "nested unknown field type",
+			input: &struct {
+				Nested struct {
+					Unknown interface{} `env:"UNKNOWN"`
+				} `env:",prefix=NESTED_"`
+			}{},
+			loader: MapLoader{"NESTED_UNKNOWN": "1+2i"},
+			err:    ErrUnknownFieldType,
+		},
 	}
 
 	runTestcases(t, testcases)
@@ -648,6 +673,14 @@ func TestOption_Required(t *testing.T) {
 			loader: MapLoader{},
 		},
 		{
+			name: "required custom decoder",
+			input: &struct {
+				Name CustomGob `env:"NAME,required"`
+			}{},
+			err:    ErrRequired,
+			loader: MapLoader{},
+		},
+		{
 			name: "required option: empty value",
 			input: &struct {
 				Name *string `env:"NAME,required"`
@@ -674,10 +707,21 @@ func runTestcases(t *testing.T, testcases []testcase) {
 	for _, tc := range testcases {
 		tc := tc
 
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
+		t.Run("Load_"+tc.name, func(t *testing.T) {
 			err := Load(context.Background(), tc.input, WithLoader(tc.loader))
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, tc.err.Error())
+
+				return
+			}
+
+			require.NoError(t, err)
+			assert.EqualValues(t, tc.want, tc.input)
+		})
+
+		t.Run("LoadAsync_"+tc.name, func(t *testing.T) {
+			err := Load(context.Background(), tc.input, Concurrency(5), WithLoader(tc.loader))
 			if tc.err != nil {
 				assert.Error(t, err)
 				assert.ErrorContains(t, err, tc.err.Error())

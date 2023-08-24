@@ -3,6 +3,7 @@ package xload_test
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 	"strings"
 	"time"
 
@@ -57,7 +58,7 @@ func ExampleLoad_customLoader() {
 		context.Background(),
 		&conf,
 		xload.FieldTagName("env"),
-		xload.WithLoader(loader),
+		loader,
 	)
 	if err != nil {
 		panic(err)
@@ -76,7 +77,7 @@ func ExampleLoad_prefixLoader() {
 	err := xload.Load(
 		context.Background(),
 		&conf,
-		xload.WithLoader(xload.PrefixLoader("MYAPP_", xload.OSLoader())),
+		xload.PrefixLoader("MYAPP_", xload.OSLoader()),
 	)
 	if err != nil {
 		panic(err)
@@ -158,19 +159,19 @@ func ExampleLoad_transformFieldName() {
 	var conf AppConf
 
 	// transform converts key from MYAPP_HOST to myapp.host
-	transform := func(next xload.Loader) xload.Loader {
-		return xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
+	transform := func(next xload.Loader) xload.LoaderFunc {
+		return func(ctx context.Context, key string) (string, error) {
 			newKey := strings.ReplaceAll(key, "_", ".")
 			newKey = strings.ToLower(newKey)
 
 			return next.Load(ctx, newKey)
-		})
+		}
 	}
 
 	err := xload.Load(
 		context.Background(),
 		&conf,
-		xload.WithLoader(transform(xload.OSLoader())),
+		transform(xload.OSLoader()),
 	)
 	if err != nil {
 		panic(err)
@@ -236,6 +237,66 @@ func ExampleLoad_decodingJSONValue() {
 
 	type AppConf struct {
 		ServiceAccount ServiceAccount `env:"SERVICE_ACCOUNT"`
+	}
+
+	var conf AppConf
+
+	err := xload.Load(context.Background(), &conf)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ExampleLoad_concurrentLoading() {
+	type AppConf struct {
+		Host    string        `env:"HOST"`
+		Debug   bool          `env:"DEBUG"`
+		Timeout time.Duration `env:"TIMEOUT"`
+	}
+
+	var conf AppConf
+
+	loader := xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
+		// lookup value from a remote service
+
+		// NOTE: this function is called for each key concurrently
+		// so make sure it is thread-safe.
+		// Using a pooled client is recommended.
+		return "", nil
+	})
+
+	err := xload.Load(
+		context.Background(),
+		&conf,
+		xload.Concurrency(3), // load 3 keys concurrently
+		xload.FieldTagName("env"),
+		loader,
+	)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ExampleLoad_extendingStructs() {
+	type Host struct {
+		URL       url.URL `env:"URL"`
+		Telemetry bool    `env:"TELEMETRY"`
+	}
+
+	type DB struct {
+		Host
+		Username string `env:"USERNAME"`
+		Password string `env:"PASSWORD"`
+	}
+
+	type HTTP struct {
+		Host
+		Timeout time.Duration `env:"TIMEOUT"`
+	}
+
+	type AppConf struct {
+		DB   DB   `env:",prefix=DB_"`
+		HTTP HTTP `env:",prefix=HTTP_"`
 	}
 
 	var conf AppConf

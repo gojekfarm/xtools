@@ -29,6 +29,8 @@ var (
 	ErrMissingKey = errors.New("xload: missing key")
 	// ErrInvalidPrefix is returned when the prefix option is used on a non-struct field.
 	ErrInvalidPrefix = errors.New("xload: prefix is only valid on struct types")
+	// ErrInvalidPrefixAndKey is returned when the prefix option is used with a key.
+	ErrInvalidPrefixAndKey = errors.New("xload: prefix cannot be used when field name is set")
 )
 
 const (
@@ -47,12 +49,11 @@ const (
 func Load(ctx context.Context, v any, opts ...Option) error {
 	o := newOptions(opts...)
 
-	err := process(ctx, v, o.tagName, o.loader)
-	if err != nil {
-		return err
+	if o.concurrency > 1 {
+		return processConcurrently(ctx, v, o)
 	}
 
-	return nil
+	return process(ctx, v, o.tagName, o.loader)
 }
 
 //nolint:funlen,nestif
@@ -216,6 +217,10 @@ func parseField(tag string) (*field, error) {
 			f.required = true
 		case strings.HasPrefix(opt, optPrefix):
 			f.prefix = strings.TrimPrefix(opt, optPrefix)
+
+			if key != "" && f.prefix != "" {
+				return nil, ErrInvalidPrefixAndKey
+			}
 		case strings.HasPrefix(opt, optDelimiter):
 			f.delimiter = strings.TrimPrefix(opt, optDelimiter)
 		case strings.HasPrefix(opt, optSeparator):
@@ -378,6 +383,10 @@ type Decoder interface {
 // - encoding.BinaryUnmarshaler
 // - encoding.GobDecoder
 func decode(field reflect.Value, val string) (bool, error) {
+	if val == "" {
+		return false, nil
+	}
+
 	for field.CanAddr() {
 		field = field.Addr()
 	}

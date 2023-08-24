@@ -1,6 +1,7 @@
 package xload
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -15,6 +16,12 @@ type House struct {
 	Living  Room  `env:",prefix=LIVING_"`
 	Bedroom *Room `env:",prefix=BEDROOM_"`
 	Plot    Plot  `env:"PLOT"`
+}
+
+type Villa struct {
+	House
+
+	Floors int `env:"FLOORS"`
 }
 
 type Address struct {
@@ -137,11 +144,43 @@ func TestLoad_Structs(t *testing.T) {
 			},
 		},
 		{
+			name:  "inheritance: using prefix",
+			input: &Villa{},
+			want: &Villa{
+				House: House{
+					Name: "villa1",
+					Address: Address{
+						Street:    "street1",
+						City:      "city1",
+						Longitute: ptr.Float64(1.1),
+						Latitude:  ptr.Float64(-2.2),
+					},
+				},
+				Floors: 2,
+			},
+			loader: MapLoader{
+				"NAME":      "villa1",
+				"STREET":    "street1",
+				"CITY":      "city1",
+				"LONGITUTE": "1.1",
+				"LATITUDE":  "-2.2",
+				"FLOORS":    "2",
+			},
+		},
+		{
 			name: "non-struct field with prefix",
 			input: &struct {
 				Name string `env:",prefix=CLUSTER"`
 			}{},
 			err:    ErrInvalidPrefix,
+			loader: MapLoader{},
+		},
+		{
+			name: "struct field with name and prefix",
+			input: &struct {
+				Address Address `env:"ADDRESS,prefix=CLUSTER"`
+			}{},
+			err:    ErrInvalidPrefixAndKey,
 			loader: MapLoader{},
 		},
 	}
@@ -263,6 +302,24 @@ func TestLoad_JSON(t *testing.T) {
 			}{},
 			err:    errors.New("invalid character"),
 			loader: MapLoader{"PLOT": `invalid`},
+		},
+		{
+			name: "json: loader error",
+			input: &struct {
+				Plot Plot `env:"PLOT"`
+			}{},
+			err: errors.New("loader error"),
+			loader: LoaderFunc(func(ctx context.Context, key string) (string, error) {
+				return "", errors.New("loader error")
+			}),
+		},
+		{
+			name: "json: empty required value",
+			input: &struct {
+				Plot Plot `env:"PLOT,required"`
+			}{},
+			err:    ErrRequired,
+			loader: MapLoader{},
 		},
 	}
 
