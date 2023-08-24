@@ -8,8 +8,8 @@ replace (
 )
 
 require (
-	github.com/gojekfarm/xtools/xload v0.4.0
-	github.com/gojekfarm/xtools/xload/providers/yaml v0.4.0
+	github.com/gojekfarm/xtools/xload v0.4.1
+	github.com/gojekfarm/xtools/xload/providers/yaml v0.4.1
 )
 
 require (
