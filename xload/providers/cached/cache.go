@@ -6,6 +6,8 @@ import (
 )
 
 // Cacher is the interface for custom cache implementations.
+//
+//go:generate mockery --name Cacher --structname MockCache --filename mock_test.go --outpkg cached --output .
 type Cacher interface {
 	Get(key string) (string, error)
 	Set(key, value string, ttl time.Duration) error

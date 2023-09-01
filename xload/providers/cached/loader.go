@@ -27,6 +27,9 @@ func NewLoader(l xload.Loader, opts ...Option) xload.LoaderFunc {
 			return "", err
 		}
 
+		// DESIGN: If the loader returns an empty value, we
+		// consider it a cache HIT and cache the empty value.
+
 		err = o.cache.Set(key, loaded, o.ttl)
 
 		return loaded, err
