@@ -22,20 +22,22 @@ func Cache(c Cacher) Option {
 }
 
 // DisableEmptyValueHit disables caching of empty values.
-func DisableEmptyValueHit() Option {
-	return optionFunc(func(o *options) { o.emptyValueHit = false })
-}
+var DisableEmptyValueHit = emptyValHit(false)
+
+type emptyValHit bool
+
+func (e emptyValHit) apply(o *options) { o.emptyHit = bool(e) }
 
 type options struct {
-	ttl           time.Duration
-	cache         Cacher
-	emptyValueHit bool
+	ttl      time.Duration
+	cache    Cacher
+	emptyHit bool
 }
 
 func defaultOptions() *options {
 	return &options{
-		ttl:           5 * time.Minute,
-		emptyValueHit: true,
+		ttl:      5 * time.Minute,
+		emptyHit: true,
 	}
 }
 

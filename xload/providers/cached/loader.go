@@ -32,7 +32,7 @@ func NewLoader(l xload.Loader, opts ...Option) xload.LoaderFunc {
 			return "", err
 		}
 
-		if loaded == "" && !o.emptyValueHit {
+		if loaded == "" && !o.emptyHit {
 			return "", nil
 		}
 

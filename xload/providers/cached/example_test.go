@@ -104,7 +104,7 @@ func Example_disableEmptyValueHit() {
 		cached.NewLoader(
 			remoteLoader,
 			cached.TTL(5*60*time.Minute),
-			cached.DisableEmptyValueHit(),
+			cached.DisableEmptyValueHit,
 		),
 	)
 	if err != nil {

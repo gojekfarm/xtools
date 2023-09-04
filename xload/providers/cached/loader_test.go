@@ -78,7 +78,7 @@ func TestNewLoader_WithDisableEmptyValueHit(t *testing.T) {
 	mc.On("Get", mock.Anything).Return("", nil).Times(6)
 	mc.On("Set", mock.Anything, mock.Anything, ttl).Return(nil).Times(4)
 
-	cachedLoader := NewLoader(loader, TTL(ttl), Cache(mc), DisableEmptyValueHit())
+	cachedLoader := NewLoader(loader, TTL(ttl), Cache(mc), DisableEmptyValueHit)
 
 	cfg := config{}
 
