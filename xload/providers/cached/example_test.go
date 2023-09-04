@@ -80,3 +80,34 @@ func Example_customCache() {
 		panic(err)
 	}
 }
+
+func Example_disableEmptyValueHit() {
+	// By default, the cached loader caches empty values.
+	// This example shows how to disable caching of empty values
+	// with the cached loader.
+
+	ctx := context.Background()
+	cfg := struct {
+		Title       string `env:"TITLE"`
+		Link        string `env:"LINK"`
+		ButtonLabel string `env:"BUTTON_LABEL"`
+	}{}
+
+	remoteLoader := xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
+		// Load the value from a remote source.
+
+		return "", nil
+	})
+
+	err := xload.Load(
+		ctx, &cfg,
+		cached.NewLoader(
+			remoteLoader,
+			cached.TTL(5*60*time.Minute),
+			cached.DisableEmptyValueHit(),
+		),
+	)
+	if err != nil {
+		panic(err)
+	}
+}

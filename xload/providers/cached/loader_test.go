@@ -66,6 +66,32 @@ func TestNewLoader_WithTTL(t *testing.T) {
 	mc.AssertExpectations(t)
 }
 
+func TestNewLoader_WithDisableEmptyValueHit(t *testing.T) {
+	loader := xload.MapLoader(map[string]string{
+		"KEY_1": "value-1",
+		"KEY_2": "value-2",
+	})
+
+	ttl := 123 * time.Second
+
+	mc := NewMockCache(t)
+	mc.On("Get", mock.Anything).Return("", nil).Times(6)
+	mc.On("Set", mock.Anything, mock.Anything, ttl).Return(nil).Times(4)
+
+	cachedLoader := NewLoader(loader, TTL(ttl), Cache(mc), DisableEmptyValueHit())
+
+	cfg := config{}
+
+	err := xload.Load(context.Background(), &cfg, cachedLoader)
+	assert.NoError(t, err)
+
+	// load again to ensure that the empty value is not cached
+	err = xload.Load(context.Background(), &cfg, cachedLoader)
+	assert.NoError(t, err)
+
+	mc.AssertExpectations(t)
+}
+
 func TestNewLoader_ForwardError(t *testing.T) {
 	failingLoader := xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
 		return "", assert.AnError
