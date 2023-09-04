@@ -22,7 +22,7 @@ func Cache(c Cacher) Option {
 }
 
 // DisableEmptyValueHit disables caching of empty values.
-var DisableEmptyValueHit = emptyValHit(false)
+var DisableEmptyValueHit Option = emptyValHit(false)
 
 type emptyValHit bool
 
