@@ -13,63 +13,56 @@ type Cacher interface {
 	Set(key, value string, ttl time.Duration) error
 }
 
+type mv struct {
+	val string
+	ttl time.Time
+}
+
 // MapCache is a simple cache implementation using a map.
 type MapCache struct {
-	m   map[string]string
-	ttl map[string]time.Time
+	m sync.Map
 
 	now func() time.Time
-	mu  sync.Mutex
 }
 
 // NewMapCache returns a new MapCache.
 func NewMapCache() *MapCache {
 	return &MapCache{
-		m:   make(map[string]string),
-		ttl: make(map[string]time.Time),
+		m:   sync.Map{},
 		now: time.Now,
 	}
 }
 
 // Get returns the value for the given key, if cached.
 func (c *MapCache) Get(key string) (string, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	v, ok := c.m.Load(key)
+	if !ok {
+		return "", nil
+	}
 
-	if c.isExpired(key) {
+	mv, ok := v.(*mv)
+
+	if !ok || c.now().After(mv.ttl) {
 		c.delete(key)
 
 		return "", nil
 	}
 
-	if v, ok := c.m[key]; ok {
-		return v, nil
-	}
-
-	return "", nil
+	return mv.val, nil
 }
 
 // Set sets the value for the given key.
 func (c *MapCache) Set(key, value string, ttl time.Duration) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	v := &mv{
+		val: value,
+		ttl: c.now().Add(ttl),
+	}
 
-	c.m[key] = value
-	c.ttl[key] = c.now().Add(ttl)
+	c.m.Store(key, v)
 
 	return nil
 }
 
-func (c *MapCache) isExpired(key string) bool {
-	t, ok := c.ttl[key]
-	if !ok {
-		return false
-	}
-
-	return c.now().After(t)
-}
-
 func (c *MapCache) delete(key string) {
-	delete(c.m, key)
-	delete(c.ttl, key)
+	c.m.Delete(key)
 }
