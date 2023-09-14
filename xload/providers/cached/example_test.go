@@ -43,8 +43,8 @@ func NewCustomCache() *CustomCache {
 	return &CustomCache{}
 }
 
-func (c *CustomCache) Get(key string) (string, error) {
-	return "", nil
+func (c *CustomCache) Get(key string) (*string, error) {
+	return nil, nil
 }
 
 func (c *CustomCache) Set(key, value string, ttl time.Duration) error {

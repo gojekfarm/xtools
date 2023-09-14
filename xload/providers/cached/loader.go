@@ -23,8 +23,8 @@ func NewLoader(l xload.Loader, opts ...Option) xload.LoaderFunc {
 			return "", err
 		}
 
-		if v != "" {
-			return v, nil
+		if v != nil {
+			return *v, nil
 		}
 
 		loaded, err := l.Load(ctx, key)
