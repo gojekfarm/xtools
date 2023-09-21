@@ -6,10 +6,14 @@ import (
 )
 
 // Cacher is the interface for custom cache implementations.
+// Implementations must distinguish between key not found and
+// key found with empty value.
+// `Get` must return nil for key not found.
+// `Set` must cache empty values.
 //
 //go:generate mockery --name Cacher --structname MockCache --filename mock_test.go --outpkg cached --output .
 type Cacher interface {
-	Get(key string) (string, error)
+	Get(key string) (*string, error)
 	Set(key, value string, ttl time.Duration) error
 }
 
@@ -34,10 +38,11 @@ func NewMapCache() *MapCache {
 }
 
 // Get returns the value for the given key, if cached.
-func (c *MapCache) Get(key string) (string, error) {
+// If the value is not cached, it returns nil.
+func (c *MapCache) Get(key string) (*string, error) {
 	v, ok := c.m.Load(key)
 	if !ok {
-		return "", nil
+		return nil, nil
 	}
 
 	mv, ok := v.(*mv)
@@ -45,10 +50,10 @@ func (c *MapCache) Get(key string) (string, error) {
 	if !ok || c.now().After(mv.ttl) {
 		c.delete(key)
 
-		return "", nil
+		return nil, nil
 	}
 
-	return mv.val, nil
+	return &mv.val, nil
 }
 
 // Set sets the value for the given key.

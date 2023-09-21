@@ -15,11 +15,11 @@ func TestMapCache(t *testing.T) {
 
 	v, err := cache.Get("foo")
 	assert.NoError(t, err)
-	assert.Equal(t, "bar", v)
+	assert.Equal(t, "bar", *v)
 
 	v, err = cache.Get("not-found")
 	assert.NoError(t, err)
-	assert.Equal(t, "", v)
+	assert.Nil(t, v)
 }
 
 func TestMapCacheExpired(t *testing.T) {
@@ -39,5 +39,5 @@ func TestMapCacheExpired(t *testing.T) {
 
 	v, err := cache.Get("foo")
 	assert.NoError(t, err)
-	assert.Equal(t, "", v)
+	assert.Nil(t, v)
 }
