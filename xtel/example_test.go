@@ -16,5 +16,7 @@ func ExampleNewProvider() {
 		panic(err)
 	}
 
-	defer tp.Stop()
+	if err := tp.Stop(); err != nil {
+		panic(err)
+	}
 }
