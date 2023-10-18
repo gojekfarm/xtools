@@ -1,6 +1,8 @@
 package xtel
 
 import (
+	"context"
+
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
@@ -16,7 +18,7 @@ type TracerProvider = trace.TracerProvider
 type MeterProvider = metric.MeterProvider
 
 // TraceExporterFunc is used to create a new trace.SpanExporter.
-type TraceExporterFunc func() (trace.SpanExporter, error)
+type TraceExporterFunc func(context.Context) (trace.SpanExporter, error)
 
 // MetricReaderFunc is used to create a new metric.Reader.
-type MetricReaderFunc func() (metric.Reader, error)
+type MetricReaderFunc func(context.Context) (metric.Reader, error)

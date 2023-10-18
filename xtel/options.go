@@ -1,7 +1,14 @@
 package xtel
 
 import (
+	"context"
+	"time"
+
 	"github.com/hashicorp/go-multierror"
+)
+
+const (
+	newExporterTimeout = 15 * time.Second
 )
 
 // ProviderOption changes the behaviour of Provider.
@@ -22,7 +29,10 @@ type disableClientTracing struct{}
 func (d *disableClientTracing) apply(p *Provider) { p.roundTripper = nil }
 
 func (fn TraceExporterFunc) apply(p *Provider) {
-	se, err := fn()
+	ctx, cancel := context.WithTimeout(context.Background(), newExporterTimeout)
+	defer cancel()
+
+	se, err := fn(ctx)
 	if se != nil {
 		p.spanExporters = append(p.spanExporters, se)
 	}
@@ -31,7 +41,10 @@ func (fn TraceExporterFunc) apply(p *Provider) {
 }
 
 func (fn MetricReaderFunc) apply(p *Provider) {
-	me, err := fn()
+	ctx, cancel := context.WithTimeout(context.Background(), newExporterTimeout)
+	defer cancel()
+
+	me, err := fn(ctx)
 	if me != nil {
 		p.metricReaders = append(p.metricReaders, me)
 	}

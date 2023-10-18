@@ -1,6 +1,7 @@
 package exporter
 
 import (
+	"context"
 	"os"
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -16,7 +17,7 @@ type STDOutOptions struct {
 
 // NewSTDOut exports and writes exported tracing telemetry information in JSON for the given STDOutOptions.
 func NewSTDOut(opts STDOutOptions) xtel.TraceExporterFunc {
-	return func() (trace.SpanExporter, error) {
+	return func(_ context.Context) (trace.SpanExporter, error) {
 		o := []stdouttrace.Option{stdouttrace.WithWriter(os.Stdout)}
 
 		if opts.PrettyPrint {

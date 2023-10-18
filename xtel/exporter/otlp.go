@@ -32,7 +32,7 @@ var WithTracesExporterInsecure = &insecure{}
 
 // NewOTLP returns a new exporter and starts it. It configs the new exporter with the given Options.
 func NewOTLP(opts ...Option) xtel.TraceExporterFunc {
-	return func() (trace.SpanExporter, error) {
+	return func(ctx context.Context) (trace.SpanExporter, error) {
 		cfg := newConfig(opts...)
 
 		var client otlptrace.Client
@@ -44,7 +44,7 @@ func NewOTLP(opts ...Option) xtel.TraceExporterFunc {
 			client = otlptracehttp.NewClient(cfg.httpOptions()...)
 		}
 
-		traceExporter, err := newTraceExporter(context.Background(), client)
+		traceExporter, err := newTraceExporter(ctx, client)
 		if err != nil {
 			return nil, err
 		}
