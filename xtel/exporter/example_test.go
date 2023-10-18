@@ -20,3 +20,10 @@ func ExampleNewSTDOut() {
 		fmt.Printf("failed printing traces to terminal: %s\n", err)
 	}
 }
+
+func ExampleNewPrometheus() {
+	_, err := xtel.NewProvider("eg-service", exporter.NewPrometheus(exporter.PrometheusOptions{}))
+	if err != nil {
+		fmt.Printf("failed exporting metrics to prometheus: %s\n", err)
+	}
+}

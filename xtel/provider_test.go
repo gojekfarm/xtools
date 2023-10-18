@@ -34,14 +34,14 @@ func TestNewProvider(t *testing.T) {
 }
 
 func TestNewProvider_SpanExporter(t *testing.T) {
-	we := WithExporter(func() (trace.SpanExporter, error) {
+	tef := TraceExporterFunc(func() (trace.SpanExporter, error) {
 		o := []stdouttrace.Option{stdouttrace.WithWriter(os.Stdout)}
 		o = append(o, stdouttrace.WithPrettyPrint())
 
 		return stdouttrace.New(o...)
 	})
 
-	np, err := NewProvider("dummy", we)
+	np, err := NewProvider("dummy", tef)
 
 	if err != nil {
 		panic(err)
@@ -59,7 +59,7 @@ func TestNewProvider_SpanExporter(t *testing.T) {
 }
 
 func TestNewProvider_initError(t *testing.T) {
-	np, err := NewProvider("dummy", WithExporter(func() (trace.SpanExporter, error) {
+	np, err := NewProvider("dummy", TraceExporterFunc(func() (trace.SpanExporter, error) {
 		return nil, errors.New("can't create a SpanExporter")
 	}))
 

@@ -15,8 +15,8 @@ type STDOutOptions struct {
 }
 
 // NewSTDOut exports and writes exported tracing telemetry information in JSON for the given STDOutOptions.
-func NewSTDOut(opts STDOutOptions) xtel.ProviderOption {
-	return xtel.WithExporter(func() (trace.SpanExporter, error) {
+func NewSTDOut(opts STDOutOptions) xtel.TraceExporterFunc {
+	return func() (trace.SpanExporter, error) {
 		o := []stdouttrace.Option{stdouttrace.WithWriter(os.Stdout)}
 
 		if opts.PrettyPrint {
@@ -24,5 +24,5 @@ func NewSTDOut(opts STDOutOptions) xtel.ProviderOption {
 		}
 
 		return stdouttrace.New(o...)
-	})
+	}
 }
