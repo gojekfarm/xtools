@@ -1,10 +1,11 @@
 package exporter
 
 import (
-	"github.com/gojekfarm/xtools/xtel"
 	pc "github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
+
+	"github.com/gojekfarm/xtools/xtel"
 )
 
 // PrometheusOptions handles the configuration of Prometheus exporter.

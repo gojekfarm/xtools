@@ -36,6 +36,7 @@ func NewOTLP(opts ...Option) xtel.TraceExporterFunc {
 		cfg := newConfig(opts...)
 
 		var client otlptrace.Client
+
 		switch cfg.mode {
 		case GRPC:
 			client = otlptracegrpc.NewClient(cfg.grpcOptions()...)
