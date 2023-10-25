@@ -38,6 +38,7 @@ type Message struct {
 	Timestamp time.Time
 	Status    Status
 	ErrMsg    string
+	Offset    int64
 
 	headers      map[string][]byte
 	ackCallbacks []AckFunc
@@ -55,6 +56,7 @@ func newMessage(group string, raw *kafka.Message) *Message {
 		Value:     raw.Value,
 		Timestamp: raw.Timestamp,
 		Status:    Unassigned,
+		Offset:    int64(raw.TopicPartition.Offset),
 		headers:   mapHeaders(raw.Headers),
 	}
 }
