@@ -6,17 +6,21 @@ import (
 
 	"log/slog"
 
+	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/rs/xid"
 	"github.com/urfave/cli/v2"
 )
 
-var brokers = []string{"localhost:9092"}
+var (
+	brokers    = []string{"localhost:9092"}
+	partitions = 4
+)
 
 func runSequentialTest(c *cli.Context) error {
 	topic := xid.New().String()
 
-	if err := createTopic(topic, 1); err != nil {
+	if err := createTopic(topic, partitions); err != nil {
 		return err
 	}
 
@@ -31,30 +35,53 @@ func runSequentialTest(c *cli.Context) error {
 		expect: messages,
 	}
 
-	// Create a consumer and consume messages from the topic
-	consumer, err := xkafka.NewConsumer(
-		"test-seq-consumer",
-		h,
-		xkafka.Brokers(brokers),
-		xkafka.Topics{topic},
-		xkafka.ConfigMap{
-			"enable.auto.commit": true,
-			"auto.offset.reset":  "earliest",
-		},
-	)
-	if err != nil {
-		return err
-	}
+	// Create multiple consumers to simulate horizontal scaling
+	consumers := createConsumers(partitions, topic, h)
 
 	h.close = func() {
-		consumer.Close()
+		for _, consumer := range consumers {
+			consumer.Close()
+		}
 	}
 
-	if err := consumer.Start(context.Background()); err != nil {
+	// Run all consumers
+	var components []xrun.Component
+
+	for _, consumer := range consumers {
+		components = append(components, consumer)
+	}
+
+	r := xrun.All(xrun.NoTimeout, components...)
+
+	if err := r.Run(c.Context); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func createConsumers(count int, topic string, h xkafka.Handler) []*xkafka.Consumer {
+	consumers := make([]*xkafka.Consumer, count)
+
+	for i := 0; i < count; i++ {
+		consumer, err := xkafka.NewConsumer(
+			"test-seq-consumer",
+			h,
+			xkafka.Brokers(brokers),
+			xkafka.Topics{topic},
+			xkafka.ConfigMap{
+				"enable.auto.commit": true,
+				"auto.offset.reset":  "earliest",
+			},
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		consumers[i] = consumer
+	}
+
+	return consumers
 }
 
 type handler struct {
