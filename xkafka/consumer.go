@@ -2,6 +2,7 @@ package xkafka
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -30,6 +31,10 @@ func NewConsumer(name string, handler Handler, opts ...Option) (*Consumer, error
 
 	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
 	_ = cfg.configMap.SetKey("group.id", name)
+
+	if cfg.manualCommit {
+		_ = cfg.configMap.SetKey("enable.auto.commit", false)
+	}
 
 	consumer, err := cfg.consumerFn(&cfg.configMap)
 	if err != nil {
@@ -77,18 +82,21 @@ func (c *Consumer) Start(ctx context.Context) error {
 
 	c.handler = c.concatMiddlewares(c.handler)
 
-	st := stream.New().WithMaxGoroutines(c.config.concurrency)
+	if c.config.concurrency > 1 {
+		return c.runAsync(ctx)
+	}
+
+	return c.runSequential(ctx)
+}
+
+func (c *Consumer) runSequential(ctx context.Context) error {
 	errChan := make(chan error, 1)
 
 	for {
 		select {
 		case <-ctx.Done():
-			st.Wait()
-
 			return c.unsubscribe()
 		case err := <-errChan:
-			st.Wait()
-
 			uerr := c.unsubscribe()
 			if uerr != nil {
 				// TODO: use multierror
@@ -105,28 +113,91 @@ func (c *Consumer) Start(ctx context.Context) error {
 				}
 
 				if ferr := c.config.errorHandler(err); ferr != nil {
-					errChan <- ferr
+					errChan <- err
 
 					continue
 				}
 			}
 
-			st.Go(func() stream.Callback {
-				c.runHandler(ctx, c.handler, km, errChan)
+			msg := newMessage(c.name, km)
 
-				return func() {}
-			})
+			err = c.handler.Handle(ctx, msg)
+			if ferr := c.config.errorHandler(err); ferr != nil {
+				errChan <- ferr
+
+				continue
+			}
+
+			if c.config.manualCommit &&
+				(msg.Status == Success || msg.Status == Skip) {
+				_, err := c.kafka.StoreMessage(km)
+				if err != nil {
+					slog.Error("[XKAFKA] Failed to store message", "error", err)
+
+					errChan <- err
+				}
+			}
 		}
 	}
 }
 
-func (c *Consumer) runHandler(ctx context.Context, handler Handler, km *kafka.Message, errChan chan error) {
-	msg := newMessage(c.name, km)
+func (c *Consumer) runAsync(ctx context.Context) error {
+	errChan := make(chan error, 1)
+	p := stream.New().
+		WithMaxGoroutines(c.config.concurrency)
 
-	err := handler.Handle(ctx, msg)
+	for {
+		select {
+		case <-ctx.Done():
+			err := c.unsubscribe()
 
-	if ferr := c.config.errorHandler(err); ferr != nil {
-		errChan <- ferr
+			p.Wait()
+
+			return err
+		case err := <-errChan:
+			uerr := c.unsubscribe()
+			if uerr != nil {
+				// TODO: use multierror
+				return errors.Wrap(err, uerr.Error())
+			}
+
+			p.Wait()
+
+			return err
+		default:
+			km, err := c.kafka.ReadMessage(c.config.pollTimeout)
+
+			if err != nil {
+				if kerr, ok := err.(kafka.Error); ok && kerr.Code() == kafka.ErrTimedOut {
+					continue
+				}
+
+				if ferr := c.config.errorHandler(err); ferr != nil {
+					errChan <- err
+
+					continue
+				}
+			}
+
+			p.Go(func() stream.Callback {
+				msg := newMessage(c.name, km)
+
+				err = c.handler.Handle(ctx, msg)
+				if ferr := c.config.errorHandler(err); ferr != nil {
+					errChan <- ferr
+				}
+
+				return func() {
+					if c.config.manualCommit &&
+						(msg.Status == Success || msg.Status == Skip) {
+						_, err := c.kafka.StoreMessage(km)
+						if err != nil {
+							errChan <- err
+						}
+					}
+				}
+			})
+		}
 	}
 }
 
@@ -143,6 +214,8 @@ func (c *Consumer) subscribe() error {
 }
 
 func (c *Consumer) unsubscribe() error {
+	c.kafka.Commit()
+
 	return c.kafka.Unsubscribe()
 }
 

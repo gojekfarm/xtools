@@ -28,6 +28,10 @@ func main() {
 			Name:   "sequential",
 			Action: runSequentialTest,
 		},
+		{
+			Name:   "sequential-manual",
+			Action: runSequentialWithManualCommitTest,
+		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
