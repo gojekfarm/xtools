@@ -32,7 +32,7 @@ func runSequentialWithManualCommitTest(c *cli.Context) error {
 			handleMessagesWithErrors(),
 			xkafka.Brokers(brokers),
 			xkafka.Topics{topic},
-			xkafka.ManualCommit(true),
+			xkafka.ManualOffset(true),
 			xkafka.ConfigMap{
 				"auto.offset.reset": "earliest",
 			},
@@ -67,7 +67,7 @@ func runSequentialWithManualCommitTest(c *cli.Context) error {
 			handleMessages(),
 			xkafka.Brokers(brokers),
 			xkafka.Topics{topic},
-			xkafka.ManualCommit(true),
+			xkafka.ManualOffset(true),
 			xkafka.ConfigMap{
 				"auto.offset.reset": "earliest",
 			},
@@ -103,8 +103,8 @@ func handleMessagesWithErrors() xkafka.HandlerFunc {
 	return func(ctx context.Context, msg *xkafka.Message) error {
 		simulateWork()
 
-		if len(s.received) == 5 {
-			slog.Info("[SEQUENTIAL-MANUAL] Simulating error")
+		if msg.Offset > 1 {
+			slog.Info("[HANDLER] Simulating error", "offset", msg.Offset)
 			err := errors.New("some error")
 
 			msg.AckFail(err)

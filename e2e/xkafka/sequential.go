@@ -16,11 +16,11 @@ import (
 
 var (
 	brokers    = []string{"localhost:9092"}
-	partitions = 1
+	partitions = 2
 )
 
 func runSequentialTest(c *cli.Context) error {
-	topic := xid.New().String()
+	topic := "auto-commit-" + xid.New().String()
 
 	if err := createTopic(topic, partitions); err != nil {
 		return err
@@ -28,14 +28,43 @@ func runSequentialTest(c *cli.Context) error {
 
 	s.generated = generateMessages(topic, 10)
 
-	// Create a producer and produce messages to the topic
+	// start consumers first
+	s.consumers = make([]*xkafka.Consumer, partitions)
+	components := make([]xrun.Component, partitions)
+
+	for i := 0; i < partitions; i++ {
+		consumer, err := xkafka.NewConsumer(
+			"test-seq-consumer",
+			handleMessagesWithErrors(),
+			xkafka.Brokers(brokers),
+			xkafka.Topics{topic},
+			xkafka.ConfigMap{
+				"auto.offset.reset": "earliest",
+			},
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		consumer.Use(loggingMiddleware())
+
+		s.consumers[i] = consumer
+		components[i] = consumer
+	}
+
+	// publish messages to the topic
 	if err := publishMessages(s.generated); err != nil {
 		return err
 	}
 
-	// Create multiple consumers to simulate horizontal scaling
+	runConsumers(c.Context, s.consumers)
+
+	slog.Info("[SEQUENTIAL] Consumers exited", "count", len(s.received))
+
+	// create new consumers with the same group id
+	// these consumers will start consuming from the last committed offset
 	s.consumers = make([]*xkafka.Consumer, partitions)
-	components := make([]xrun.Component, partitions)
+	components = make([]xrun.Component, partitions)
 
 	for i := 0; i < partitions; i++ {
 		consumer, err := xkafka.NewConsumer(
@@ -44,8 +73,7 @@ func runSequentialTest(c *cli.Context) error {
 			xkafka.Brokers(brokers),
 			xkafka.Topics{topic},
 			xkafka.ConfigMap{
-				"enable.auto.commit": true,
-				"auto.offset.reset":  "earliest",
+				"auto.offset.reset": "earliest",
 			},
 		)
 		if err != nil {
@@ -71,8 +99,6 @@ func runSequentialTest(c *cli.Context) error {
 			break
 		}
 	}
-
-	printOffsets()
 
 	return nil
 }
@@ -156,22 +182,4 @@ func runConsumers(ctx context.Context, consumers []*xkafka.Consumer) error {
 	}
 
 	return xrun.All(xrun.NoTimeout, componenets...).Run(ctx)
-}
-
-func printOffsets() {
-	m, err := s.consumers[0].GetMetadata()
-	if err != nil {
-		panic(err)
-	}
-
-	for _, topic := range m.Topics {
-		for _, partition := range topic.Partitions {
-			slog.Info("[OFFSET] ",
-				"topic", topic.Topic,
-				"partition", partition.ID,
-				"offset", partition,
-			)
-		}
-	}
-
 }
