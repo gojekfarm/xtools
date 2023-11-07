@@ -32,8 +32,8 @@ func NewConsumer(name string, handler Handler, opts ...Option) (*Consumer, error
 	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
 	_ = cfg.configMap.SetKey("group.id", name)
 
-	if cfg.manualCommit {
-		_ = cfg.configMap.SetKey("enable.auto.commit", false)
+	if cfg.manualOffset {
+		_ = cfg.configMap.SetKey("enable.auto.offset.store", false)
 	}
 
 	consumer, err := cfg.consumerFn(&cfg.configMap)
@@ -128,7 +128,7 @@ func (c *Consumer) runSequential(ctx context.Context) error {
 				continue
 			}
 
-			if c.config.manualCommit &&
+			if c.config.manualOffset &&
 				(msg.Status == Success || msg.Status == Skip) {
 				_, err := c.kafka.StoreMessage(km)
 				if err != nil {
@@ -188,7 +188,7 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 				}
 
 				return func() {
-					if c.config.manualCommit &&
+					if c.config.manualOffset &&
 						(msg.Status == Success || msg.Status == Skip) {
 						_, err := c.kafka.StoreMessage(km)
 						if err != nil {
