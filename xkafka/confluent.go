@@ -12,6 +12,7 @@ type consumerClient interface {
 	SubscribeTopics(topics []string, rebalanceCb kafka.RebalanceCb) error
 	Unsubscribe() error
 	StoreMessage(msg *kafka.Message) ([]kafka.TopicPartition, error)
+	StoreOffsets(offsets []kafka.TopicPartition) ([]kafka.TopicPartition, error)
 	Commit() ([]kafka.TopicPartition, error)
 	Close() error
 }

@@ -26,11 +26,13 @@ func main() {
 	app.Commands = []*cli.Command{
 		{
 			Name:   "sequential",
-			Action: runSequentialTest,
+			Flags:  []cli.Flag{&cli.BoolFlag{Name: "manual"}},
+			Action: runSequential,
 		},
 		{
-			Name:   "sequential-manual",
-			Action: runSequentialWithManualCommitTest,
+			Name:   "async",
+			Flags:  []cli.Flag{&cli.BoolFlag{Name: "manual"}},
+			Action: runAsync,
 		},
 	}
 
