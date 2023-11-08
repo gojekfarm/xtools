@@ -2,7 +2,6 @@ package xkafka
 
 import (
 	"context"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -132,7 +131,6 @@ func (c *Consumer) runSequential(ctx context.Context) error {
 				(msg.Status == Success || msg.Status == Skip) {
 				_, err := c.kafka.StoreMessage(km)
 				if err != nil {
-					slog.Error("[XKAFKA] Failed to store message", "error", err)
 
 					errChan <- err
 				}
@@ -142,16 +140,38 @@ func (c *Consumer) runSequential(ctx context.Context) error {
 }
 
 func (c *Consumer) runAsync(ctx context.Context) error {
-	errChan := make(chan error, 1)
+	errChan := make(chan error, c.config.concurrency)
 	p := stream.New().
 		WithMaxGoroutines(c.config.concurrency)
+
+	defer p.Wait()
+
+	cb := func(msg *Message, err error) stream.Callback {
+		if ferr := c.config.errorHandler(err); ferr != nil {
+			errChan <- ferr
+		}
+
+		return func() {
+			if c.config.manualOffset &&
+				(msg.Status == Success || msg.Status == Skip) {
+				_, err := c.kafka.StoreOffsets([]kafka.TopicPartition{
+					{
+						Topic:     &msg.Topic,
+						Partition: msg.Partition,
+						Offset:    kafka.Offset(msg.Offset + 1),
+					},
+				})
+				if err != nil {
+					errChan <- err
+				}
+			}
+		}
+	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			err := c.unsubscribe()
-
-			p.Wait()
 
 			return err
 		case err := <-errChan:
@@ -160,8 +180,6 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 				// TODO: use multierror
 				return errors.Wrap(err, uerr.Error())
 			}
-
-			p.Wait()
 
 			return err
 		default:
@@ -182,20 +200,9 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 			p.Go(func() stream.Callback {
 				msg := newMessage(c.name, km)
 
-				err = c.handler.Handle(ctx, msg)
-				if ferr := c.config.errorHandler(err); ferr != nil {
-					errChan <- ferr
-				}
+				err := c.handler.Handle(ctx, msg)
 
-				return func() {
-					if c.config.manualOffset &&
-						(msg.Status == Success || msg.Status == Skip) {
-						_, err := c.kafka.StoreMessage(km)
-						if err != nil {
-							errChan <- err
-						}
-					}
-				}
+				return cb(msg, err)
 			})
 		}
 	}

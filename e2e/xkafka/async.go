@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"time"
 
@@ -12,8 +11,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func runSequentialWithManualCommitTest(c *cli.Context) error {
-	topic := "manual-commit-" + xid.New().String()
+func runAsync(c *cli.Context) error {
+	isManual := c.Bool("manual")
+	topic := "seq-" + xid.New().String()
 
 	if err := createTopic(topic, partitions); err != nil {
 		return err
@@ -21,21 +21,28 @@ func runSequentialWithManualCommitTest(c *cli.Context) error {
 
 	s.generated = generateMessages(topic, 10)
 
+	opts := []xkafka.Option{
+		xkafka.Brokers(brokers),
+		xkafka.Topics{topic},
+		xkafka.ConfigMap{
+			"auto.offset.reset": "earliest",
+		},
+		xkafka.Concurrency(2),
+	}
+
+	if isManual {
+		opts = append(opts, xkafka.ManualOffset(true))
+	}
+
 	// start consumers first
-	// these consumers will only commit offsets for messages that are SUCCESSFULLY processed
 	s.consumers = make([]*xkafka.Consumer, partitions)
 	components := make([]xrun.Component, partitions)
 
 	for i := 0; i < partitions; i++ {
 		consumer, err := xkafka.NewConsumer(
-			"test-seq-consumer",
+			"test-async-consumer",
 			handleMessagesWithErrors(),
-			xkafka.Brokers(brokers),
-			xkafka.Topics{topic},
-			xkafka.ManualOffset(true),
-			xkafka.ConfigMap{
-				"auto.offset.reset": "earliest",
-			},
+			opts...,
 		)
 		if err != nil {
 			panic(err)
@@ -54,7 +61,7 @@ func runSequentialWithManualCommitTest(c *cli.Context) error {
 
 	runConsumers(c.Context, s.consumers)
 
-	slog.Info("[SEQUENTIAL-MANUAL] Consumers exited", "count", len(s.received))
+	slog.Info("[SEQUENTIAL] Consumers exited", "count", len(s.received))
 
 	// create new consumers with the same group id
 	// these consumers will start consuming from the last committed offset
@@ -63,14 +70,9 @@ func runSequentialWithManualCommitTest(c *cli.Context) error {
 
 	for i := 0; i < partitions; i++ {
 		consumer, err := xkafka.NewConsumer(
-			"test-seq-consumer",
+			"test-async-consumer",
 			handleMessages(),
-			xkafka.Brokers(brokers),
-			xkafka.Topics{topic},
-			xkafka.ManualOffset(true),
-			xkafka.ConfigMap{
-				"auto.offset.reset": "earliest",
-			},
+			opts...,
 		)
 		if err != nil {
 			panic(err)
@@ -97,24 +99,4 @@ func runSequentialWithManualCommitTest(c *cli.Context) error {
 	}
 
 	return nil
-}
-
-func handleMessagesWithErrors() xkafka.HandlerFunc {
-	return func(ctx context.Context, msg *xkafka.Message) error {
-		simulateWork()
-
-		if msg.Offset > 1 {
-			slog.Info("[HANDLER] Simulating error", "offset", msg.Offset)
-			err := errors.New("some error")
-
-			msg.AckFail(err)
-			return err
-		}
-
-		msg.AckSuccess()
-
-		s.received = append(s.received, msg)
-
-		return nil
-	}
 }

@@ -19,14 +19,27 @@ var (
 	partitions = 2
 )
 
-func runSequentialTest(c *cli.Context) error {
-	topic := "auto-commit-" + xid.New().String()
+func runSequential(c *cli.Context) error {
+	isManual := c.Bool("manual")
+	topic := "seq-" + xid.New().String()
 
 	if err := createTopic(topic, partitions); err != nil {
 		return err
 	}
 
 	s.generated = generateMessages(topic, 10)
+
+	opts := []xkafka.Option{
+		xkafka.Brokers(brokers),
+		xkafka.Topics{topic},
+		xkafka.ConfigMap{
+			"auto.offset.reset": "earliest",
+		},
+	}
+
+	if isManual {
+		opts = append(opts, xkafka.ManualOffset(true))
+	}
 
 	// start consumers first
 	s.consumers = make([]*xkafka.Consumer, partitions)
@@ -36,11 +49,7 @@ func runSequentialTest(c *cli.Context) error {
 		consumer, err := xkafka.NewConsumer(
 			"test-seq-consumer",
 			handleMessagesWithErrors(),
-			xkafka.Brokers(brokers),
-			xkafka.Topics{topic},
-			xkafka.ConfigMap{
-				"auto.offset.reset": "earliest",
-			},
+			opts...,
 		)
 		if err != nil {
 			panic(err)
@@ -70,11 +79,7 @@ func runSequentialTest(c *cli.Context) error {
 		consumer, err := xkafka.NewConsumer(
 			"test-seq-consumer",
 			handleMessages(),
-			xkafka.Brokers(brokers),
-			xkafka.Topics{topic},
-			xkafka.ConfigMap{
-				"auto.offset.reset": "earliest",
-			},
+			opts...,
 		)
 		if err != nil {
 			panic(err)
@@ -101,18 +106,6 @@ func runSequentialTest(c *cli.Context) error {
 	}
 
 	return nil
-}
-
-func handleMessages() xkafka.HandlerFunc {
-	return func(ctx context.Context, msg *xkafka.Message) error {
-		simulateWork()
-
-		msg.AckSuccess()
-
-		s.received = append(s.received, msg)
-
-		return nil
-	}
 }
 
 func publishMessages(messages []*xkafka.Message) error {
@@ -182,4 +175,39 @@ func runConsumers(ctx context.Context, consumers []*xkafka.Consumer) error {
 	}
 
 	return xrun.All(xrun.NoTimeout, componenets...).Run(ctx)
+}
+
+func handleMessages() xkafka.HandlerFunc {
+	return func(ctx context.Context, msg *xkafka.Message) error {
+		s.mu.Lock()
+		s.received[string(msg.Key)] = msg
+		s.mu.Unlock()
+
+		simulateWork()
+
+		msg.AckSuccess()
+
+		return nil
+	}
+}
+
+func handleMessagesWithErrors() xkafka.HandlerFunc {
+	return func(ctx context.Context, msg *xkafka.Message) error {
+		s.mu.Lock()
+		s.received[string(msg.Key)] = msg
+		s.mu.Unlock()
+
+		simulateWork()
+
+		if msg.Offset > 1 {
+			err := fmt.Errorf("simulated error for key %s", string(msg.Key))
+
+			msg.AckFail(err)
+			return err
+		}
+
+		msg.AckSuccess()
+
+		return nil
+	}
 }

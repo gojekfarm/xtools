@@ -132,6 +132,32 @@ func (_m *MockConsumerClient) StoreMessage(msg *kafka.Message) ([]kafka.TopicPar
 	return r0, r1
 }
 
+// StoreOffsets provides a mock function with given fields: offsets
+func (_m *MockConsumerClient) StoreOffsets(offsets []kafka.TopicPartition) ([]kafka.TopicPartition, error) {
+	ret := _m.Called(offsets)
+
+	var r0 []kafka.TopicPartition
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]kafka.TopicPartition) ([]kafka.TopicPartition, error)); ok {
+		return rf(offsets)
+	}
+	if rf, ok := ret.Get(0).(func([]kafka.TopicPartition) []kafka.TopicPartition); ok {
+		r0 = rf(offsets)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]kafka.TopicPartition)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func([]kafka.TopicPartition) error); ok {
+		r1 = rf(offsets)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // SubscribeTopics provides a mock function with given fields: topics, rebalanceCb
 func (_m *MockConsumerClient) SubscribeTopics(topics []string, rebalanceCb kafka.RebalanceCb) error {
 	ret := _m.Called(topics, rebalanceCb)
