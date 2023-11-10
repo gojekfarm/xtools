@@ -24,16 +24,15 @@ type Consumer struct {
 func NewConsumer(name string, handler Handler, opts ...Option) (*Consumer, error) {
 	cfg := defaultConsumerOptions()
 
+	// set default config values
+	_ = cfg.configMap.SetKey("enable.auto.offset.store", false)
+
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
 
 	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
 	_ = cfg.configMap.SetKey("group.id", name)
-
-	if cfg.manualOffset {
-		_ = cfg.configMap.SetKey("enable.auto.offset.store", false)
-	}
 
 	consumer, err := cfg.consumerFn(&cfg.configMap)
 	if err != nil {
@@ -127,8 +126,7 @@ func (c *Consumer) runSequential(ctx context.Context) error {
 				continue
 			}
 
-			if c.config.manualOffset &&
-				(msg.Status == Success || msg.Status == Skip) {
+			if msg.Status == Success || msg.Status == Skip {
 				_, err := c.kafka.StoreMessage(km)
 				if err != nil {
 
@@ -152,8 +150,7 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 		}
 
 		return func() {
-			if c.config.manualOffset &&
-				(msg.Status == Success || msg.Status == Skip) {
+			if msg.Status == Success || msg.Status == Skip {
 				_, err := c.kafka.StoreOffsets([]kafka.TopicPartition{
 					{
 						Topic:     &msg.Topic,

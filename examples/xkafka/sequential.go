@@ -20,7 +20,6 @@ var (
 )
 
 func runSequential(c *cli.Context) error {
-	isManual := c.Bool("manual")
 	topic := "seq-" + xid.New().String()
 
 	if err := createTopic(topic, partitions); err != nil {
@@ -35,10 +34,6 @@ func runSequential(c *cli.Context) error {
 		xkafka.ConfigMap{
 			"auto.offset.reset": "earliest",
 		},
-	}
-
-	if isManual {
-		opts = append(opts, xkafka.ManualOffset(true))
 	}
 
 	// start consumers first
