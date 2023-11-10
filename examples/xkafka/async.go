@@ -12,8 +12,7 @@ import (
 )
 
 func runAsync(c *cli.Context) error {
-	isManual := c.Bool("manual")
-	topic := "seq-" + xid.New().String()
+	topic := "async-" + xid.New().String()
 
 	if err := createTopic(topic, partitions); err != nil {
 		return err
@@ -28,10 +27,6 @@ func runAsync(c *cli.Context) error {
 			"auto.offset.reset": "earliest",
 		},
 		xkafka.Concurrency(2),
-	}
-
-	if isManual {
-		opts = append(opts, xkafka.ManualOffset(true))
 	}
 
 	// start consumers first

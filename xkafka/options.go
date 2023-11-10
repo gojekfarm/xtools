@@ -59,14 +59,6 @@ type DeliveryCallback AckFunc
 
 func (d DeliveryCallback) apply(o *options) { o.deliveryCb = d }
 
-// ManualOffset is an option to disable automatically storing the offsets.
-// When enabled, the consumer will store the offsets only for messages that are
-// marked as `Success` or `Skip`. The consumer will commit the offsets in the
-// background based on the `auto.commit.interval.ms` config.
-type ManualOffset bool
-
-func (mc ManualOffset) apply(o *options) { o.manualOffset = bool(mc) }
-
 type options struct {
 	// common options
 	brokers         []string
@@ -80,7 +72,6 @@ type options struct {
 	metadataTimeout time.Duration
 	pollTimeout     time.Duration
 	concurrency     int
-	manualOffset    bool
 
 	// producer options
 	producerFn producerFunc
