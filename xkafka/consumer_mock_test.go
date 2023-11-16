@@ -106,32 +106,6 @@ func (_m *MockConsumerClient) ReadMessage(timeout time.Duration) (*kafka.Message
 	return r0, r1
 }
 
-// StoreMessage provides a mock function with given fields: msg
-func (_m *MockConsumerClient) StoreMessage(msg *kafka.Message) ([]kafka.TopicPartition, error) {
-	ret := _m.Called(msg)
-
-	var r0 []kafka.TopicPartition
-	var r1 error
-	if rf, ok := ret.Get(0).(func(*kafka.Message) ([]kafka.TopicPartition, error)); ok {
-		return rf(msg)
-	}
-	if rf, ok := ret.Get(0).(func(*kafka.Message) []kafka.TopicPartition); ok {
-		r0 = rf(msg)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]kafka.TopicPartition)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(*kafka.Message) error); ok {
-		r1 = rf(msg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // StoreOffsets provides a mock function with given fields: offsets
 func (_m *MockConsumerClient) StoreOffsets(offsets []kafka.TopicPartition) ([]kafka.TopicPartition, error) {
 	ret := _m.Called(offsets)
