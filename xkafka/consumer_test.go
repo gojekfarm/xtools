@@ -49,10 +49,11 @@ func TestNewConsumer(t *testing.T) {
 	assert.NotNil(t, consumer.config.errorHandler)
 
 	expectedConfig := kafka.ConfigMap{
-		"bootstrap.servers":  "localhost:9092",
-		"group.id":           "test-consumer",
-		"auto.offset.reset":  "earliest",
-		"enable.auto.commit": true,
+		"bootstrap.servers":        "localhost:9092",
+		"group.id":                 "test-consumer",
+		"auto.offset.reset":        "earliest",
+		"enable.auto.commit":       true,
+		"enable.auto.offset.store": false,
 	}
 
 	assert.EqualValues(t, expectedConfig, consumer.config.configMap)
@@ -117,6 +118,7 @@ func TestConsumerUnsubscribeError(t *testing.T) {
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(unsubError)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+	mockKafka.On("Commit").Return(nil, nil)
 
 	consumer.handler = handler
 
@@ -142,6 +144,7 @@ func TestConsumerHandleMessage(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
+	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 	consumer.handler = handler
@@ -164,6 +167,7 @@ func TestConsumerHandleMessageError(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
+	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 	consumer.handler = handler
@@ -187,6 +191,7 @@ func TestConsumerErrorCallback(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
+	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 	consumer.handler = handler
@@ -222,6 +227,7 @@ func TestConsumerReadMessageTimeout(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
+	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
 	mockKafka.On("ReadMessage", testTimeout).Return(nil, expect).Once()
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
@@ -243,6 +249,7 @@ func TestConsumerKafkaError(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
+	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
 	mockKafka.On("ReadMessage", testTimeout).Return(nil, expect).Once()
 
@@ -261,6 +268,7 @@ func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 
 	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
+	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
