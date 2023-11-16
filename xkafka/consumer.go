@@ -218,7 +218,7 @@ func (c *Consumer) subscribe() error {
 }
 
 func (c *Consumer) unsubscribe() error {
-	c.kafka.Commit()
+	_, _ = c.kafka.Commit()
 
 	return c.kafka.Unsubscribe()
 }
