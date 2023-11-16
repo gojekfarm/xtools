@@ -2,15 +2,17 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"time"
+
+	"github.com/rs/xid"
+	"github.com/urfave/cli/v2"
+	"log/slog"
 
 	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
-	"github.com/rs/xid"
-	"github.com/urfave/cli/v2"
 )
 
+// nolint
 func runAsync(c *cli.Context) error {
 	topic := "async-" + xid.New().String()
 
@@ -89,6 +91,7 @@ func runAsync(c *cli.Context) error {
 			<-time.After(1 * time.Second)
 
 			cancel()
+
 			break
 		}
 	}

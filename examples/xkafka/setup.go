@@ -3,9 +3,8 @@ package main
 import (
 	"context"
 
-	"log/slog"
-
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"log/slog"
 )
 
 func createTopic(name string, partitions int) error {

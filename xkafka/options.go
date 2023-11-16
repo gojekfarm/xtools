@@ -59,6 +59,17 @@ type DeliveryCallback AckFunc
 
 func (d DeliveryCallback) apply(o *options) { o.deliveryCb = d }
 
+// ManualCommit disables the auto commit and calls the `Commit` after every
+// message is marked as `Success` or `Skip` by the handler.
+//
+// Works only for xkafka.Consumer.
+//
+// WARNING: Using this option will increase the message processing time,
+// because of the synchronous `Commit` for every message.
+type ManualCommit bool
+
+func (mc ManualCommit) apply(o *options) { o.manualCommit = bool(mc) }
+
 type options struct {
 	// common options
 	brokers         []string
@@ -72,6 +83,7 @@ type options struct {
 	metadataTimeout time.Duration
 	pollTimeout     time.Duration
 	concurrency     int
+	manualCommit    bool
 
 	// producer options
 	producerFn producerFunc

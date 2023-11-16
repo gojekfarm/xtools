@@ -5,10 +5,9 @@ import (
 	"os"
 	"time"
 
-	"log/slog"
-
 	"github.com/lmittmann/tint"
 	"github.com/urfave/cli/v2"
+	"log/slog"
 )
 
 func main() {

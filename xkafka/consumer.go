@@ -34,6 +34,10 @@ func NewConsumer(name string, handler Handler, opts ...Option) (*Consumer, error
 	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
 	_ = cfg.configMap.SetKey("group.id", name)
 
+	if cfg.manualCommit {
+		_ = cfg.configMap.SetKey("enable.auto.commit", false)
+	}
+
 	consumer, err := cfg.consumerFn(&cfg.configMap)
 	if err != nil {
 		return nil, err
@@ -126,12 +130,11 @@ func (c *Consumer) runSequential(ctx context.Context) error {
 				continue
 			}
 
-			if msg.Status == Success || msg.Status == Skip {
-				_, err := c.kafka.StoreMessage(km)
-				if err != nil {
+			err = c.storeMessage(msg)
+			if err != nil {
+				errChan <- err
 
-					errChan <- err
-				}
+				continue
 			}
 		}
 	}
@@ -150,17 +153,9 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 		}
 
 		return func() {
-			if msg.Status == Success || msg.Status == Skip {
-				_, err := c.kafka.StoreOffsets([]kafka.TopicPartition{
-					{
-						Topic:     &msg.Topic,
-						Partition: msg.Partition,
-						Offset:    kafka.Offset(msg.Offset + 1),
-					},
-				})
-				if err != nil {
-					errChan <- err
-				}
+			err := c.storeMessage(msg)
+			if err != nil {
+				errChan <- err
 			}
 		}
 	}
@@ -203,6 +198,32 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 			})
 		}
 	}
+}
+
+func (c *Consumer) storeMessage(msg *Message) error {
+	if msg.Status != Success && msg.Status != Skip {
+		return nil
+	}
+
+	_, err := c.kafka.StoreOffsets([]kafka.TopicPartition{
+		{
+			Topic:     &msg.Topic,
+			Partition: msg.Partition,
+			Offset:    kafka.Offset(msg.Offset + 1),
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	if c.config.manualCommit {
+		_, err := c.kafka.Commit()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *Consumer) concatMiddlewares(h Handler) Handler {

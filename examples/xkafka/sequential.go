@@ -6,12 +6,12 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/rs/xid"
+	"github.com/urfave/cli/v2"
 	"log/slog"
 
 	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
-	"github.com/rs/xid"
-	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -19,6 +19,7 @@ var (
 	partitions = 2
 )
 
+// nolint
 func runSequential(c *cli.Context) error {
 	topic := "seq-" + xid.New().String()
 
@@ -96,6 +97,7 @@ func runSequential(c *cli.Context) error {
 			<-time.After(1 * time.Second)
 
 			cancel()
+
 			break
 		}
 	}
@@ -162,14 +164,17 @@ func simulateWork() {
 	<-time.After(time.Duration(rand.Int63n(200)) * time.Millisecond)
 }
 
-func runConsumers(ctx context.Context, consumers []*xkafka.Consumer) error {
-	componenets := make([]xrun.Component, len(consumers))
+func runConsumers(ctx context.Context, consumers []*xkafka.Consumer) {
+	components := make([]xrun.Component, len(consumers))
 
 	for i, consumer := range consumers {
-		componenets[i] = consumer
+		components[i] = consumer
 	}
 
-	return xrun.All(xrun.NoTimeout, componenets...).Run(ctx)
+	err := xrun.All(xrun.NoTimeout, components...).Run(ctx)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func handleMessages() xkafka.HandlerFunc {
@@ -198,6 +203,7 @@ func handleMessagesWithErrors() xkafka.HandlerFunc {
 			err := fmt.Errorf("simulated error for key %s", string(msg.Key))
 
 			msg.AckFail(err)
+
 			return err
 		}
 
