@@ -17,9 +17,16 @@ var (
 	testTopics  = Topics{"test-topic"}
 	testBrokers = Brokers{"localhost:9092"}
 	testTimeout = time.Second
+	defaultOpts = []Option{
+		testTopics,
+		testBrokers,
+		PollTimeout(testTimeout),
+	}
 )
 
 func TestNewConsumer(t *testing.T) {
+	t.Parallel()
+
 	cfg := ConfigMap{
 		"enable.auto.commit": true,
 		"auto.offset.reset":  "earliest",
@@ -61,6 +68,8 @@ func TestNewConsumer(t *testing.T) {
 }
 
 func TestNewConsumerError(t *testing.T) {
+	t.Parallel()
+
 	expectError := errors.New("error in consumer")
 
 	fn := func(configMap *kafka.ConfigMap) (consumerClient, error) {
@@ -77,6 +86,8 @@ func TestNewConsumerError(t *testing.T) {
 }
 
 func TestConsumerGetMetadata(t *testing.T) {
+	t.Parallel()
+
 	consumer, mockKafka := newTestConsumer(t,
 		testTopics,
 		testBrokers,
@@ -95,6 +106,8 @@ func TestConsumerGetMetadata(t *testing.T) {
 }
 
 func TestConsumerSubscribeError(t *testing.T) {
+	t.Parallel()
+
 	consumer, mockKafka := newTestConsumer(t,
 		testTopics,
 		testBrokers,
@@ -113,6 +126,8 @@ func TestConsumerSubscribeError(t *testing.T) {
 }
 
 func TestConsumerUnsubscribeError(t *testing.T) {
+	t.Parallel()
+
 	consumer, mockKafka := newTestConsumer(t,
 		testTopics,
 		testBrokers,
@@ -142,6 +157,8 @@ func TestConsumerUnsubscribeError(t *testing.T) {
 }
 
 func TestConsumerHandleMessage(t *testing.T) {
+	t.Parallel()
+
 	consumer, mockKafka := newTestConsumer(t,
 		testTopics,
 		testBrokers,
@@ -172,129 +189,207 @@ func TestConsumerHandleMessage(t *testing.T) {
 }
 
 func TestConsumerHandleMessageError(t *testing.T) {
-	consumer, mockKafka := newTestConsumer(t,
-		testTopics,
-		testBrokers,
-		PollTimeout(testTimeout),
-	)
+	t.Parallel()
 
-	km := newFakeKafkaMessage()
-	ctx := context.Background()
-	expect := errors.New("error in handler")
+	testcases := []struct {
+		name    string
+		options []Option
+	}{
+		{
+			name:    "sequential",
+			options: []Option{},
+		},
+		{
+			name: "async",
+			options: []Option{
+				Concurrency(2),
+			},
+		},
+	}
 
-	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
-		return expect
-	})
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			consumer, mockKafka := newTestConsumer(t, append(defaultOpts, tc.options...)...)
+			km := newFakeKafkaMessage()
+			ctx := context.Background()
+			expect := errors.New("error in handler")
 
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
-	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("Commit").Return(nil, nil)
-	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+			handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
+				msg.AckFail(expect)
 
-	consumer.handler = handler
-	err := consumer.Run(ctx)
-	assert.Error(t, err)
-	assert.Equal(t, expect, err)
+				return expect
+			})
 
-	mockKafka.AssertExpectations(t)
+			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+			mockKafka.On("Unsubscribe").Return(nil)
+			mockKafka.On("Commit").Return(nil, nil)
+			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+
+			consumer.handler = handler
+			err := consumer.Run(ctx)
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, expect)
+
+			mockKafka.AssertExpectations(t)
+		})
+	}
 }
 
 func TestConsumerErrorCallback(t *testing.T) {
-	km := newFakeKafkaMessage()
-	ctx := context.Background()
-	expect := errors.New("error in handler")
+	t.Parallel()
 
-	errHandler := ErrorHandler(func(err error) error {
-		assert.Equal(t, expect, err)
+	testcases := []struct {
+		name    string
+		options []Option
+	}{
+		{
+			name:    "sequential",
+			options: []Option{},
+		},
+		{
+			name: "async",
+			options: []Option{
+				Concurrency(2),
+			},
+		},
+	}
 
-		return err
-	})
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			km := newFakeKafkaMessage()
+			ctx := context.Background()
+			expect := errors.New("error in handler")
 
-	consumer, mockKafka := newTestConsumer(t,
-		testTopics,
-		testBrokers,
-		PollTimeout(testTimeout),
-		errHandler,
-	)
-	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
-		return expect
-	})
+			errHandler := ErrorHandler(func(err error) error {
+				assert.Equal(t, expect, err)
 
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
-	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("Commit").Return(nil, nil)
-	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+				return err
+			})
 
-	consumer.handler = handler
+			opts := append(defaultOpts, errHandler)
+			opts = append(opts, tc.options...)
 
-	err := consumer.Run(ctx)
-	assert.EqualError(t, err, expect.Error())
+			consumer, mockKafka := newTestConsumer(t, opts...)
 
-	mockKafka.AssertExpectations(t)
+			handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
+				return expect
+			})
+
+			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+			mockKafka.On("Unsubscribe").Return(nil)
+			mockKafka.On("Commit").Return(nil, nil)
+			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+
+			consumer.handler = handler
+
+			err := consumer.Run(ctx)
+			assert.EqualError(t, err, expect.Error())
+
+			mockKafka.AssertExpectations(t)
+		})
+	}
 }
 
 func TestConsumerReadMessageTimeout(t *testing.T) {
-	consumer, mockKafka := newTestConsumer(t,
-		testTopics,
-		testBrokers,
-		PollTimeout(testTimeout),
-	)
+	t.Parallel()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	expect := kafka.NewError(kafka.ErrTimedOut, "kafka: timed out", false)
-	km := newFakeKafkaMessage()
+	testcases := []struct {
+		name    string
+		options []Option
+	}{
+		{
+			name:    "sequential",
+			options: []Option{},
+		},
+		{
+			name: "async",
+			options: []Option{
+				Concurrency(2),
+			},
+		},
+	}
 
-	counter := 0
-	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
-		counter++
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			consumer, mockKafka := newTestConsumer(t, append(defaultOpts, tc.options...)...)
 
-		if counter > 2 {
-			cancel()
-		}
+			ctx, cancel := context.WithCancel(context.Background())
+			expect := kafka.NewError(kafka.ErrTimedOut, "kafka: timed out", false)
+			km := newFakeKafkaMessage()
 
-		return nil
-	})
+			counter := 0
+			handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
+				counter++
 
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
-	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("Commit").Return(nil, nil)
-	mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
-	mockKafka.On("ReadMessage", testTimeout).Return(nil, expect).Once()
-	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+				if counter > 2 {
+					cancel()
+				}
 
-	consumer.handler = handler
+				return nil
+			})
 
-	err := consumer.Run(ctx)
-	assert.NoError(t, err)
+			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+			mockKafka.On("Unsubscribe").Return(nil)
+			mockKafka.On("Commit").Return(nil, nil)
+			mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
+			mockKafka.On("ReadMessage", testTimeout).Return(nil, expect).Once()
+			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
-	mockKafka.AssertExpectations(t)
+			consumer.handler = handler
+
+			err := consumer.Run(ctx)
+			assert.NoError(t, err)
+
+			mockKafka.AssertExpectations(t)
+		})
+	}
 }
 
 func TestConsumerKafkaError(t *testing.T) {
-	consumer, mockKafka := newTestConsumer(t,
-		testTopics,
-		testBrokers,
-		PollTimeout(testTimeout),
-	)
+	t.Parallel()
 
-	ctx := context.Background()
-	expect := kafka.NewError(kafka.ErrUnknown, "kafka: unknown error", false)
-	km := newFakeKafkaMessage()
+	testcases := []struct {
+		name    string
+		options []Option
+	}{
+		{
+			name:    "sequential",
+			options: []Option{},
+		},
+		{
+			name: "async",
+			options: []Option{
+				Concurrency(2),
+			},
+		},
+	}
 
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
-	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("Commit").Return(nil, nil)
-	mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
-	mockKafka.On("ReadMessage", testTimeout).Return(nil, expect).Once()
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			consumer, mockKafka := newTestConsumer(t, append(defaultOpts, tc.options...)...)
 
-	err := consumer.Run(ctx)
-	assert.Error(t, err)
-	assert.Equal(t, expect, err)
+			ctx := context.Background()
+			expect := kafka.NewError(kafka.ErrUnknown, "kafka: unknown error", false)
+			km := newFakeKafkaMessage()
 
-	mockKafka.AssertExpectations(t)
+			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+			mockKafka.On("Unsubscribe").Return(nil)
+			mockKafka.On("Commit").Return(nil, nil)
+			mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
+			mockKafka.On("ReadMessage", testTimeout).Return(nil, expect).Once()
+
+			err := consumer.Run(ctx)
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, expect)
+
+			mockKafka.AssertExpectations(t)
+		})
+	}
 }
 
 func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
+	t.Parallel()
+
 	consumer, mockKafka := newTestConsumer(t,
 		testTopics,
 		testBrokers,
@@ -341,6 +436,8 @@ func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 }
 
 func TestConsumerManualCommit(t *testing.T) {
+	t.Parallel()
+
 	consumer, mockKafka := newTestConsumer(t,
 		testTopics,
 		testBrokers,
@@ -374,6 +471,8 @@ func TestConsumerManualCommit(t *testing.T) {
 }
 
 func TestConsumerAsync(t *testing.T) {
+	t.Parallel()
+
 	consumer, mockKafka := newTestConsumer(t,
 		testTopics,
 		testBrokers,
@@ -416,6 +515,58 @@ func TestConsumerAsync(t *testing.T) {
 	mockKafka.AssertExpectations(t)
 }
 
+func TestConsumerStoreOffsetsError(t *testing.T) {
+	t.Parallel()
+
+	testcases := []struct {
+		name    string
+		options []Option
+	}{
+		// {
+		// 	name:    "sequential",
+		// 	options: []Option{},
+		// },
+		{
+			name: "async",
+			options: []Option{
+				Concurrency(2),
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			consumer, mockKafka := newTestConsumer(t, append(defaultOpts, tc.options...)...)
+
+			km := newFakeKafkaMessage()
+			ctx := context.Background()
+			expect := errors.New("error in store offsets")
+
+			handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
+				time.Sleep(20 * time.Millisecond)
+
+				msg.AckSuccess()
+
+				return nil
+			})
+
+			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+			mockKafka.On("Unsubscribe").Return(nil)
+			mockKafka.On("StoreOffsets", mock.Anything).Return(nil, expect)
+			mockKafka.On("Commit").Return(nil, nil)
+			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+
+			consumer.handler = handler
+
+			err := consumer.Run(ctx)
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, expect)
+
+			mockKafka.AssertExpectations(t)
+		})
+	}
+}
+
 func testMiddleware(name string, pre, post *[]string) MiddlewareFunc {
 	return func(next Handler) Handler {
 		return HandlerFunc(func(ctx context.Context, msg *Message) error {
@@ -433,7 +584,7 @@ func newTestConsumer(t *testing.T, opts ...Option) (*Consumer, *MockConsumerClie
 
 	mockConsumer.On("Close").Return(nil)
 
-	opts = append(opts, consumerFunc(mockConsumerFunc(mockConsumer)))
+	opts = append(opts, mockConsumerFunc(mockConsumer))
 
 	consumer, err := NewConsumer("consumer-id", noopHandler(), opts...)
 	require.NoError(t, err)

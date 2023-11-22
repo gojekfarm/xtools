@@ -96,5 +96,7 @@ func runAsync(c *cli.Context) error {
 		}
 	}
 
+	slog.Info("[ASYNC] Messages received", "count", len(s.received))
+
 	return nil
 }

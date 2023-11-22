@@ -102,6 +102,8 @@ func runSequential(c *cli.Context) error {
 		}
 	}
 
+	slog.Info("[SEQUENTIAL] Messages processed", "count", len(s.received))
+
 	return nil
 }
 
@@ -164,17 +166,14 @@ func simulateWork() {
 	<-time.After(time.Duration(rand.Int63n(200)) * time.Millisecond)
 }
 
-func runConsumers(ctx context.Context, consumers []*xkafka.Consumer) {
+func runConsumers(ctx context.Context, consumers []*xkafka.Consumer) error {
 	components := make([]xrun.Component, len(consumers))
 
 	for i, consumer := range consumers {
 		components[i] = consumer
 	}
 
-	err := xrun.All(xrun.NoTimeout, components...).Run(ctx)
-	if err != nil {
-		panic(err)
-	}
+	return xrun.All(xrun.NoTimeout, components...).Run(ctx)
 }
 
 func handleMessages() xkafka.HandlerFunc {

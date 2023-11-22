@@ -2,11 +2,11 @@ package xkafka
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
-	"github.com/pkg/errors"
 	"github.com/sourcegraph/conc/stream"
 )
 
@@ -97,25 +97,27 @@ func (c *Consumer) runSequential(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			close(errChan)
+
 			return c.unsubscribe()
 		case err := <-errChan:
 			uerr := c.unsubscribe()
 			if uerr != nil {
-				// TODO: use multierror
-				return errors.Wrap(err, uerr.Error())
+				return errors.Join(err, uerr)
 			}
+
+			close(errChan)
 
 			return err
 		default:
 			km, err := c.kafka.ReadMessage(c.config.pollTimeout)
-
 			if err != nil {
 				if kerr, ok := err.(kafka.Error); ok && kerr.Code() == kafka.ErrTimedOut {
 					continue
 				}
 
 				if ferr := c.config.errorHandler(err); ferr != nil {
-					errChan <- err
+					errChan <- ferr
 
 					continue
 				}
@@ -141,60 +143,51 @@ func (c *Consumer) runSequential(ctx context.Context) error {
 }
 
 func (c *Consumer) runAsync(ctx context.Context) error {
-	errChan := make(chan error, c.config.concurrency)
-	p := stream.New().
-		WithMaxGoroutines(c.config.concurrency)
-
-	defer p.Wait()
-
-	cb := func(msg *Message, err error) stream.Callback {
-		if ferr := c.config.errorHandler(err); ferr != nil {
-			errChan <- ferr
-		}
-
-		return func() {
-			err := c.storeMessage(msg)
-			if err != nil {
-				errChan <- err
-			}
-		}
-	}
+	st := stream.New().WithMaxGoroutines(c.config.concurrency)
+	ctx, cancel := context.WithCancelCause(ctx)
 
 	for {
 		select {
 		case <-ctx.Done():
-			err := c.unsubscribe()
+			st.Wait()
 
-			return err
-		case err := <-errChan:
 			uerr := c.unsubscribe()
-			if uerr != nil {
-				// TODO: use multierror
-				return errors.Wrap(err, uerr.Error())
+
+			err := context.Cause(ctx)
+			if err != nil && err == context.Canceled {
+				return uerr
 			}
 
-			return err
+			return errors.Join(err, uerr)
 		default:
 			km, err := c.kafka.ReadMessage(c.config.pollTimeout)
-
 			if err != nil {
 				if kerr, ok := err.(kafka.Error); ok && kerr.Code() == kafka.ErrTimedOut {
 					continue
 				}
 
 				if ferr := c.config.errorHandler(err); ferr != nil {
-					errChan <- err
+					cancel(ferr)
 
 					continue
 				}
 			}
 
-			p.Go(func() stream.Callback {
-				msg := newMessage(c.name, km)
+			msg := newMessage(c.name, km)
 
+			st.Go(func() stream.Callback {
 				err := c.handler.Handle(ctx, msg)
+				if ferr := c.config.errorHandler(err); ferr != nil {
+					cancel(ferr)
 
-				return cb(msg, err)
+					return func() {}
+				}
+
+				return func() {
+					if err := c.storeMessage(msg); err != nil {
+						cancel(err)
+					}
+				}
 			})
 		}
 	}
