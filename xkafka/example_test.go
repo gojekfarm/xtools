@@ -7,6 +7,10 @@ import (
 func ExampleConsumer() {
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		// do something with the message
+
+		// acknowledge the message with success, skip or error
+		msg.AckSuccess()
+
 		return nil
 	})
 
@@ -16,13 +20,18 @@ func ExampleConsumer() {
 	}
 
 	consumer, err := NewConsumer("consumer-id", handler,
-		Concurrency(10),
+		Concurrency(10), // default is 1. values > 1 enable async processing
 		Topics{"test"},
 		Brokers{"localhost:9092"},
-		ConfigMap{
-			"enable.auto.commit": false,
-		},
+		// default behavior is to stop the consumer. this option allows customizing the error handling
 		ErrorHandler(ignoreError),
+		// custom configuration for the underlying kafka consumer
+		ConfigMap{
+			"auto.commit.interval.ms": 1000,
+		},
+		// default behavior is to commit messages automatically.
+		// this option triggers manual commit after each message is processed.
+		ManualCommit(true),
 	)
 	if err != nil {
 		panic(err)
@@ -93,7 +102,7 @@ func ExampleProducer() {
 func ExampleProducer_AsyncPublish() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// default callback function called for each message
+	// default callback function called after each message
 	// handled by the producer
 	callback := func(msg *Message) {
 		// do something with the message
