@@ -318,7 +318,12 @@ func TestConsumerReadMessageTimeout(t *testing.T) {
 			km := newFakeKafkaMessage()
 
 			counter := 0
+			mu := sync.Mutex{}
+
 			handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
+				mu.Lock()
+				defer mu.Unlock()
+
 				counter++
 
 				if counter > 2 {
@@ -522,10 +527,10 @@ func TestConsumerStoreOffsetsError(t *testing.T) {
 		name    string
 		options []Option
 	}{
-		// {
-		// 	name:    "sequential",
-		// 	options: []Option{},
-		// },
+		{
+			name:    "sequential",
+			options: []Option{},
+		},
 		{
 			name: "async",
 			options: []Option{
@@ -554,6 +559,59 @@ func TestConsumerStoreOffsetsError(t *testing.T) {
 			mockKafka.On("Unsubscribe").Return(nil)
 			mockKafka.On("StoreOffsets", mock.Anything).Return(nil, expect)
 			mockKafka.On("Commit").Return(nil, nil)
+			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+
+			consumer.handler = handler
+
+			err := consumer.Run(ctx)
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, expect)
+
+			mockKafka.AssertExpectations(t)
+		})
+	}
+}
+
+func TestConsumerCommitError(t *testing.T) {
+	t.Parallel()
+
+	testcases := []struct {
+		name    string
+		options []Option
+	}{
+		{
+			name: "sequential",
+			options: []Option{
+				ManualCommit(true),
+			},
+		},
+		{
+			name: "async",
+			options: []Option{
+				ManualCommit(true),
+				Concurrency(2),
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			consumer, mockKafka := newTestConsumer(t, append(defaultOpts, tc.options...)...)
+
+			km := newFakeKafkaMessage()
+			ctx := context.Background()
+			expect := errors.New("error in commit")
+
+			handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
+				msg.AckSuccess()
+
+				return nil
+			})
+
+			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+			mockKafka.On("Unsubscribe").Return(nil)
+			mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
+			mockKafka.On("Commit").Return(nil, expect)
 			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 			consumer.handler = handler

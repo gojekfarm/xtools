@@ -91,35 +91,29 @@ func (c *Consumer) Start(ctx context.Context) error {
 	return c.runSequential(ctx)
 }
 
-func (c *Consumer) runSequential(ctx context.Context) error {
-	errChan := make(chan error, 1)
+func (c *Consumer) runSequential(ctx context.Context) (err error) {
+	defer func() {
+		if uerr := c.unsubscribe(); uerr != nil {
+			err = errors.Join(err, uerr)
+		}
+	}()
 
 	for {
 		select {
 		case <-ctx.Done():
-			close(errChan)
-
-			return c.unsubscribe()
-		case err := <-errChan:
-			uerr := c.unsubscribe()
-			if uerr != nil {
-				return errors.Join(err, uerr)
-			}
-
-			close(errChan)
-
 			return err
 		default:
 			km, err := c.kafka.ReadMessage(c.config.pollTimeout)
 			if err != nil {
-				if kerr, ok := err.(kafka.Error); ok && kerr.Code() == kafka.ErrTimedOut {
+				var kerr kafka.Error
+				if errors.As(err, &kerr) && kerr.Code() == kafka.ErrTimedOut {
 					continue
 				}
 
 				if ferr := c.config.errorHandler(err); ferr != nil {
-					errChan <- ferr
+					err = ferr
 
-					continue
+					return err
 				}
 			}
 
@@ -127,16 +121,14 @@ func (c *Consumer) runSequential(ctx context.Context) error {
 
 			err = c.handler.Handle(ctx, msg)
 			if ferr := c.config.errorHandler(err); ferr != nil {
-				errChan <- ferr
+				err = ferr
 
-				continue
+				return err
 			}
 
 			err = c.storeMessage(msg)
 			if err != nil {
-				errChan <- err
-
-				continue
+				return err
 			}
 		}
 	}
@@ -154,7 +146,7 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 			uerr := c.unsubscribe()
 
 			err := context.Cause(ctx)
-			if err != nil && err == context.Canceled {
+			if err != nil && errors.Is(err, context.Canceled) {
 				return uerr
 			}
 
@@ -162,7 +154,8 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 		default:
 			km, err := c.kafka.ReadMessage(c.config.pollTimeout)
 			if err != nil {
-				if kerr, ok := err.(kafka.Error); ok && kerr.Code() == kafka.ErrTimedOut {
+				var kerr kafka.Error
+				if errors.As(err, &kerr) && kerr.Code() == kafka.ErrTimedOut {
 					continue
 				}
 
@@ -198,6 +191,9 @@ func (c *Consumer) storeMessage(msg *Message) error {
 		return nil
 	}
 
+	// similar to StoreMessage in confluent-kafka-go/consumer.go
+	// msg.Offset + 1 it ensures that the consumer starts with
+	// next message when it restarts
 	_, err := c.kafka.StoreOffsets([]kafka.TopicPartition{
 		{
 			Topic:     &msg.Topic,
