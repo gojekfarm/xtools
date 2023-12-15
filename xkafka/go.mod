@@ -3,7 +3,7 @@ module github.com/gojekfarm/xtools/xkafka
 go 1.19
 
 require (
-	github.com/confluentinc/confluent-kafka-go v1.9.2
+	github.com/confluentinc/confluent-kafka-go/v2 v2.0.2
 	github.com/pkg/errors v0.9.1
 	github.com/sourcegraph/conc v0.2.0
 	github.com/stretchr/testify v1.8.1
