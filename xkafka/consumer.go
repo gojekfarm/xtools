@@ -111,9 +111,9 @@ func (c *Consumer) runSequential(ctx context.Context) (err error) {
 				}
 
 				if ferr := c.config.errorHandler(err); ferr != nil {
-					err = ferr
-
-					return err
+					return ferr
+				} else {
+					continue
 				}
 			}
 
@@ -161,9 +161,9 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 
 				if ferr := c.config.errorHandler(err); ferr != nil {
 					cancel(ferr)
-
-					continue
 				}
+
+				continue
 			}
 
 			msg := newMessage(c.name, km)
