@@ -33,5 +33,5 @@ func NewTracer(opts ...Option) *Tracer {
 	}
 }
 
-// DefaultTracer calls the defaultTracer variable which will call the NewTracer function.
-func DefaultTracer() *Tracer { return defaultTracer }
+// DefaultTracer is the default Tracer used by the package-level functions.
+var DefaultTracer = defaultTracer

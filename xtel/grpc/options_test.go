@@ -16,6 +16,15 @@ func TestWithTraceProvider(t *testing.T) {
 	assert.Equal(t, options.tp, tp)
 }
 
+func TestWithMetricProvider(t *testing.T) {
+	mp := otel.GetMeterProvider()
+	wmp := WithMetricProvider(mp)
+
+	options := &options{}
+	wmp(options)
+	assert.Equal(t, options.mp, mp)
+}
+
 func TestWithTextMapPropagator(t *testing.T) {
 	tmp := otel.GetTextMapPropagator()
 	wtmp := WithTextMapPropagator(tmp)

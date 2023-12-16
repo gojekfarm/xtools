@@ -7,7 +7,7 @@ import (
 )
 
 func TestDefaultTracer(t *testing.T) {
-	assert.Equal(t, defaultTracer, DefaultTracer())
+	assert.Equal(t, defaultTracer, DefaultTracer)
 }
 
 func TestNewTracer(t *testing.T) {

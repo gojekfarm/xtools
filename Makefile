@@ -34,7 +34,7 @@ gomod.tidy:
 	@$(call run-go-mod-dir,go mod tidy,"go mod tidy")
 
 .PHONY: go.generate
-go.generate: mockery protoc
+go.generate: mockery ensure-buf
 	@$(call run-go-mod-dir,go generate ./...,"go generate")
 
 ## test: Run all tests
@@ -88,10 +88,6 @@ MOCKERY = $(BIN_DIR)/mockery
 mockery:
 	$(call go-get-tool,$(MOCKERY),github.com/vektra/mockery/v2@v2.20.0)
 
-PROTOC = $(BIN_DIR)/protoc
-protoc:
-	$(call go-get-tool,$(PROTOC),google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1)
-
 # go-get-tool will 'go get' any package $2 and install it to $1.
 define go-get-tool
 @[ -f $(1) ] || { \
@@ -124,3 +120,16 @@ for dir in $(filter-out $(2),$(GO_BUILD_DIRS)); do \
 	cd "$(PROJECT_DIR)/$${dir}" && PATH=$(BIN_DIR):$$PATH $(1); \
 done;
 endef
+
+BUF := /usr/local/bin/buf
+ensure-buf: ## Download buf if necessary.
+ifeq (,$(wildcard $(BUF)))
+ifeq (,$(shell which buf 2>/dev/null))
+	@{ \
+	set -e ;\
+	bin/install-buf ;\
+	}
+else
+BUF = $(shell which buf)
+endif
+endif

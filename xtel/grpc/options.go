@@ -18,6 +18,15 @@ func WithTracerProvider(trpr trace.TracerProvider) Option {
 	}
 }
 
+// WithMetricProvider returns an Option using the options type and MetricProvider.
+// It sets the options for the given MetricProvider, which can be used for the
+// instrumentation of Meters.
+func WithMetricProvider(mr metric.MeterProvider) Option {
+	return func(o *options) {
+		o.mp = mr
+	}
+}
+
 // WithTextMapPropagator returns an Option using the options type and TextMapPropagator.
 // It sets the options for the given TextMapPropagator.
 // propagation.TextMapPropagator propagates cross-cutting concerns as key-value text pairs within a
