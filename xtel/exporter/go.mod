@@ -1,6 +1,6 @@
 module github.com/gojekfarm/xtools/xtel/exporter
 
-go 1.19
+go 1.20
 
 require (
 	github.com/gojekfarm/xtools/xtel v0.0.0-20230911104033-e5e7b07b8c02
