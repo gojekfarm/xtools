@@ -1,17 +1,29 @@
 package redis
 
 import (
-	"github.com/go-redis/redis/extra/redisotel/v8"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/extra/redisotel/v9"
+	"github.com/redis/go-redis/v9"
 )
 
-// NewHook returns a new hook, consisting of a tracer and attribute configured
-// according to the given Option(s).
-func NewHook(opts ...Option) redis.Hook {
+// InstrumentClient instruments the redis client with tracing and metrics.
+func InstrumentClient(rdb redis.UniversalClient, opts ...Option) error {
 	o := newOptions(opts...)
 
-	return redisotel.NewTracingHook(
+	if err := redisotel.InstrumentTracing(
+		rdb,
 		redisotel.WithTracerProvider(o.tp),
 		redisotel.WithAttributes(o.at...),
-	)
+	); err != nil {
+		return err
+	}
+
+	if err := redisotel.InstrumentMetrics(
+		rdb,
+		redisotel.WithMeterProvider(o.mp),
+		redisotel.WithAttributes(o.at...),
+	); err != nil {
+		return err
+	}
+
+	return nil
 }

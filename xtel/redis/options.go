@@ -3,6 +3,7 @@ package redis
 import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -18,6 +19,15 @@ func WithTracerProvider(trpr trace.TracerProvider) Option {
 	}
 }
 
+// WithMeterProvider returns an Option using the options type and MeterProvider.
+// It sets the options for the given MeterProvider, which can be used for the
+// instrumentation of Meters.
+func WithMeterProvider(mp metric.MeterProvider) Option {
+	return func(o *options) {
+		o.mp = mp
+	}
+}
+
 // WithAttributes specifies additional attributes to be added to the span.
 func WithAttributes(attrs ...attribute.KeyValue) Option {
 	return func(o *options) {
@@ -27,6 +37,7 @@ func WithAttributes(attrs ...attribute.KeyValue) Option {
 
 type options struct {
 	tp trace.TracerProvider
+	mp metric.MeterProvider
 	at []attribute.KeyValue
 }
 

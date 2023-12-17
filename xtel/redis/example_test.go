@@ -1,30 +1,33 @@
 package redis_test
 
 import (
-	"context"
-
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 
 	xredis "github.com/gojekfarm/xtools/xtel/redis"
 )
 
-func ExampleNewHook() {
+func ExampleInstrumentClient() {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
 
-	h := xredis.NewHook()
-	rdb.AddHook(h)
+	provider := sdktrace.NewTracerProvider()
+	if err := xredis.InstrumentClient(rdb, xredis.WithTracerProvider(provider)); err != nil {
+		panic(err)
+	}
 }
 
 func ExampleWithAttributes() {
-	provider := sdktrace.NewTracerProvider()
-	xredis.NewHook(
-		xredis.WithTracerProvider(provider),
-		xredis.WithAttributes(semconv.NetPeerNameKey.String("localhost")))
+	rdb := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
 
-	_, span := provider.Tracer("redis-example").Start(context.TODO(), "redis-example")
-	defer span.End()
+	if err := xredis.InstrumentClient(
+		rdb,
+		xredis.WithAttributes(semconv.NetPeerNameKey.String("localhost")),
+	); err != nil {
+		panic(err)
+	}
 }
