@@ -2,11 +2,11 @@ package xtel
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -28,7 +28,7 @@ type Provider struct {
 	roundTripper  http.RoundTripper
 	samplingRatio float64
 
-	initErrors *multierror.Error
+	initError error
 }
 
 // NewProvider creates a new Provider for the given ProviderOption.
@@ -42,7 +42,7 @@ func NewProvider(serviceName string, opts ...ProviderOption) (*Provider, error) 
 		opt.apply(p)
 	}
 
-	if err := p.initErrors.ErrorOrNil(); err != nil {
+	if err := p.initError; err != nil {
 		return nil, err
 	}
 
@@ -99,12 +99,12 @@ func (p *Provider) Stop() error {
 	wg.Wait()
 	close(errCh)
 
-	var errs *multierror.Error
+	var errs error
 	for err := range errCh {
-		errs = multierror.Append(errs, err)
+		errs = errors.Join(errs, err)
 	}
 
-	return errs.ErrorOrNil()
+	return errs
 }
 
 // Run will start running the Provider and associated processes.

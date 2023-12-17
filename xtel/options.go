@@ -2,9 +2,8 @@ package xtel
 
 import (
 	"context"
+	"errors"
 	"time"
-
-	"github.com/hashicorp/go-multierror"
 )
 
 const (
@@ -37,7 +36,7 @@ func (fn TraceExporterFunc) apply(p *Provider) {
 		p.spanExporters = append(p.spanExporters, se)
 	}
 
-	p.initErrors = multierror.Append(p.initErrors, err)
+	p.initError = errors.Join(p.initError, err)
 }
 
 func (fn MetricReaderFunc) apply(p *Provider) {
@@ -49,5 +48,5 @@ func (fn MetricReaderFunc) apply(p *Provider) {
 		p.metricReaders = append(p.metricReaders, me)
 	}
 
-	p.initErrors = multierror.Append(p.initErrors, err)
+	p.initError = errors.Join(p.initError, err)
 }

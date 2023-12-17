@@ -59,13 +59,16 @@ func TestNewProvider_SpanExporter(t *testing.T) {
 }
 
 func TestNewProvider_initError(t *testing.T) {
-	np, err := NewProvider("dummy", TraceExporterFunc(func(_ context.Context) (trace.SpanExporter, error) {
-		return nil, errors.New("can't create a SpanExporter")
-	}))
+	np, err := NewProvider("dummy",
+		TraceExporterFunc(func(_ context.Context) (trace.SpanExporter, error) {
+			return nil, errors.New("can't create SpanExporter 1")
+		}),
+		TraceExporterFunc(func(_ context.Context) (trace.SpanExporter, error) {
+			return nil, errors.New("can't create SpanExporter 2")
+		}),
+	)
 
 	assert.Nil(t, np)
-	assert.EqualError(t, err, `1 error occurred:
-	* can't create a SpanExporter
-
-`)
+	assert.EqualError(t, err, `can't create SpanExporter 1
+can't create SpanExporter 2`)
 }
