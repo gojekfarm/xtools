@@ -115,6 +115,8 @@ func (c *Consumer) runSequential(ctx context.Context) (err error) {
 
 					return err
 				}
+
+				continue
 			}
 
 			msg := newMessage(c.name, km)
@@ -164,6 +166,8 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 
 					continue
 				}
+
+				continue
 			}
 
 			msg := newMessage(c.name, km)
