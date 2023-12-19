@@ -11,6 +11,8 @@ type consumerClient interface {
 	ReadMessage(timeout time.Duration) (*kafka.Message, error)
 	SubscribeTopics(topics []string, rebalanceCb kafka.RebalanceCb) error
 	Unsubscribe() error
+	StoreOffsets(offsets []kafka.TopicPartition) ([]kafka.TopicPartition, error)
+	Commit() ([]kafka.TopicPartition, error)
 	Close() error
 }
 

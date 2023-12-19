@@ -28,6 +28,32 @@ func (_m *MockConsumerClient) Close() error {
 	return r0
 }
 
+// Commit provides a mock function with given fields:
+func (_m *MockConsumerClient) Commit() ([]kafka.TopicPartition, error) {
+	ret := _m.Called()
+
+	var r0 []kafka.TopicPartition
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]kafka.TopicPartition, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []kafka.TopicPartition); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]kafka.TopicPartition)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetMetadata provides a mock function with given fields: topic, allTopics, timeoutMs
 func (_m *MockConsumerClient) GetMetadata(topic *string, allTopics bool, timeoutMs int) (*kafka.Metadata, error) {
 	ret := _m.Called(topic, allTopics, timeoutMs)
@@ -73,6 +99,32 @@ func (_m *MockConsumerClient) ReadMessage(timeout time.Duration) (*kafka.Message
 
 	if rf, ok := ret.Get(1).(func(time.Duration) error); ok {
 		r1 = rf(timeout)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StoreOffsets provides a mock function with given fields: offsets
+func (_m *MockConsumerClient) StoreOffsets(offsets []kafka.TopicPartition) ([]kafka.TopicPartition, error) {
+	ret := _m.Called(offsets)
+
+	var r0 []kafka.TopicPartition
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]kafka.TopicPartition) ([]kafka.TopicPartition, error)); ok {
+		return rf(offsets)
+	}
+	if rf, ok := ret.Get(0).(func([]kafka.TopicPartition) []kafka.TopicPartition); ok {
+		r0 = rf(offsets)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]kafka.TopicPartition)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func([]kafka.TopicPartition) error); ok {
+		r1 = rf(offsets)
 	} else {
 		r1 = ret.Error(1)
 	}
