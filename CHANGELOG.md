@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.5.0]
+
+### Changed
+
+- [`xkafka`](./xkafka) Improved async & sequential consumer implementations. See https://github.com/gojekfarm/xtools/pull/26 for more details.
+- [`xkafka`](./xkafka) Upgraded `github.com/confluentinc/confluent-kafka-go` to `v2`
+
 ## [0.4.1]
 
 ### Changed
@@ -57,8 +64,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`generic`](./generic) package added
 - [`xproto`](./xproto) package added
 
-[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.4.1...HEAD
-[0.4.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.1
+[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.5.0
+[0.4.1]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.1
 [0.4.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.0
 [0.3.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.3.0
 [0.2.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.2.0
