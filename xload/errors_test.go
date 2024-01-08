@@ -1,8 +1,9 @@
 package xload
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestErrUnknownTagOption_Error(t *testing.T) {
