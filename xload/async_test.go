@@ -116,7 +116,7 @@ func Test_loadAndSetWithOriginal(t *testing.T) {
 	}
 
 	t.Run("successful load and set", func(t *testing.T) {
-		meta := &field{name: "testName", required: true}
+		meta := &field{key: "testName", required: true}
 
 		obj := &Args{
 			Nest: &struct {
@@ -137,7 +137,7 @@ func Test_loadAndSetWithOriginal(t *testing.T) {
 	})
 
 	t.Run("loader returns error", func(t *testing.T) {
-		meta := &field{name: "testName", required: true}
+		meta := &field{key: "testName", required: true}
 		original := reflect.ValueOf(new(string))
 		fVal := reflect.ValueOf(new(string))
 
@@ -148,8 +148,8 @@ func Test_loadAndSetWithOriginal(t *testing.T) {
 		assert.Equal(t, "load error", err.Error())
 	})
 
-	t.Run("field is required but loader val is empty", func(t *testing.T) {
-		meta := &field{name: "testName", required: true}
+	t.Run("key is required but loader val is empty", func(t *testing.T) {
+		meta := &field{key: "testName", required: true}
 		original := reflect.ValueOf(new(string))
 		fVal := reflect.ValueOf(new(string))
 
@@ -157,6 +157,9 @@ func Test_loadAndSetWithOriginal(t *testing.T) {
 			return "", nil
 		}), meta)(context.Background(), original, fVal, true)
 		assert.NotNil(t, err)
-		assert.Equal(t, ErrRequired, err)
+
+		wantErr := &ErrRequired{}
+		assert.ErrorAs(t, err, &wantErr)
+		assert.Equal(t, "testName", wantErr.key)
 	})
 }
