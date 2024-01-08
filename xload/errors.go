@@ -53,8 +53,11 @@ func (e *ErrInvalidPrefix) Error() string {
 }
 
 // ErrInvalidPrefixAndKey is returned when the prefix option is used with a key.
-type ErrInvalidPrefixAndKey struct{ key string }
+type ErrInvalidPrefixAndKey struct {
+	field string
+	key   string
+}
 
 func (e *ErrInvalidPrefixAndKey) Error() string {
-	return fmt.Sprintf("`%s` key has both prefix and key", e.key)
+	return fmt.Sprintf("`%s` key=%s has both prefix and key", e.field, e.key)
 }

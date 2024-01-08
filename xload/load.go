@@ -209,7 +209,7 @@ func parseField(name, tag string) (*field, error) {
 			f.prefix = strings.TrimPrefix(opt, optPrefix)
 
 			if key != "" && f.prefix != "" {
-				return nil, &ErrInvalidPrefixAndKey{key: key}
+				return nil, &ErrInvalidPrefixAndKey{field: name, key: key}
 			}
 		case strings.HasPrefix(opt, optDelimiter):
 			f.delimiter = strings.TrimPrefix(opt, optDelimiter)

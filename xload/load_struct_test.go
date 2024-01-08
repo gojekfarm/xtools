@@ -179,11 +179,11 @@ func TestLoad_Structs(t *testing.T) {
 			loader: MapLoader{},
 		},
 		{
-			name: "struct key with key and prefix",
+			name: "struct with key and prefix",
 			input: &struct {
 				Address Address `env:"ADDRESS,prefix=CLUSTER"`
 			}{},
-			err:    &ErrInvalidPrefixAndKey{key: "ADDRESS"},
+			err:    &ErrInvalidPrefixAndKey{field: "Address", key: "ADDRESS"},
 			loader: MapLoader{},
 		},
 	}
