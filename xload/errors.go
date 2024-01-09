@@ -8,7 +8,7 @@ import (
 // ErrRequired is returned when a required key is missing.
 type ErrRequired struct{ key string }
 
-func (e *ErrRequired) Error() string { return "required key missing: " + e.key }
+func (e ErrRequired) Error() string { return "required key missing: " + e.key }
 
 // ErrUnknownTagOption is returned when an unknown tag option is used.
 type ErrUnknownTagOption struct {
@@ -16,7 +16,7 @@ type ErrUnknownTagOption struct {
 	opt string
 }
 
-func (e *ErrUnknownTagOption) Error() string {
+func (e ErrUnknownTagOption) Error() string {
 	if e.key == "" {
 		return fmt.Sprintf("unknown tag option: %s", e.opt)
 	}
@@ -31,14 +31,14 @@ type ErrUnknownFieldType struct {
 	key   string
 }
 
-func (e *ErrUnknownFieldType) Error() string {
+func (e ErrUnknownFieldType) Error() string {
 	return fmt.Sprintf("`%s: %s` key=%s has an invalid value", e.field, e.kind, e.key)
 }
 
 // ErrInvalidMapValue is returned when the map value is invalid.
 type ErrInvalidMapValue struct{ key string }
 
-func (e *ErrInvalidMapValue) Error() string {
+func (e ErrInvalidMapValue) Error() string {
 	return fmt.Sprintf("`%s` key has an invalid map value", e.key)
 }
 
@@ -48,7 +48,7 @@ type ErrInvalidPrefix struct {
 	kind  reflect.Kind
 }
 
-func (e *ErrInvalidPrefix) Error() string {
+func (e ErrInvalidPrefix) Error() string {
 	return fmt.Sprintf("prefix is only valid on struct types, found `%s: %s`", e.field, e.kind)
 }
 
@@ -58,6 +58,6 @@ type ErrInvalidPrefixAndKey struct {
 	key   string
 }
 
-func (e *ErrInvalidPrefixAndKey) Error() string {
+func (e ErrInvalidPrefixAndKey) Error() string {
 	return fmt.Sprintf("`%s` key=%s has both prefix and key", e.field, e.key)
 }
