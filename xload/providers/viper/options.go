@@ -19,10 +19,11 @@ func (f optionFunc) apply(o *options) { f(o) }
 // From allows passing a pre-configured Viper instance.
 func From(v *viper.Viper) Option { return optionFunc(func(o *options) { o.viper = v }) }
 
-// PrefixSeparator allows changing the separator used when flattening the config.
-type PrefixSeparator string
+// ValueMapper allows specifying a custom value mapper function that will be used to flatten the config
+// for xload.Loader from Viper.
+type ValueMapper func(map[string]any) map[string]string
 
-func (s PrefixSeparator) apply(o *options) { o.separator = string(s) }
+func (m ValueMapper) apply(o *options) { o.mapValues = m }
 
 // ConfigFile allows specifying the config file to be used.
 type ConfigFile string
@@ -61,8 +62,8 @@ func (t Transformer) apply(o *options) { o.transform = t }
 type options struct {
 	viper     *viper.Viper
 	file      fileOpts
-	separator string
 	transform Transformer
+	mapValues ValueMapper
 	autoEnv   bool
 }
 
@@ -81,8 +82,16 @@ func def() *options {
 			ext:   "yaml",
 			paths: []string{"./", "../"},
 		},
-		separator: "_",
-		autoEnv:   true,
+		autoEnv: true,
+		mapValues: func(in map[string]any) map[string]string {
+			out := make(map[string]string)
+
+			for key, value := range xload.FlattenMap(in, "_") {
+				out[key] = value
+			}
+
+			return out
+		},
 		transform: func(_ *viper.Viper, next xload.Loader) xload.Loader {
 			return xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
 				return next.Load(ctx, strings.ToLower(key))

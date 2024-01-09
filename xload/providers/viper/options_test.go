@@ -17,11 +17,6 @@ func TestOptions(t *testing.T) {
 		want *options
 	}{
 		{
-			name: "PrefixSeparator",
-			opts: []Option{PrefixSeparator("__")},
-			want: &options{separator: "__"},
-		},
-		{
 			name: "ConfigFile",
 			opts: []Option{ConfigFile("/tmp/config.yaml")},
 			want: &options{file: fileOpts{absPath: "/tmp/config.yaml"}},
@@ -66,13 +61,21 @@ func TestOptions(t *testing.T) {
 		assert.NotNil(t, opts.transform)
 		assert.True(t, fmt.Sprintf("%p", f) == fmt.Sprintf("%p", opts.transform))
 	})
+
+	t.Run("ValueMapper", func(t *testing.T) {
+		opts := &options{}
+		f := ValueMapper(func(_ map[string]any) map[string]string { return nil })
+		f.apply(opts)
+		assert.NotNil(t, opts.mapValues)
+		assert.True(t, fmt.Sprintf("%p", f) == fmt.Sprintf("%p", opts.mapValues))
+	})
 }
 
 func Test_def(t *testing.T) {
 	opts := def()
 
 	assert.Equal(t, fileOpts{name: "application", ext: "yaml", paths: []string{"./", "../"}}, opts.file)
-	assert.Equal(t, "_", opts.separator)
 	assert.NotNil(t, opts.viper)
+	assert.NotNil(t, opts.mapValues)
 	assert.NotNil(t, opts.transform)
 }

@@ -45,10 +45,7 @@ func New(options ...Option) (*Loader, error) {
 		return nil, err
 	}
 
-	mp := make(map[string]string)
-	for key, value := range xload.FlattenMap(v.AllSettings(), opts.separator) {
-		mp[key] = value
-	}
+	mp := opts.mapValues(v.AllSettings())
 
 	return &Loader{
 		v: v,
