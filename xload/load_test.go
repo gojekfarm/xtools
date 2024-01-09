@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -114,7 +115,7 @@ func TestLoad_Errors(t *testing.T) {
 				Host string `env:"HOST,unknown"`
 			}{},
 			loader: MapLoader{},
-			err:    ErrUnknownTagOption,
+			err:    &ErrUnknownTagOption{key: "HOST", opt: "unknown"},
 		},
 	}
 
@@ -123,6 +124,8 @@ func TestLoad_Errors(t *testing.T) {
 
 func TestLoad_NativeTypes(t *testing.T) {
 	t.Parallel()
+
+	anyKind := reflect.TypeOf(new(any)).Elem().Kind()
 
 	testcases := []testcase{
 		// boolean value
@@ -408,7 +411,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 				StringMap map[string]string `env:"STRING_MAP"`
 			}{},
 			loader: MapLoader{"STRING_MAP": "key1::value1,key2::value2"},
-			err:    ErrInvalidMapValue,
+			err:    &ErrInvalidMapValue{key: "STRING_MAP"},
 		},
 		{
 			name: "map: invalid value",
@@ -427,24 +430,24 @@ func TestLoad_NativeTypes(t *testing.T) {
 			err:    errors.New("unable to cast"),
 		},
 
-		// unknown field type
+		// unknown key type
 		{
-			name: "unknown field type",
+			name: "unknown key type",
 			input: &struct {
 				Unknown interface{} `env:"UNKNOWN"`
 			}{},
 			loader: MapLoader{"UNKNOWN": "1+2i"},
-			err:    ErrUnknownFieldType,
+			err:    &ErrUnknownFieldType{field: "Unknown", key: "UNKNOWN", kind: anyKind},
 		},
 		{
-			name: "nested unknown field type",
+			name: "nested unknown key type",
 			input: &struct {
 				Nested struct {
 					Unknown interface{} `env:"UNKNOWN"`
 				} `env:",prefix=NESTED_"`
 			}{},
 			loader: MapLoader{"NESTED_UNKNOWN": "1+2i"},
-			err:    ErrUnknownFieldType,
+			err:    &ErrUnknownFieldType{field: "Unknown", key: "UNKNOWN", kind: anyKind},
 		},
 	}
 
@@ -574,7 +577,7 @@ func TestLoad_MapTypes(t *testing.T) {
 				StringMap map[string]string `env:"STRING_MAP"`
 			}{},
 			loader: MapLoader{"STRING_MAP": "key1::value1,key2::value2"},
-			err:    ErrInvalidMapValue,
+			err:    &ErrInvalidMapValue{key: "STRING_MAP"},
 		},
 		{
 			name: "map: invalid value",
@@ -669,7 +672,7 @@ func TestOption_Required(t *testing.T) {
 			input: &struct {
 				Name string `env:"NAME,required"`
 			}{},
-			err:    ErrRequired,
+			err:    &ErrRequired{key: "NAME"},
 			loader: MapLoader{},
 		},
 		{
@@ -677,7 +680,7 @@ func TestOption_Required(t *testing.T) {
 			input: &struct {
 				Name CustomGob `env:"NAME,required"`
 			}{},
-			err:    ErrRequired,
+			err:    &ErrRequired{key: "NAME"},
 			loader: MapLoader{},
 		},
 		{
@@ -685,7 +688,7 @@ func TestOption_Required(t *testing.T) {
 			input: &struct {
 				Name *string `env:"NAME,required"`
 			}{},
-			err:    ErrRequired,
+			err:    &ErrRequired{key: "NAME"},
 			loader: MapLoader{"NAME": ""},
 		},
 		{

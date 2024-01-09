@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -73,6 +74,8 @@ func (p *Plots) Decode(s string) error {
 
 func TestLoad_Structs(t *testing.T) {
 	t.Parallel()
+
+	strKind := reflect.TypeOf("").Kind()
 
 	testcases := []testcase{
 		{
@@ -168,19 +171,19 @@ func TestLoad_Structs(t *testing.T) {
 			},
 		},
 		{
-			name: "non-struct field with prefix",
+			name: "non-struct key with prefix",
 			input: &struct {
 				Name string `env:",prefix=CLUSTER"`
 			}{},
-			err:    ErrInvalidPrefix,
+			err:    &ErrInvalidPrefix{field: "Name", kind: strKind},
 			loader: MapLoader{},
 		},
 		{
-			name: "struct field with name and prefix",
+			name: "struct with key and prefix",
 			input: &struct {
 				Address Address `env:"ADDRESS,prefix=CLUSTER"`
 			}{},
-			err:    ErrInvalidPrefixAndKey,
+			err:    &ErrInvalidPrefixAndKey{field: "Address", key: "ADDRESS"},
 			loader: MapLoader{},
 		},
 	}
@@ -318,7 +321,7 @@ func TestLoad_JSON(t *testing.T) {
 			input: &struct {
 				Plot Plot `env:"PLOT,required"`
 			}{},
-			err:    ErrRequired,
+			err:    &ErrRequired{key: "PLOT"},
 			loader: MapLoader{},
 		},
 	}

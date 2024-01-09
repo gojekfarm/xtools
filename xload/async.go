@@ -65,7 +65,7 @@ func processAsync(p *pool.ContextPool, o *options, loader Loader, obj any, cb fu
 			continue
 		}
 
-		meta, err := parseField(tag)
+		meta, err := parseField(fTyp.Name, tag)
 		if err != nil {
 			return err
 		}
@@ -95,7 +95,7 @@ func processAsync(p *pool.ContextPool, o *options, loader Loader, obj any, cb fu
 
 			// if the struct has a key, load it
 			// and set the value to the struct
-			if meta.name != "" && hasDecoder(fVal) {
+			if meta.key != "" && hasDecoder(fVal) {
 				las := loadAndSetWithOriginal(loader, meta)
 
 				original := value.Field(i)
@@ -121,7 +121,7 @@ func processAsync(p *pool.ContextPool, o *options, loader Loader, obj any, cb fu
 		}
 
 		if meta.prefix != "" {
-			return ErrInvalidPrefix
+			return &ErrInvalidPrefix{field: fTyp.Name, kind: fVal.Kind()}
 		}
 
 		las := loadAndSetVal(loader, meta)
@@ -148,13 +148,13 @@ func setNilStructPtr(original reflect.Value, v reflect.Value, isNilStructPtr boo
 
 func loadAndSetWithOriginal(loader Loader, meta *field) loadAndSetPointer {
 	return func(ctx context.Context, original reflect.Value, fVal reflect.Value, isNilStructPtr bool) error {
-		val, err := loader.Load(ctx, meta.name)
+		val, err := loader.Load(ctx, meta.key)
 		if err != nil {
 			return err
 		}
 
 		if val == "" && meta.required {
-			return ErrRequired
+			return &ErrRequired{key: meta.key}
 		}
 
 		if ok, err := decode(fVal, val); ok {
@@ -172,13 +172,13 @@ func loadAndSetWithOriginal(loader Loader, meta *field) loadAndSetPointer {
 func loadAndSetVal(loader Loader, meta *field) loadAndSet {
 	return func(ctx context.Context, fVal reflect.Value) error {
 		// lookup value
-		val, err := loader.Load(ctx, meta.name)
+		val, err := loader.Load(ctx, meta.key)
 		if err != nil {
 			return err
 		}
 
 		if val == "" && meta.required {
-			return ErrRequired
+			return &ErrRequired{key: meta.key}
 		}
 
 		// set value

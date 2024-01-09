@@ -17,20 +17,8 @@ var (
 	ErrNotPointer = errors.New("xload: config must be a pointer")
 	// ErrNotStruct is returned when the given config is not a struct.
 	ErrNotStruct = errors.New("xload: config must be a struct")
-	// ErrUnknownTagOption is returned when an unknown tag option is used.
-	ErrUnknownTagOption = errors.New("xload: unknown tag option")
-	// ErrRequired is returned when a required field is missing.
-	ErrRequired = errors.New("xload: missing required value")
-	// ErrUnknownFieldType is returned when the field type is not supported.
-	ErrUnknownFieldType = errors.New("xload: unknown field type")
-	// ErrInvalidMapValue is returned when the map value is invalid.
-	ErrInvalidMapValue = errors.New("xload: invalid map value")
 	// ErrMissingKey is returned when the key is missing from the tag.
-	ErrMissingKey = errors.New("xload: missing key")
-	// ErrInvalidPrefix is returned when the prefix option is used on a non-struct field.
-	ErrInvalidPrefix = errors.New("xload: prefix is only valid on struct types")
-	// ErrInvalidPrefixAndKey is returned when the prefix option is used with a key.
-	ErrInvalidPrefixAndKey = errors.New("xload: prefix cannot be used when field name is set")
+	ErrMissingKey = errors.New("xload: missing key on required field")
 )
 
 const (
@@ -86,7 +74,7 @@ func process(ctx context.Context, obj any, tagKey string, loader Loader) error {
 			continue
 		}
 
-		meta, err := parseField(tag)
+		meta, err := parseField(fTyp.Name, tag)
 		if err != nil {
 			return err
 		}
@@ -127,14 +115,14 @@ func process(ctx context.Context, obj any, tagKey string, loader Loader) error {
 
 			// if the struct has a key, load it
 			// and set the value to the struct
-			if meta.name != "" {
-				val, err := loader.Load(ctx, meta.name)
+			if meta.key != "" {
+				val, err := loader.Load(ctx, meta.key)
 				if err != nil {
 					return err
 				}
 
 				if val == "" && meta.required {
-					return ErrRequired
+					return &ErrRequired{key: meta.key}
 				}
 
 				if ok, err := decode(fVal, val); ok {
@@ -164,17 +152,17 @@ func process(ctx context.Context, obj any, tagKey string, loader Loader) error {
 		}
 
 		if meta.prefix != "" {
-			return ErrInvalidPrefix
+			return &ErrInvalidPrefix{field: fTyp.Name, kind: fVal.Kind()}
 		}
 
 		// lookup value
-		val, err := loader.Load(ctx, meta.name)
+		val, err := loader.Load(ctx, meta.key)
 		if err != nil {
 			return err
 		}
 
 		if val == "" && meta.required {
-			return ErrRequired
+			return &ErrRequired{key: meta.key}
 		}
 
 		// set value
@@ -189,18 +177,20 @@ func process(ctx context.Context, obj any, tagKey string, loader Loader) error {
 
 type field struct {
 	name      string
+	key       string
 	prefix    string
 	required  bool
 	delimiter string
 	separator string
 }
 
-func parseField(tag string) (*field, error) {
+func parseField(name, tag string) (*field, error) {
 	parts := strings.Split(tag, ",")
 	key, tagOpts := strings.TrimSpace(parts[0]), parts[1:]
 
 	f := &field{
-		name:      key,
+		name:      name,
+		key:       key,
 		delimiter: defaultDelimiter,
 		separator: defaultSeparator,
 	}
@@ -219,14 +209,14 @@ func parseField(tag string) (*field, error) {
 			f.prefix = strings.TrimPrefix(opt, optPrefix)
 
 			if key != "" && f.prefix != "" {
-				return nil, ErrInvalidPrefixAndKey
+				return nil, &ErrInvalidPrefixAndKey{field: name, key: key}
 			}
 		case strings.HasPrefix(opt, optDelimiter):
 			f.delimiter = strings.TrimPrefix(opt, optDelimiter)
 		case strings.HasPrefix(opt, optSeparator):
 			f.separator = strings.TrimPrefix(opt, optSeparator)
 		default:
-			return nil, ErrUnknownTagOption
+			return nil, &ErrUnknownTagOption{key: key, opt: opt}
 		}
 	}
 
@@ -318,7 +308,7 @@ func setVal(field reflect.Value, val string, meta *field) error {
 		for _, v := range vals {
 			kv := strings.Split(v, meta.separator)
 			if len(kv) != 2 {
-				return ErrInvalidMapValue
+				return &ErrInvalidMapValue{key: meta.key}
 			}
 
 			k, v := strings.TrimSpace(kv[0]), strings.TrimSpace(kv[1])
@@ -365,7 +355,7 @@ func setVal(field reflect.Value, val string, meta *field) error {
 		field.Set(slice)
 
 	default:
-		return ErrUnknownFieldType
+		return &ErrUnknownFieldType{field: meta.name, key: meta.key, kind: kd}
 	}
 
 	return nil
