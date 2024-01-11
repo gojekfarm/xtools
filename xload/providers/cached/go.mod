@@ -5,7 +5,7 @@ go 1.20
 replace github.com/gojekfarm/xtools/xload => ../..
 
 require (
-	github.com/gojekfarm/xtools/xload v0.5.0
+	github.com/gojekfarm/xtools/xload v0.6.0
 	github.com/stretchr/testify v1.8.4
 )
 
