@@ -8,6 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.6.0]
+
+### Added
+
+- [`xload`](./xload) Add [viper](https://github.com/spf13/viper) provider. ([#32](https://github.com/gojekfarm/xtools/pull/32))
+
+### Changed
+
+- [`xload`](./xload) Add context to errors to help with debugging. ([#31](https://github.com/gojekfarm/xtools/pull/31))
+
 ## [0.5.0]
 
 ### Changed
@@ -65,6 +75,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`xproto`](./xproto) package added
 
 [Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.5.0...HEAD
+[0.6.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.6.0
 [0.5.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.5.0
 [0.4.1]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.1
 [0.4.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.0
