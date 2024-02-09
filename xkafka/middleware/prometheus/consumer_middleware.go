@@ -51,7 +51,7 @@ func ConsumerMiddleware(next xkafka.Handler) xkafka.Handler {
 	return xkafka.HandlerFunc(func(ctx context.Context, m *xkafka.Message) error {
 		startTime := time.Now()
 
-		defer consumerLag.WithLabelValues(m.Group, m.Topic, string(m.Partition)).
+		consumerLag.WithLabelValues(m.Group, m.Topic, string(m.Partition)).
 			Observe(time.Since(m.Timestamp).Seconds())
 
 		inflight := consumerInflightMessages.WithLabelValues(m.Group, m.Topic)
