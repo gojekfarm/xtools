@@ -82,16 +82,8 @@ func def() *options {
 			ext:   "yaml",
 			paths: []string{"./", "../"},
 		},
-		autoEnv: true,
-		mapValues: func(in map[string]any) map[string]string {
-			out := make(map[string]string)
-
-			for key, value := range xload.FlattenMap(in, "_") {
-				out[key] = value
-			}
-
-			return out
-		},
+		autoEnv:   true,
+		mapValues: func(in map[string]any) map[string]string { return xload.FlattenMap(in, "_") },
 		transform: func(_ *viper.Viper, next xload.Loader) xload.Loader {
 			return xload.LoaderFunc(func(ctx context.Context, key string) (string, error) {
 				return next.Load(ctx, strings.ToLower(key))
