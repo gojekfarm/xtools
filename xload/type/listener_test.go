@@ -1,9 +1,10 @@
 package xloadtype
 
 import (
-	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestListener_Decode(t *testing.T) {

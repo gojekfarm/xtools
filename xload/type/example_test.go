@@ -3,6 +3,7 @@ package xloadtype_test
 import (
 	"context"
 	"fmt"
+
 	"github.com/gojekfarm/xtools/xload"
 	xloadtype "github.com/gojekfarm/xtools/xload/type"
 )
