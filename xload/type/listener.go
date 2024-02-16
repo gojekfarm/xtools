@@ -6,6 +6,7 @@ import (
 	"strconv"
 )
 
+// Listener represents a network listener, say, a tcp or http listener.
 type Listener struct {
 	IP   net.IP
 	Port int

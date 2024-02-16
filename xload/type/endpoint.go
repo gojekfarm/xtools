@@ -6,6 +6,8 @@ import (
 	"strconv"
 )
 
+// Endpoint represents a network endpoint
+// It can be used to represent a target host:port pair.
 type Endpoint struct {
 	Host string
 	Port int
