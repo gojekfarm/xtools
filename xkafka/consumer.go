@@ -84,6 +84,10 @@ func (c *Consumer) Run(ctx context.Context) error {
 
 // Start subscribes to the configured topics and starts consuming messages.
 // It runs the handler for each message in a separate goroutine.
+//
+// This method is non-blocking and returns immediately post subscribe.
+// Instead, use Run if you want to block until the context is closed or an error occurs.
+//
 // Errors are handled by the ErrorHandler if set, otherwise they stop the consumer
 // and are returned.
 func (c *Consumer) Start() error {
