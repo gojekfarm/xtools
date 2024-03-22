@@ -95,6 +95,7 @@ func TestConsumerGetMetadata(t *testing.T) {
 	)
 
 	mockKafka.On("GetMetadata", mock.Anything, false, 10000).Return(&kafka.Metadata{}, nil)
+	mockKafka.On("Close").Return(nil)
 
 	metadata, err := consumer.GetMetadata()
 	assert.NoError(t, err)
@@ -180,6 +181,7 @@ func TestConsumerHandleMessage(t *testing.T) {
 	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+	mockKafka.On("Close").Return(nil)
 
 	consumer.handler = handler
 	err := consumer.Run(ctx)
@@ -339,6 +341,7 @@ func TestConsumerReadMessageTimeout(t *testing.T) {
 			mockKafka.On("ReadMessage", testTimeout).Return(km, nil).Once()
 			mockKafka.On("ReadMessage", testTimeout).Return(nil, expect).Once()
 			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+			mockKafka.On("Close").Return(nil)
 
 			consumer.handler = handler
 
@@ -408,6 +411,7 @@ func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+	mockKafka.On("Close").Return(nil)
 
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		cancel()
@@ -458,6 +462,7 @@ func TestConsumerManualCommit(t *testing.T) {
 	mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
 	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+	mockKafka.On("Close").Return(nil)
 
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
 		cancel()
@@ -493,6 +498,7 @@ func TestConsumerAsync(t *testing.T) {
 	mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 	mockKafka.On("Commit").Return(nil, nil)
+	mockKafka.On("Close").Return(nil)
 
 	var recv []*Message
 	var mu sync.Mutex
@@ -639,8 +645,6 @@ func testMiddleware(name string, pre, post *[]string) MiddlewareFunc {
 
 func newTestConsumer(t *testing.T, opts ...Option) (*Consumer, *MockConsumerClient) {
 	mockConsumer := &MockConsumerClient{}
-
-	mockConsumer.On("Close").Return(nil)
 
 	opts = append(opts, mockConsumerFunc(mockConsumer))
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -18,6 +19,7 @@ type Consumer struct {
 	handler     Handler
 	middlewares []middleware
 	config      options
+	cancelCtx   atomic.Pointer[context.CancelFunc]
 }
 
 // NewConsumer creates a new Consumer instance.
@@ -65,23 +67,49 @@ func (c *Consumer) Use(mwf ...MiddlewareFunc) {
 	}
 }
 
-// Run manages starting and stopping the consumer.
+// Run starts running the Consumer. The component will stop running
+// when the context is closed. Run blocks until the context is closed or
+// an error occurs.
 func (c *Consumer) Run(ctx context.Context) error {
-	defer c.Close()
-
-	return c.Start(ctx)
-}
-
-// Start subscribes to the configured topics and starts consuming messages.
-// It runs the handler for each message in a separate goroutine.
-// It blocks until the context is cancelled or an error occurs.
-// Errors are handled by the ErrorHandler if set, otherwise they stop the consumer
-// and are returned.
-func (c *Consumer) Start(ctx context.Context) error {
 	if err := c.subscribe(); err != nil {
 		return err
 	}
 
+	if err := c.start(ctx); err != nil {
+		return err
+	}
+
+	return c.close()
+}
+
+// Start subscribes to the configured topics and starts consuming messages.
+// It runs the handler for each message in a separate goroutine.
+// Errors are handled by the ErrorHandler if set, otherwise they stop the consumer
+// and are returned.
+func (c *Consumer) Start() error {
+	if err := c.subscribe(); err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	c.cancelCtx.Store(&cancel)
+
+	go func() { _ = c.start(ctx) }()
+
+	return nil
+}
+
+// Close closes the consumer.
+func (c *Consumer) Close() {
+	cancel := c.cancelCtx.Load()
+	if cancel != nil {
+		(*cancel)()
+	}
+
+	_ = c.close()
+}
+
+func (c *Consumer) start(ctx context.Context) error {
 	c.handler = c.concatMiddlewares(c.handler)
 
 	if c.config.concurrency > 1 {
@@ -237,9 +265,8 @@ func (c *Consumer) unsubscribe() error {
 	return c.kafka.Unsubscribe()
 }
 
-// Close closes the consumer.
-func (c *Consumer) Close() {
+func (c *Consumer) close() error {
 	<-time.After(c.config.shutdownTimeout)
 
-	_ = c.kafka.Close()
+	return c.kafka.Close()
 }
