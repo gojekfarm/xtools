@@ -85,6 +85,66 @@ func TestNewConsumerError(t *testing.T) {
 	assert.Equal(t, expectError, err)
 }
 
+func TestConsumerLifecycle(t *testing.T) {
+	t.Parallel()
+
+	t.Run("StartSubscribeError", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t,
+			testTopics,
+			testBrokers,
+			PollTimeout(testTimeout),
+		)
+
+		expectError := errors.New("error in subscribe")
+
+		mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(expectError)
+
+		assert.Error(t, consumer.Start())
+
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("StartSuccessCloseError", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t,
+			testTopics,
+			testBrokers,
+			PollTimeout(testTimeout),
+		)
+
+		mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+		mockKafka.On("Unsubscribe").Return(nil)
+		mockKafka.On("ReadMessage", testTimeout).Return(newFakeKafkaMessage(), nil)
+		mockKafka.On("Commit").Return(nil, nil)
+		mockKafka.On("Close").Return(errors.New("error in close"))
+
+		assert.NoError(t, consumer.Start())
+		<-time.After(100 * time.Millisecond)
+		consumer.Close()
+
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("StartCloseSuccess", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t,
+			testTopics,
+			testBrokers,
+			PollTimeout(testTimeout),
+		)
+
+		mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+		mockKafka.On("Unsubscribe").Return(nil)
+		mockKafka.On("ReadMessage", testTimeout).Return(newFakeKafkaMessage(), nil)
+		mockKafka.On("Commit").Return(nil, nil)
+		mockKafka.On("Close").Return(nil)
+
+		assert.NoError(t, consumer.Start())
+		<-time.After(100 * time.Millisecond)
+		consumer.Close()
+
+		mockKafka.AssertExpectations(t)
+	})
+}
+
 func TestConsumerGetMetadata(t *testing.T) {
 	t.Parallel()
 
