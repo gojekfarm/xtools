@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime"
 	"time"
 )
 
@@ -34,19 +35,28 @@ type buildInfo struct {
 	Arch      string `json:"arch"`
 }
 
-func (h *ProbeHandler) serveBuildInfo(w http.ResponseWriter, r *http.Request) {
-	if _, found := r.URL.Query()[verboseQueryParam]; !found {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-
-		_, _ = fmt.Fprint(w, h.bi.Version)
-
-		return
+func (h *ProbeHandler) versionHandler(opts Options) http.Handler {
+	bi := &buildInfo{
+		BuildInfo: opts.BuildInfo,
+		GoVersion: runtime.Version(),
+		OS:        runtime.GOOS,
+		Arch:      runtime.GOARCH,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, found := r.URL.Query()[verboseQueryParam]; !found {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.Header().Set("X-Content-Type-Options", "nosniff")
 
-	e := json.NewEncoder(w)
-	e.SetIndent("", "  ")
-	_ = e.Encode(h.bi)
+			_, _ = fmt.Fprint(w, bi.Version)
+
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		e := json.NewEncoder(w)
+		e.SetIndent("", "  ")
+		_ = e.Encode(bi)
+	})
 }
