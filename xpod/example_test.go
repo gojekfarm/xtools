@@ -7,14 +7,14 @@ import (
 	"github.com/gojekfarm/xtools/xpod"
 )
 
-func ExampleNew() {
+func ExampleNewProbeHandler() {
 	h := http.NewServeMux()
 
 	// This method automatically registers the health, ready, and version endpoints
 	// with the provided prefix.
 	// If you want to register the endpoints with a custom path, you can use the
 	// `HealthHandler`, `ReadyHandler`, and `VersionHandler` methods. See the examples below.
-	h.Handle("/probe", xpod.New(xpod.Options{
+	h.Handle("/probe", xpod.NewProbeHandler(xpod.Options{
 		Prefix: "/probe",
 		BuildInfo: &xpod.BuildInfo{
 			Version:   "0.1.0",
@@ -25,10 +25,10 @@ func ExampleNew() {
 	}))
 }
 
-func ExampleNew_withoutManagedServeMux() {
+func ExampleNewProbeHandler_withoutManagedServeMux() {
 	h := http.NewServeMux()
 
-	ph := xpod.New(xpod.Options{
+	ph := xpod.NewProbeHandler(xpod.Options{
 		Prefix: "/probe",
 		BuildInfo: &xpod.BuildInfo{
 			Version:   "0.1.0",

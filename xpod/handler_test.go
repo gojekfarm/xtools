@@ -193,7 +193,7 @@ healthz check passed
 		},
 	}
 
-	t.Run("New", func(t *testing.T) {
+	t.Run("NewProbeHandler", func(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				ld := newMockLogDelegate(t)
@@ -202,7 +202,7 @@ healthz check passed
 					tt.opts.ErrorLogDelegate = ld.Logf
 				}
 
-				handler := New(tt.opts)
+				handler := NewProbeHandler(tt.opts)
 
 				runSpecs(t, handler, args{
 					name:        tt.name,
@@ -225,7 +225,7 @@ healthz check passed
 					tt.opts.ErrorLogDelegate = ld.Logf
 				}
 
-				handler := New(tt.opts).HealthHandler()
+				handler := NewProbeHandler(tt.opts).HealthHandler()
 				runSpecs(t, handler, args{
 					name:        tt.name,
 					prefix:      tt.opts.Prefix,
@@ -247,7 +247,7 @@ healthz check passed
 					tt.opts.ErrorLogDelegate = ld.Logf
 				}
 
-				handler := New(tt.opts).ReadyHandler()
+				handler := NewProbeHandler(tt.opts).ReadyHandler()
 				runSpecs(t, handler, args{
 					name:        tt.name,
 					prefix:      tt.opts.Prefix,

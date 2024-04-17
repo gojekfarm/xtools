@@ -48,8 +48,8 @@ type Options struct {
 	ShowErrReasons bool
 }
 
-// New returns a http.Handler which can be used to serve health check and build info endpoints.
-func New(opts Options) *ProbeHandler {
+// NewProbeHandler returns a http.Handler which can be used to serve health check and build info endpoints.
+func NewProbeHandler(opts Options) *ProbeHandler {
 	ph := &ProbeHandler{
 		sm:             http.NewServeMux(),
 		logDelegate:    opts.ErrorLogDelegate,

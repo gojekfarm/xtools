@@ -65,7 +65,7 @@ func TestProbeHandler_serveVersion(t *testing.T) {
 				req := httptest.NewRequest(http.MethodGet, path, nil)
 				rw := httptest.NewRecorder()
 
-				New(tt.opts).ServeHTTP(rw, req)
+				NewProbeHandler(tt.opts).ServeHTTP(rw, req)
 
 				rc := rw.Result().Body
 				b, err := io.ReadAll(rc)
@@ -80,7 +80,7 @@ func TestProbeHandler_serveVersion(t *testing.T) {
 
 	t.Run("HandlerFunc", func(t *testing.T) {
 		t.Run("NilVersionHandler", func(t *testing.T) {
-			assert.Nil(t, New(Options{}).VersionHandler())
+			assert.Nil(t, NewProbeHandler(Options{}).VersionHandler())
 		})
 
 		tests := []struct {
@@ -118,7 +118,7 @@ func TestProbeHandler_serveVersion(t *testing.T) {
 				req := httptest.NewRequest(http.MethodGet, path, nil)
 				rw := httptest.NewRecorder()
 
-				New(tt.opts).VersionHandler().ServeHTTP(rw, req)
+				NewProbeHandler(tt.opts).VersionHandler().ServeHTTP(rw, req)
 
 				rc := rw.Result().Body
 				b, err := io.ReadAll(rc)
