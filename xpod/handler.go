@@ -17,8 +17,8 @@ const (
 
 // Options can be used to provide custom health/readiness checkers and the current BuildInfo.
 type Options struct {
-	HealthCheckers []HealthChecker
-	ReadyCheckers  []HealthChecker
+	HealthCheckers []Checker
+	ReadyCheckers  []Checker
 	BuildInfo      *BuildInfo
 
 	// Prefix is the base path for the health, ready, and version endpoints.
@@ -131,7 +131,7 @@ func (h *ProbeHandler) readyHandler(opts Options) http.Handler {
 	return h.serveCheckers(rcs)
 }
 
-func (h *ProbeHandler) serveCheckers(hcs []HealthChecker) http.Handler {
+func (h *ProbeHandler) serveCheckers(hcs []Checker) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var excluded generic.Set[string]
 		if reqExcludes, ok := r.URL.Query()[excludeQueryParam]; ok && len(reqExcludes) > 0 {

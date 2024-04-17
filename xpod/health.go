@@ -4,31 +4,31 @@ import (
 	"net/http"
 )
 
-// HealthChecker is a named healthz checker.
-type HealthChecker interface {
+// Checker is a named resource/component checker.
+type Checker interface {
 	Name() string
 	Check(r *http.Request) error
 }
 
-// HealthCheckerFunc implements HealthChecker interface.
-func HealthCheckerFunc(name string, check func(*http.Request) error) *HealthCheckerFun {
-	return &HealthCheckerFun{name: name, checker: check}
+// CheckerFunc implements Checker interface.
+func CheckerFunc(name string, check func(*http.Request) error) *CheckerFun {
+	return &CheckerFun{name: name, checker: check}
 }
 
-// HealthCheckerFun implements HealthChecker interface.
-type HealthCheckerFun struct {
+// CheckerFun implements Checker interface.
+type CheckerFun struct {
 	name    string
 	checker func(r *http.Request) error
 }
 
 // Name returns the name of the health check.
-func (f *HealthCheckerFun) Name() string { return f.name }
+func (f *CheckerFun) Name() string { return f.name }
 
 // Check is used to invoke health check when a request is received.
-func (f *HealthCheckerFun) Check(req *http.Request) error { return f.checker(req) }
+func (f *CheckerFun) Check(req *http.Request) error { return f.checker(req) }
 
 // PingHealthz returns true automatically when checked.
-var PingHealthz HealthChecker = ping{}
+var PingHealthz Checker = ping{}
 
 // ping implements the simplest possible healthz checker.
 type ping struct{}

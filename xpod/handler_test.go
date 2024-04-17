@@ -81,13 +81,13 @@ healthz check passed
 		{
 			name: "FailingHealthCheckWithHiddenReason",
 			opts: Options{
-				HealthCheckers: []HealthChecker{
-					HealthCheckerFunc("redis", func(_ *http.Request) error {
+				HealthCheckers: []Checker{
+					CheckerFunc("redis", func(_ *http.Request) error {
 						return errors.New("redis-connect-error")
 					}),
 				},
-				ReadyCheckers: []HealthChecker{
-					HealthCheckerFunc("redis", func(_ *http.Request) error {
+				ReadyCheckers: []Checker{
+					CheckerFunc("redis", func(_ *http.Request) error {
 						return errors.New("redis-connect-error")
 					}),
 				},
@@ -108,13 +108,13 @@ healthz check passed
 		{
 			name: "FailingHealthCheckWithReason",
 			opts: Options{
-				HealthCheckers: []HealthChecker{
-					HealthCheckerFunc("redis", func(_ *http.Request) error {
+				HealthCheckers: []Checker{
+					CheckerFunc("redis", func(_ *http.Request) error {
 						return errors.New("redis-connect-error")
 					}),
 				},
-				ReadyCheckers: []HealthChecker{
-					HealthCheckerFunc("redis", func(_ *http.Request) error {
+				ReadyCheckers: []Checker{
+					CheckerFunc("redis", func(_ *http.Request) error {
 						return errors.New("redis-connect-error")
 					}),
 				},
@@ -129,14 +129,14 @@ healthz check passed
 		{
 			name: "FailingHealthCheckExcluded",
 			opts: Options{
-				HealthCheckers: []HealthChecker{
-					HealthCheckerFunc("redis", func(_ *http.Request) error {
+				HealthCheckers: []Checker{
+					CheckerFunc("redis", func(_ *http.Request) error {
 						return errors.New("redis-connect-error")
 					}),
 					PingHealthz,
 				},
-				ReadyCheckers: []HealthChecker{
-					HealthCheckerFunc("redis", func(_ *http.Request) error {
+				ReadyCheckers: []Checker{
+					CheckerFunc("redis", func(_ *http.Request) error {
 						return errors.New("redis-connect-error")
 					}),
 					PingHealthz,
@@ -150,15 +150,15 @@ healthz check passed
 			verbose:  true,
 			excluded: []string{"redis", "foo,bar", "baz"},
 			opts: Options{
-				HealthCheckers: []HealthChecker{
+				HealthCheckers: []Checker{
 					PingHealthz,
-					HealthCheckerFunc("redis", func(_ *http.Request) error {
+					CheckerFunc("redis", func(_ *http.Request) error {
 						return errors.New("redis-connect-error")
 					}),
 				},
-				ReadyCheckers: []HealthChecker{
+				ReadyCheckers: []Checker{
 					PingHealthz,
-					HealthCheckerFunc("redis", func(_ *http.Request) error {
+					CheckerFunc("redis", func(_ *http.Request) error {
 						return errors.New("redis-connect-error")
 					}),
 				},
