@@ -15,7 +15,46 @@ import (
 	"github.com/gojekfarm/xtools/generic/slice"
 )
 
-func TestProbeHandler_serveHealth(t *testing.T) {
+func TestProbeHandler_serveCheckers(t *testing.T) {
+	type args struct {
+		name        string
+		prefix      string
+		excluded    []string
+		verbose     bool
+		want        func(*testing.T, string)
+		logDelegate *mockLogDelegate
+	}
+
+	runSpecs := func(t *testing.T, handler http.Handler, a args) {
+		t.Run(a.name, func(t *testing.T) {
+			path := a.prefix + "/healthz?"
+
+			if len(a.excluded) > 0 {
+				for _, e := range a.excluded {
+					path += "exclude=" + e + "&"
+				}
+			}
+
+			if a.verbose {
+				path += "verbose"
+			}
+
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			rw := httptest.NewRecorder()
+
+			handler.ServeHTTP(rw, req)
+
+			rc := rw.Result().Body
+			b, err := io.ReadAll(rc)
+
+			assert.NoError(t, err)
+			assert.NoError(t, rc.Close())
+
+			a.want(t, string(b))
+			a.logDelegate.AssertExpectations(t)
+		})
+	}
+
 	tests := []struct {
 		name        string
 		opts        Options
@@ -47,6 +86,11 @@ healthz check passed
 						return errors.New("redis-connect-error")
 					}),
 				},
+				ReadyCheckers: []HealthChecker{
+					HealthCheckerFunc("redis", func(_ *http.Request) error {
+						return errors.New("redis-connect-error")
+					}),
+				},
 			},
 			logDelegate: func(t *testing.T, m *mock.Mock) {
 				m.On("Logf", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
@@ -69,6 +113,11 @@ healthz check passed
 						return errors.New("redis-connect-error")
 					}),
 				},
+				ReadyCheckers: []HealthChecker{
+					HealthCheckerFunc("redis", func(_ *http.Request) error {
+						return errors.New("redis-connect-error")
+					}),
+				},
 				ShowErrReasons: true,
 			},
 			want: func(t *testing.T, got string) {
@@ -86,6 +135,12 @@ healthz check passed
 					}),
 					PingHealthz,
 				},
+				ReadyCheckers: []HealthChecker{
+					HealthCheckerFunc("redis", func(_ *http.Request) error {
+						return errors.New("redis-connect-error")
+					}),
+					PingHealthz,
+				},
 			},
 			excluded: []string{"redis"},
 			want:     func(t *testing.T, got string) { assert.Equal(t, "ok", got) },
@@ -96,6 +151,12 @@ healthz check passed
 			excluded: []string{"redis", "foo,bar", "baz"},
 			opts: Options{
 				HealthCheckers: []HealthChecker{
+					PingHealthz,
+					HealthCheckerFunc("redis", func(_ *http.Request) error {
+						return errors.New("redis-connect-error")
+					}),
+				},
+				ReadyCheckers: []HealthChecker{
 					PingHealthz,
 					HealthCheckerFunc("redis", func(_ *http.Request) error {
 						return errors.New("redis-connect-error")
@@ -132,43 +193,72 @@ healthz check passed
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ld := newMockLogDelegate(t)
-
-			path := tt.opts.Prefix + "/healthz?"
-
-			if len(tt.excluded) > 0 {
-				for _, e := range tt.excluded {
-					path += "exclude=" + e + "&"
+	t.Run("New", func(t *testing.T) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				ld := newMockLogDelegate(t)
+				if tt.logDelegate != nil {
+					tt.logDelegate(t, &ld.Mock)
+					tt.opts.ErrorLogDelegate = ld.Logf
 				}
-			}
 
-			if tt.verbose {
-				path += "verbose"
-			}
+				handler := New(tt.opts)
 
-			req := httptest.NewRequest(http.MethodGet, path, nil)
-			rw := httptest.NewRecorder()
+				runSpecs(t, handler, args{
+					name:        tt.name,
+					prefix:      tt.opts.Prefix,
+					excluded:    tt.excluded,
+					verbose:     tt.verbose,
+					want:        tt.want,
+					logDelegate: ld,
+				})
+			})
+		}
+	})
 
-			if tt.logDelegate != nil {
-				tt.logDelegate(t, &ld.Mock)
-				tt.opts.ErrorLogDelegate = ld.Logf
-			}
+	t.Run("HealthHandler", func(t *testing.T) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				ld := newMockLogDelegate(t)
+				if tt.logDelegate != nil {
+					tt.logDelegate(t, &ld.Mock)
+					tt.opts.ErrorLogDelegate = ld.Logf
+				}
 
-			NewProbeHandler(tt.opts).ServeHTTP(rw, req)
+				handler := New(tt.opts).HealthHandler()
+				runSpecs(t, handler, args{
+					name:        tt.name,
+					prefix:      tt.opts.Prefix,
+					excluded:    tt.excluded,
+					verbose:     tt.verbose,
+					want:        tt.want,
+					logDelegate: ld,
+				})
+			})
+		}
+	})
 
-			rc := rw.Result().Body
-			b, err := io.ReadAll(rc)
+	t.Run("ReadyHandler", func(t *testing.T) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				ld := newMockLogDelegate(t)
+				if tt.logDelegate != nil {
+					tt.logDelegate(t, &ld.Mock)
+					tt.opts.ErrorLogDelegate = ld.Logf
+				}
 
-			assert.NoError(t, err)
-			assert.NoError(t, rc.Close())
-
-			tt.want(t, string(b))
-
-			ld.AssertExpectations(t)
-		})
-	}
+				handler := New(tt.opts).ReadyHandler()
+				runSpecs(t, handler, args{
+					name:        tt.name,
+					prefix:      tt.opts.Prefix,
+					excluded:    tt.excluded,
+					verbose:     tt.verbose,
+					want:        tt.want,
+					logDelegate: ld,
+				})
+			})
+		}
+	})
 }
 
 func newMockLogDelegate(t *testing.T) *mockLogDelegate {
@@ -180,3 +270,39 @@ func newMockLogDelegate(t *testing.T) *mockLogDelegate {
 type mockLogDelegate struct{ mock.Mock }
 
 func (m *mockLogDelegate) Logf(format string, args map[string]interface{}) { m.Called(format, args) }
+
+func Test_pathOrDefault(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		def  string
+		want string
+	}{
+		{
+			name: "EmptyPath",
+			def:  "healthz",
+			want: "healthz",
+		},
+		{
+			name: "EmptyDefault",
+			path: "healthz",
+			want: "healthz",
+		},
+		{
+			name: "NonEmptyPath",
+			path: "readyz",
+			def:  "healthz",
+			want: "readyz",
+		},
+		{
+			name: "BothEmpty",
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, pathOrDefault(tt.path, tt.def), "pathOrDefault(%v, %v)", tt.path, tt.def)
+		})
+	}
+}

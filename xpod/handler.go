@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
-	"runtime"
 	"strings"
 
 	"github.com/gojekfarm/xtools/generic"
@@ -18,24 +17,47 @@ const (
 
 // Options can be used to provide custom health/readiness checkers and the current BuildInfo.
 type Options struct {
-	Prefix           string
-	HealthCheckers   []HealthChecker
-	ReadyCheckers    []HealthChecker
-	BuildInfo        *BuildInfo
-	ErrorLogDelegate func(string, map[string]interface{})
-	ShowErrReasons   bool
+	HealthCheckers []HealthChecker
+	ReadyCheckers  []HealthChecker
+	BuildInfo      *BuildInfo
+
+	// Prefix is the base path for the health, ready, and version endpoints.
+	// If not provided, the default value is "/".
+	// If the prefix is "/probe", the health, ready, and version endpoints
+	// will be available at:
+	// - /probe/healthz
+	// - /probe/readyz
+	// - /probe/version
+	//
+	// HealthPath is the path for the health endpoint.
+	// If not provided, the default value is "healthz".
+	//
+	// ReadyPath is the path for the readiness endpoint.
+	// If not provided, the default value is "readyz".
+	//
+	// VersionPath is the path for the version endpoint.
+	// If not provided, the default value is "version".
+	//
+	// Note: Prefix, HealthPath, ReadyPath, and VersionPath are only used
+	// for internal http.ServeMux registration.
+	Prefix, HealthPath, ReadyPath, VersionPath string
+
+	ErrorLogDelegate func(string, map[string]any)
+
+	// ShowErrReasons is used to show the error reasons in the HTTP response.
+	ShowErrReasons bool
 }
 
-// NewProbeHandler returns a http.Handler which can be used to serve health check and build info endpoints.
-func NewProbeHandler(opts Options) *ProbeHandler {
-	ph := &ProbeHandler{sm: http.NewServeMux(), bi: &buildInfo{
-		BuildInfo: opts.BuildInfo,
-		GoVersion: runtime.Version(),
-		OS:        runtime.GOOS,
-		Arch:      runtime.GOARCH,
-	}, logDelegate: opts.ErrorLogDelegate, showErrReasons: opts.ShowErrReasons}
+// New returns a http.Handler which can be used to serve health check and build info endpoints.
+func New(opts Options) *ProbeHandler {
+	ph := &ProbeHandler{
+		sm:             http.NewServeMux(),
+		logDelegate:    opts.ErrorLogDelegate,
+		showErrReasons: opts.ShowErrReasons,
+	}
 
-	ph.registerRoutes(strings.TrimSuffix(opts.Prefix, "/"), opts.HealthCheckers, opts.ReadyCheckers)
+	ph.makeHandlers(opts)
+	ph.registerRoutes(opts)
 
 	return ph
 }
@@ -43,32 +65,73 @@ func NewProbeHandler(opts Options) *ProbeHandler {
 // ProbeHandler implements http.Handler interface to expose [/healthz /readyz /version] endpoints.
 type ProbeHandler struct {
 	sm             *http.ServeMux
-	bi             *buildInfo
+	hh             http.Handler
+	rh             http.Handler
+	vh             http.Handler
 	showErrReasons bool
 	logDelegate    func(string, map[string]interface{})
 }
 
 func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) { h.sm.ServeHTTP(w, r) }
 
-func (h *ProbeHandler) registerRoutes(prefix string, hcs []HealthChecker, rcs []HealthChecker) {
+// HealthHandler returns the handler for the health endpoint.
+func (h *ProbeHandler) HealthHandler() http.Handler { return h.hh }
+
+// ReadyHandler returns the handler for the readiness endpoint.
+func (h *ProbeHandler) ReadyHandler() http.Handler { return h.rh }
+
+// VersionHandler returns the handler for the version endpoint.
+// Note: It will be nil if the Options.BuildInfo is not provided.
+func (h *ProbeHandler) VersionHandler() http.Handler { return h.vh }
+
+func (h *ProbeHandler) registerRoutes(opts Options) {
+	prefix := strings.TrimSuffix(opts.Prefix, "/")
+
+	h.sm.HandleFunc(
+		fmt.Sprintf("%s/%s", prefix, pathOrDefault(opts.HealthPath, "healthz")),
+		h.hh.ServeHTTP,
+	)
+
+	h.sm.HandleFunc(
+		fmt.Sprintf("%s/%s", prefix, pathOrDefault(opts.ReadyPath, "readyz")),
+		h.rh.ServeHTTP,
+	)
+
+	if h.vh != nil {
+		h.sm.HandleFunc(
+			fmt.Sprintf("%s/%s", prefix, pathOrDefault(opts.HealthPath, "version")),
+			h.vh.ServeHTTP,
+		)
+	}
+}
+
+func pathOrDefault(path, def string) string {
+	if strings.TrimSpace(path) != "" {
+		return strings.TrimPrefix(path, "/")
+	}
+
+	return def
+}
+
+func (h *ProbeHandler) healthHandler(opts Options) http.Handler {
+	hcs := opts.HealthCheckers
 	if len(hcs) == 0 {
 		hcs = append(hcs, PingHealthz)
 	}
 
-	h.sm.HandleFunc(prefix+"/healthz", h.serveHealth(hcs).ServeHTTP)
+	return h.serveCheckers(hcs)
+}
 
+func (h *ProbeHandler) readyHandler(opts Options) http.Handler {
+	rcs := opts.ReadyCheckers
 	if len(rcs) == 0 {
 		rcs = append(rcs, PingHealthz)
 	}
 
-	h.sm.HandleFunc(prefix+"/readyz", h.serveHealth(rcs).ServeHTTP)
-
-	if h.bi.BuildInfo != nil {
-		h.sm.HandleFunc(prefix+"/version", h.serveBuildInfo)
-	}
+	return h.serveCheckers(rcs)
 }
 
-func (h *ProbeHandler) serveHealth(hcs []HealthChecker) http.Handler {
+func (h *ProbeHandler) serveCheckers(hcs []HealthChecker) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var excluded generic.Set[string]
 		if reqExcludes, ok := r.URL.Query()[excludeQueryParam]; ok && len(reqExcludes) > 0 {
@@ -149,6 +212,15 @@ func (h *ProbeHandler) serveHealth(hcs []HealthChecker) http.Handler {
 		_, _ = output.WriteTo(w)
 		_, _ = fmt.Fprintf(w, "%s check passed\n", strings.TrimPrefix(r.URL.Path, "/"))
 	})
+}
+
+func (h *ProbeHandler) makeHandlers(opts Options) {
+	h.hh = h.healthHandler(opts)
+	h.rh = h.readyHandler(opts)
+
+	if opts.BuildInfo != nil {
+		h.vh = h.versionHandler(opts)
+	}
 }
 
 func flattenElems(in [][]string) []string {
