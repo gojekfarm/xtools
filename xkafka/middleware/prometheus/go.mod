@@ -7,7 +7,7 @@ toolchain go1.21.0
 replace github.com/gojekfarm/xtools/xkafka => ../../
 
 require (
-	github.com/gojekfarm/xtools/xkafka v0.6.0
+	github.com/gojekfarm/xtools/xkafka v0.7.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/stretchr/testify v1.8.1
 )
@@ -28,6 +28,6 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

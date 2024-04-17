@@ -8,11 +8,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.7.0]
+
+### Added
+
+- [`xpod`](./xpod): expose Checker Handlers without managed
+  ServeMux ([#39](https://github.com/gojekfarm/xtools/pull/39))
+- [`xload`](./xload): add common parsable types ([#37](https://github.com/gojekfarm/xtools/pull/37))
+
+### Changed
+
+- [`xkafka`](./xkafka): refactor {Run,Start,Close} methods ([#38](https://github.com/gojekfarm/xtools/pull/38))
+- [`xpod`](./xpod)[**BREAKING**]: rename HealthChecker => Checker ([#39](https://github.com/gojekfarm/xtools/pull/39))
+
 ## [0.6.0]
 
 ### Added
 
-- [`xload`](./xload) Add [viper](https://github.com/spf13/viper) provider. ([#32](https://github.com/gojekfarm/xtools/pull/32))
+- [`xload`](./xload) Add [viper](https://github.com/spf13/viper)
+  provider. ([#32](https://github.com/gojekfarm/xtools/pull/32))
 
 ### Changed
 
@@ -22,7 +36,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- [`xkafka`](./xkafka) Improved async & sequential consumer implementations. See https://github.com/gojekfarm/xtools/pull/26 for more details.
+- [`xkafka`](./xkafka) Improved async & sequential consumer implementations.
+  See https://github.com/gojekfarm/xtools/pull/26 for more details.
 - [`xkafka`](./xkafka) Upgraded `github.com/confluentinc/confluent-kafka-go` to `v2`
 
 ## [0.4.1]
@@ -50,8 +65,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`xpod`](./xpod) Added `xpod` package which contains utilities that help implement best practices for health checks
   and more, while building go apps for kubernetes pods.
 - [`xkafka/middleware`](./xkafka/middleware)
-  - Added Prometheus middleware for `Consumer` and `Producer` implementations.
-  - Added Logging MiddlewareFunc.
+    - Added Prometheus middleware for `Consumer` and `Producer` implementations.
+    - Added Logging MiddlewareFunc.
 
 ## [0.2.0]
 
@@ -74,12 +89,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`generic`](./generic) package added
 - [`xproto`](./xproto) package added
 
-[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.7.0...HEAD
+
+[0.7.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.7.0
+
 [0.6.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.6.0
+
 [0.5.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.5.0
+
 [0.4.1]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.1
+
 [0.4.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.0
+
 [0.3.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.3.0
+
 [0.2.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.2.0
+
 [0.1.1]: https://github.com/gojekfarm/xtools/releases/tag/v0.1.1
+
 [0.1.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.1.0
