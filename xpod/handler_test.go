@@ -96,7 +96,7 @@ healthz check passed
 				m.On("Logf", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 					argsMap := args.Get(1).(map[string]interface{})
 
-					assert.Equal(t, "health check failed", args.String(0))
+					assert.Equal(t, "check failed", args.String(0))
 					assert.Equal(t, "redis", argsMap["failed_checks"])
 				})
 			},
@@ -167,7 +167,7 @@ healthz check passed
 				m.On("Logf", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 					argsMap := args.Get(1).(map[string]interface{})
 
-					assert.Equal(t, "cannot exclude some health checks", args.String(0))
+					assert.Equal(t, "cannot exclude some checks", args.String(0))
 					assert.ElementsMatch(t, []string{"foo", "bar", "baz"}, slice.Map(
 						strings.Split(argsMap["checks"].(string), ", "), func(s string) string {
 							return strings.Trim(s, `"`)
@@ -180,7 +180,7 @@ healthz check passed
 				assert.True(t, strings.Contains(got, `[+]ping ok`))
 				assert.True(t, strings.Contains(got, `[+]redis excluded: ok`))
 
-				re := regexp.MustCompile(`warn: some health checks cannot be excluded: no matches for (.*)`)
+				re := regexp.MustCompile(`warn: some checks cannot be excluded: no matches for (.*)`)
 				assert.True(t, re.MatchString(got))
 
 				excludedLine := re.FindStringSubmatch(got)[1]

@@ -131,7 +131,7 @@ func (h *ProbeHandler) readyHandler(opts Options) http.Handler {
 	return h.serveCheckers(rcs)
 }
 
-func (h *ProbeHandler) serveCheckers(hcs []Checker) http.Handler {
+func (h *ProbeHandler) serveCheckers(cs []Checker) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var excluded generic.Set[string]
 		if reqExcludes, ok := r.URL.Query()[excludeQueryParam]; ok && len(reqExcludes) > 0 {
@@ -145,16 +145,16 @@ func (h *ProbeHandler) serveCheckers(hcs []Checker) http.Handler {
 		var failedVerboseLogOutput bytes.Buffer
 		var failedChecks []string
 
-		for _, hc := range hcs {
-			if excluded.Has(hc.Name()) {
-				excluded.Delete(hc.Name())
-				_, _ = fmt.Fprintf(&output, "[+]%s excluded: ok\n", hc.Name())
+		for _, c := range cs {
+			if excluded.Has(c.Name()) {
+				excluded.Delete(c.Name())
+				_, _ = fmt.Fprintf(&output, "[+]%s excluded: ok\n", c.Name())
 
 				continue
 			}
 
-			if err := hc.Check(r); err != nil {
-				_, _ = fmt.Fprintf(&output, "[-]%s failed:", hc.Name())
+			if err := c.Check(r); err != nil {
+				_, _ = fmt.Fprintf(&output, "[-]%s failed:", c.Name())
 
 				if h.showErrReasons {
 					_, _ = fmt.Fprintf(&output, "\n\treason: %v\n", err)
@@ -162,13 +162,13 @@ func (h *ProbeHandler) serveCheckers(hcs []Checker) http.Handler {
 					_, _ = fmt.Fprintf(&output, " reason hidden\n")
 				}
 
-				failedChecks = append(failedChecks, hc.Name())
-				_, _ = fmt.Fprintf(&failedVerboseLogOutput, "[-]%s failed: %v\n", hc.Name(), err)
+				failedChecks = append(failedChecks, c.Name())
+				_, _ = fmt.Fprintf(&failedVerboseLogOutput, "[-]%s failed: %v\n", c.Name(), err)
 
 				continue
 			}
 
-			_, _ = fmt.Fprintf(&output, "[+]%s ok\n", hc.Name())
+			_, _ = fmt.Fprintf(&output, "[+]%s ok\n", c.Name())
 		}
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -181,9 +181,9 @@ func (h *ProbeHandler) serveCheckers(hcs []Checker) http.Handler {
 						return fmt.Sprintf("%q", in)
 					}), ", ")
 
-			_, _ = fmt.Fprintf(&output, "warn: some health checks cannot be excluded: no matches for %s\n", quotedChecks)
+			_, _ = fmt.Fprintf(&output, "warn: some checks cannot be excluded: no matches for %s\n", quotedChecks)
 			if h.logDelegate != nil {
-				h.logDelegate("cannot exclude some health checks", map[string]interface{}{
+				h.logDelegate("cannot exclude some checks", map[string]interface{}{
 					"checks": quotedChecks,
 					"reason": "no matches",
 				})
@@ -192,7 +192,7 @@ func (h *ProbeHandler) serveCheckers(hcs []Checker) http.Handler {
 
 		if len(failedChecks) > 0 {
 			if h.logDelegate != nil {
-				h.logDelegate("health check failed", map[string]interface{}{
+				h.logDelegate("check failed", map[string]interface{}{
 					"failed_checks": strings.Join(failedChecks, ","),
 				})
 			}
