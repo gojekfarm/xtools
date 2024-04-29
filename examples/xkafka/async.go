@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	"log/slog"
-
 	"github.com/rs/xid"
 	"github.com/urfave/cli/v2"
+	"log/slog"
 
 	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
@@ -30,6 +29,10 @@ func runAsync(c *cli.Context) error {
 			"auto.offset.reset": "earliest",
 		},
 		xkafka.Concurrency(2),
+		xkafka.ErrorHandler(func(err error) error {
+			slog.Error(err.Error())
+			return nil
+		}),
 	}
 
 	// start consumers first

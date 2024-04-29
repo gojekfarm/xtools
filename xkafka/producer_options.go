@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -33,7 +34,6 @@ func newProducerConfig(opts ...ProducerOption) (*producerConfig, error) {
 				"partitioner": partitioner,
 			},
 		},
-		errorHandler:    NoopErrorHandler,
 		shutdownTimeout: 1 * time.Second,
 	}
 
@@ -41,7 +41,23 @@ func newProducerConfig(opts ...ProducerOption) (*producerConfig, error) {
 		opt.setProducerConfig(cfg)
 	}
 
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
+}
+
+func (c *producerConfig) validate() error {
+	if len(c.brokers) == 0 {
+		return errors.Wrap(ErrRequiredOption, "xkafka.Brokers must be set")
+	}
+
+	if c.errorHandler == nil {
+		return errors.Wrap(ErrRequiredOption, "xkafka.ErrorHandler must be set")
+	}
+
+	return nil
 }
 
 // DeliveryCallback is a callback function triggered for every published message.

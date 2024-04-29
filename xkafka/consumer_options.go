@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/pkg/errors"
 )
 
 // ConsumerOption is an interface for consumer options.
@@ -28,7 +29,6 @@ func newConsumerConfig(opts ...ConsumerOption) (*consumerConfig, error) {
 		topics:          []string{},
 		brokers:         []string{},
 		configMap:       kafka.ConfigMap{},
-		errorHandler:    NoopErrorHandler,
 		metadataTimeout: 10 * time.Second,
 		pollTimeout:     10 * time.Second,
 		shutdownTimeout: 1 * time.Second,
@@ -39,7 +39,27 @@ func newConsumerConfig(opts ...ConsumerOption) (*consumerConfig, error) {
 		opt.setConsumerConfig(cfg)
 	}
 
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
+}
+
+func (c *consumerConfig) validate() error {
+	if len(c.brokers) == 0 {
+		return errors.Wrap(ErrRequiredOption, "xkafka.Brokers must be set")
+	}
+
+	if len(c.topics) == 0 {
+		return errors.Wrap(ErrRequiredOption, "xkafka.Topics must be set")
+	}
+
+	if c.errorHandler == nil {
+		return errors.Wrap(ErrRequiredOption, "xkafka.ErrorHandler must be set")
+	}
+
+	return nil
 }
 
 // Topics sets the kafka topics to consume.
