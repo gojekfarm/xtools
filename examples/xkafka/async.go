@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 
+	"log/slog"
+
 	"github.com/rs/xid"
 	"github.com/urfave/cli/v2"
-	"log/slog"
 
 	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
@@ -22,7 +23,7 @@ func runAsync(c *cli.Context) error {
 
 	s.generated = generateMessages(topic, 10)
 
-	opts := []xkafka.Option{
+	opts := []xkafka.ConsumerOption{
 		xkafka.Brokers(brokers),
 		xkafka.Topics{topic},
 		xkafka.ConfigMap{

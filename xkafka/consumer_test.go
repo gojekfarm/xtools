@@ -17,7 +17,7 @@ var (
 	testTopics  = Topics{"test-topic"}
 	testBrokers = Brokers{"localhost:9092"}
 	testTimeout = time.Second
-	defaultOpts = []Option{
+	defaultOpts = []ConsumerOption{
 		testTopics,
 		testBrokers,
 		PollTimeout(testTimeout),
@@ -255,15 +255,15 @@ func TestConsumerHandleMessageError(t *testing.T) {
 
 	testcases := []struct {
 		name    string
-		options []Option
+		options []ConsumerOption
 	}{
 		{
 			name:    "sequential",
-			options: []Option{},
+			options: []ConsumerOption{},
 		},
 		{
 			name: "async",
-			options: []Option{
+			options: []ConsumerOption{
 				Concurrency(2),
 			},
 		},
@@ -302,15 +302,15 @@ func TestConsumerErrorCallback(t *testing.T) {
 
 	testcases := []struct {
 		name    string
-		options []Option
+		options []ConsumerOption
 	}{
 		{
 			name:    "sequential",
-			options: []Option{},
+			options: []ConsumerOption{},
 		},
 		{
 			name: "async",
-			options: []Option{
+			options: []ConsumerOption{
 				Concurrency(2),
 			},
 		},
@@ -357,15 +357,15 @@ func TestConsumerReadMessageTimeout(t *testing.T) {
 
 	testcases := []struct {
 		name    string
-		options []Option
+		options []ConsumerOption
 	}{
 		{
 			name:    "sequential",
-			options: []Option{},
+			options: []ConsumerOption{},
 		},
 		{
 			name: "async",
-			options: []Option{
+			options: []ConsumerOption{
 				Concurrency(2),
 			},
 		},
@@ -418,15 +418,15 @@ func TestConsumerKafkaError(t *testing.T) {
 
 	testcases := []struct {
 		name    string
-		options []Option
+		options []ConsumerOption
 	}{
 		{
 			name:    "sequential",
-			options: []Option{},
+			options: []ConsumerOption{},
 		},
 		{
 			name: "async",
-			options: []Option{
+			options: []ConsumerOption{
 				Concurrency(2),
 			},
 		},
@@ -591,15 +591,15 @@ func TestConsumerStoreOffsetsError(t *testing.T) {
 
 	testcases := []struct {
 		name    string
-		options []Option
+		options []ConsumerOption
 	}{
 		{
 			name:    "sequential",
-			options: []Option{},
+			options: []ConsumerOption{},
 		},
 		{
 			name: "async",
-			options: []Option{
+			options: []ConsumerOption{
 				Concurrency(2),
 			},
 		},
@@ -643,17 +643,17 @@ func TestConsumerCommitError(t *testing.T) {
 
 	testcases := []struct {
 		name    string
-		options []Option
+		options []ConsumerOption
 	}{
 		{
 			name: "sequential",
-			options: []Option{
+			options: []ConsumerOption{
 				ManualCommit(true),
 			},
 		},
 		{
 			name: "async",
-			options: []Option{
+			options: []ConsumerOption{
 				ManualCommit(true),
 				Concurrency(2),
 			},
@@ -703,7 +703,7 @@ func testMiddleware(name string, pre, post *[]string) MiddlewareFunc {
 	}
 }
 
-func newTestConsumer(t *testing.T, opts ...Option) (*Consumer, *MockConsumerClient) {
+func newTestConsumer(t *testing.T, opts ...ConsumerOption) (*Consumer, *MockConsumerClient) {
 	mockConsumer := &MockConsumerClient{}
 
 	opts = append(opts, mockConsumerFunc(mockConsumer))

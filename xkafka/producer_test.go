@@ -421,7 +421,7 @@ func TestProducerIgnoreOpaqueMessage(t *testing.T) {
 	mockKafka.AssertExpectations(t)
 }
 
-func newTestProducer(t *testing.T, opts ...Option) (*Producer, *MockProducerClient) {
+func newTestProducer(t *testing.T, opts ...ProducerOption) (*Producer, *MockProducerClient) {
 	mockKafka := &MockProducerClient{}
 
 	mockKafka.On("Events").Return(make(chan kafka.Event, 1))

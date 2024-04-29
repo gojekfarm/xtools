@@ -18,21 +18,19 @@ type Consumer struct {
 	kafka       consumerClient
 	handler     Handler
 	middlewares []middleware
-	config      options
+	config      *consumerConfig
 	cancelCtx   atomic.Pointer[context.CancelFunc]
 }
 
 // NewConsumer creates a new Consumer instance.
-func NewConsumer(name string, handler Handler, opts ...Option) (*Consumer, error) {
-	cfg := defaultConsumerOptions()
-
-	// set default config values
-	_ = cfg.configMap.SetKey("enable.auto.offset.store", false)
-
-	for _, opt := range opts {
-		opt.apply(&cfg)
+func NewConsumer(name string, handler Handler, opts ...ConsumerOption) (*Consumer, error) {
+	cfg, err := newConsumerConfig(opts...)
+	if err != nil {
+		return nil, err
 	}
 
+	// override kafka configs
+	_ = cfg.configMap.SetKey("enable.auto.offset.store", false)
 	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
 	_ = cfg.configMap.SetKey("group.id", name)
 

@@ -18,7 +18,7 @@ type consumerClient interface {
 
 type consumerFunc func(cfg *kafka.ConfigMap) (consumerClient, error)
 
-func (cf consumerFunc) apply(o *options) { o.consumerFn = cf }
+func (cf consumerFunc) setConsumerConfig(o *consumerConfig) { o.consumerFn = cf }
 
 func defaultConsumerFunc(cfg *kafka.ConfigMap) (consumerClient, error) {
 	return kafka.NewConsumer(cfg)
@@ -34,7 +34,7 @@ type producerClient interface {
 
 type producerFunc func(cfg *kafka.ConfigMap) (producerClient, error)
 
-func (pf producerFunc) apply(o *options) { o.producerFn = pf }
+func (pf producerFunc) setProducerConfig(o *producerConfig) { o.producerFn = pf }
 
 func defaultProducerFunc(cfg *kafka.ConfigMap) (producerClient, error) {
 	return kafka.NewProducer(cfg)
