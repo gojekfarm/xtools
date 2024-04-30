@@ -22,13 +22,17 @@ func runAsync(c *cli.Context) error {
 
 	s.generated = generateMessages(topic, 10)
 
-	opts := []xkafka.Option{
+	opts := []xkafka.ConsumerOption{
 		xkafka.Brokers(brokers),
 		xkafka.Topics{topic},
 		xkafka.ConfigMap{
 			"auto.offset.reset": "earliest",
 		},
 		xkafka.Concurrency(2),
+		xkafka.ErrorHandler(func(err error) error {
+			slog.Error(err.Error())
+			return nil
+		}),
 	}
 
 	// start consumers first

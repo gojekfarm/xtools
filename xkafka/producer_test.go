@@ -2,7 +2,6 @@ package xkafka
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -14,6 +13,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var defaultProducerOptions = []ProducerOption{
+	testBrokers,
+	errHandler,
+}
+
 func TestNewProducer(t *testing.T) {
 	cfg := ConfigMap{
 		"socket.keepalive.enable": true,
@@ -21,9 +25,7 @@ func TestNewProducer(t *testing.T) {
 
 	producer, err := NewProducer(
 		"test-producer",
-		testBrokers,
-		cfg,
-		ShutdownTimeout(testTimeout),
+		append(defaultProducerOptions, cfg, ShutdownTimeout(testTimeout))...,
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, producer)
@@ -44,21 +46,41 @@ func TestNewProducer(t *testing.T) {
 	assert.EqualValues(t, expectedConfig, producer.config.configMap)
 }
 
-func TestNewProducerError(t *testing.T) {
-	expectError := errors.New("error in producer")
-
-	fn := func(configMap *kafka.ConfigMap) (producerClient, error) {
-		return nil, expectError
+func TestNewProducerErrors(t *testing.T) {
+	testcases := []struct {
+		name    string
+		options []ProducerOption
+		expect  error
+	}{
+		{
+			name:    "missing brokers",
+			options: []ProducerOption{errHandler},
+			expect:  ErrRequiredOption,
+		},
+		{
+			name:    "missing error handler",
+			options: []ProducerOption{testBrokers},
+			expect:  ErrRequiredOption,
+		},
+		{
+			name: "producer error",
+			options: []ProducerOption{
+				testBrokers, errHandler,
+				producerFunc(func(configMap *kafka.ConfigMap) (producerClient, error) {
+					return nil, assert.AnError
+				}),
+			},
+			expect: assert.AnError,
+		},
 	}
 
-	producer, err := NewProducer(
-		"test-producer",
-		testBrokers,
-		ConfigMap{},
-		producerFunc(fn),
-	)
-	assert.EqualError(t, err, expectError.Error())
-	assert.Nil(t, producer)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := NewProducer("test-producer", tc.options...)
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, tc.expect)
+		})
+	}
 }
 
 func TestProducerPublish(t *testing.T) {
@@ -421,14 +443,15 @@ func TestProducerIgnoreOpaqueMessage(t *testing.T) {
 	mockKafka.AssertExpectations(t)
 }
 
-func newTestProducer(t *testing.T, opts ...Option) (*Producer, *MockProducerClient) {
+func newTestProducer(t *testing.T, opts ...ProducerOption) (*Producer, *MockProducerClient) {
 	mockKafka := &MockProducerClient{}
 
 	mockKafka.On("Events").Return(make(chan kafka.Event, 1))
 	mockKafka.On("Close").Return()
 	mockKafka.On("Flush", mock.Anything).Return(0)
 
-	opts = append(opts, testBrokers, mockProducerFunc(mockKafka), ShutdownTimeout(time.Second))
+	opts = append(defaultProducerOptions, opts...)
+	opts = append(opts, mockProducerFunc(mockKafka), ShutdownTimeout(time.Second))
 
 	producer, err := NewProducer(
 		"producer-id",

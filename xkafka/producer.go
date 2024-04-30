@@ -12,7 +12,7 @@ import (
 // It provides both synchronous and asynchronous publish methods
 // and a channel to stream delivery events.
 type Producer struct {
-	config              options
+	config              *producerConfig
 	kafka               producerClient
 	events              chan kafka.Event
 	middlewares         []middleware
@@ -21,13 +21,13 @@ type Producer struct {
 }
 
 // NewProducer creates a new Producer.
-func NewProducer(name string, opts ...Option) (*Producer, error) {
-	cfg := defaultProducerOptions()
-
-	for _, opt := range opts {
-		opt.apply(&cfg)
+func NewProducer(name string, opts ...ProducerOption) (*Producer, error) {
+	cfg, err := newProducerConfig(opts...)
+	if err != nil {
+		return nil, err
 	}
 
+	// override kafka configs
 	_ = cfg.configMap.SetKey("bootstrap.servers", strings.Join(cfg.brokers, ","))
 	_ = cfg.configMap.SetKey("client.id", name)
 
