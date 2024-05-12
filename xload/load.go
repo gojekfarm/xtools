@@ -41,11 +41,34 @@ func Load(ctx context.Context, v any, opts ...Option) error {
 		return processConcurrently(ctx, v, o)
 	}
 
-	return process(ctx, v, o.tagName, o.loader)
+	return process(ctx, v, o)
+}
+
+func process(ctx context.Context, v any, o *options) error {
+	if !o.detectCollisions {
+		return doProcess(ctx, v, o.tagName, o.loader)
+	}
+
+	keyUsage := make(collisionMap)
+	loaderWithKeyUsage := LoaderFunc(func(ctx context.Context, key string) (string, error) {
+		v, err := o.loader.Load(ctx, key)
+
+		if err == nil {
+			keyUsage.add(key)
+		}
+
+		return v, err
+	})
+
+	if err := doProcess(ctx, v, o.tagName, loaderWithKeyUsage); err != nil {
+		return err
+	}
+
+	return keyUsage.err()
 }
 
 //nolint:funlen,nestif
-func process(ctx context.Context, obj any, tagKey string, loader Loader) error {
+func doProcess(ctx context.Context, obj any, tagKey string, loader Loader) error {
 	v := reflect.ValueOf(obj)
 
 	if v.Kind() != reflect.Ptr {
@@ -141,7 +164,7 @@ func process(ctx context.Context, obj any, tagKey string, loader Loader) error {
 				pld = PrefixLoader(meta.prefix, loader)
 			}
 
-			err := process(ctx, fVal.Interface(), tagKey, pld)
+			err := doProcess(ctx, fVal.Interface(), tagKey, pld)
 			if err != nil {
 				return err
 			}

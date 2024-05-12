@@ -186,6 +186,58 @@ func TestLoad_Structs(t *testing.T) {
 			err:    &ErrInvalidPrefixAndKey{field: "Address", key: "ADDRESS"},
 			loader: MapLoader{},
 		},
+
+		// key collision
+		{
+			name: "key collision",
+			input: &struct {
+				Address1 Address  `env:",prefix=ADDRESS_"`
+				Address2 *Address `env:",prefix=ADDRESS_"`
+			}{},
+			err: &ErrCollision{keys: []string{
+				"ADDRESS_CITY",
+				"ADDRESS_LATITUDE",
+				"ADDRESS_LONGITUTE",
+				"ADDRESS_STREET",
+			}},
+			loader: MapLoader{
+				"ADDRESS_STREET":    "street1",
+				"ADDRESS_CITY":      "city1",
+				"ADDRESS_LONGITUTE": "1.1",
+				"ADDRESS_LATITUDE":  "-2.2",
+			},
+		},
+		{
+			name: "key collision with detection disabled",
+			opts: []Option{SkipCollisionDetection},
+			input: &struct {
+				Address1 Address  `env:",prefix=ADDRESS_"`
+				Address2 *Address `env:",prefix=ADDRESS_"`
+			}{},
+			want: &struct {
+				Address1 Address
+				Address2 *Address
+			}{
+				Address{
+					Street:    "street1",
+					City:      "city1",
+					Longitute: ptr.Float64(1.1),
+					Latitude:  ptr.Float64(-2.2),
+				},
+				&Address{
+					Street:    "street1",
+					City:      "city1",
+					Longitute: ptr.Float64(1.1),
+					Latitude:  ptr.Float64(-2.2),
+				},
+			},
+			loader: MapLoader{
+				"ADDRESS_STREET":    "street1",
+				"ADDRESS_CITY":      "city1",
+				"ADDRESS_LONGITUTE": "1.1",
+				"ADDRESS_LATITUDE":  "-2.2",
+			},
+		},
 	}
 
 	runTestcases(t, testcases)

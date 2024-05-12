@@ -18,6 +18,7 @@ type testcase struct {
 	input  any
 	want   any
 	loader Loader
+	opts   []Option
 	err    error
 }
 
@@ -711,7 +712,7 @@ func runTestcases(t *testing.T, testcases []testcase) {
 		tc := tc
 
 		t.Run("Load_"+tc.name, func(t *testing.T) {
-			err := Load(context.Background(), tc.input, WithLoader(tc.loader))
+			err := Load(context.Background(), tc.input, append(tc.opts, WithLoader(tc.loader))...)
 			if tc.err != nil {
 				assert.Error(t, err)
 				assert.ErrorContains(t, err, tc.err.Error())
@@ -724,7 +725,7 @@ func runTestcases(t *testing.T, testcases []testcase) {
 		})
 
 		t.Run("LoadAsync_"+tc.name, func(t *testing.T) {
-			err := Load(context.Background(), tc.input, Concurrency(5), WithLoader(tc.loader))
+			err := Load(context.Background(), tc.input, append(tc.opts, Concurrency(5), WithLoader(tc.loader))...)
 			if tc.err != nil {
 				assert.Error(t, err)
 				assert.ErrorContains(t, err, tc.err.Error())
