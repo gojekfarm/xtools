@@ -1,7 +1,6 @@
 package xload
 
 import (
-	"sort"
 	"sync"
 )
 
@@ -59,8 +58,6 @@ func keysToErr(collidedKeys []string) error {
 	if len(collidedKeys) == 0 {
 		return nil
 	}
-
-	sort.Strings(collidedKeys)
 
 	return &ErrCollision{keys: collidedKeys}
 }
