@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gotidy/ptr"
+	"github.com/stretchr/testify/assert"
 )
 
 type House struct {
@@ -175,16 +176,16 @@ func TestLoad_Structs(t *testing.T) {
 			input: &struct {
 				Name string `env:",prefix=CLUSTER"`
 			}{},
-			err:    &ErrInvalidPrefix{field: "Name", kind: strKind},
-			loader: MapLoader{},
+			wantErr: errContains(&ErrInvalidPrefix{field: "Name", kind: strKind}),
+			loader:  MapLoader{},
 		},
 		{
 			name: "struct with key and prefix",
 			input: &struct {
 				Address Address `env:"ADDRESS,prefix=CLUSTER"`
 			}{},
-			err:    &ErrInvalidPrefixAndKey{field: "Address", key: "ADDRESS"},
-			loader: MapLoader{},
+			wantErr: errContains(&ErrInvalidPrefixAndKey{field: "Address", key: "ADDRESS"}),
+			loader:  MapLoader{},
 		},
 
 		// key collision
@@ -194,12 +195,16 @@ func TestLoad_Structs(t *testing.T) {
 				Address1 Address  `env:",prefix=ADDRESS_"`
 				Address2 *Address `env:",prefix=ADDRESS_"`
 			}{},
-			err: &ErrCollision{keys: []string{
-				"ADDRESS_CITY",
-				"ADDRESS_LATITUDE",
-				"ADDRESS_LONGITUTE",
-				"ADDRESS_STREET",
-			}},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				tErr := &ErrCollision{}
+				assert.ErrorAs(t, err, &tErr)
+				return assert.ElementsMatch(t, tErr.Keys(), []string{
+					"ADDRESS_CITY",
+					"ADDRESS_LATITUDE",
+					"ADDRESS_LONGITUTE",
+					"ADDRESS_STREET",
+				})
+			},
 			loader: MapLoader{
 				"ADDRESS_STREET":    "street1",
 				"ADDRESS_CITY":      "city1",
@@ -271,8 +276,8 @@ func TestLoad_Decoder(t *testing.T) {
 			input: &struct {
 				Time time.Time `env:"TIME"`
 			}{},
-			loader: MapLoader{"TIME": "invalid"},
-			err:    errors.New("cannot parse"),
+			loader:  MapLoader{"TIME": "invalid"},
+			wantErr: errContains(errors.New("cannot parse")),
 		},
 	}
 
@@ -355,15 +360,15 @@ func TestLoad_JSON(t *testing.T) {
 			input: &struct {
 				Plot Plot `env:"PLOT"`
 			}{},
-			err:    errors.New("invalid character"),
-			loader: MapLoader{"PLOT": `invalid`},
+			wantErr: errContains(errors.New("invalid character")),
+			loader:  MapLoader{"PLOT": `invalid`},
 		},
 		{
 			name: "json: loader error",
 			input: &struct {
 				Plot Plot `env:"PLOT"`
 			}{},
-			err: errors.New("loader error"),
+			wantErr: errContains(errors.New("loader error")),
 			loader: LoaderFunc(func(ctx context.Context, key string) (string, error) {
 				return "", errors.New("loader error")
 			}),
@@ -373,8 +378,8 @@ func TestLoad_JSON(t *testing.T) {
 			input: &struct {
 				Plot Plot `env:"PLOT,required"`
 			}{},
-			err:    &ErrRequired{key: "PLOT"},
-			loader: MapLoader{},
+			wantErr: errContains(&ErrRequired{key: "PLOT"}),
+			loader:  MapLoader{},
 		},
 	}
 
