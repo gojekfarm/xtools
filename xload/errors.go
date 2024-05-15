@@ -61,3 +61,19 @@ type ErrInvalidPrefixAndKey struct {
 func (e ErrInvalidPrefixAndKey) Error() string {
 	return fmt.Sprintf("`%s` key=%s has both prefix and key", e.field, e.key)
 }
+
+// ErrCollision is returned when key collisions are detected.
+// Collision can happen when two or more fields have the same full key.
+type ErrCollision struct{ keys []string }
+
+func (e *ErrCollision) Error() string {
+	return fmt.Sprintf("xload: key collisions detected for keys: %v", e.keys)
+}
+
+// Keys returns the collided keys.
+func (e *ErrCollision) Keys() []string {
+	keysCopy := make([]string, len(e.keys))
+	copy(keysCopy, e.keys)
+
+	return keysCopy
+}

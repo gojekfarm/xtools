@@ -36,3 +36,14 @@ func TestErrUnknownTagOption_Error(t *testing.T) {
 		})
 	}
 }
+
+func TestErrCollision(t *testing.T) {
+	ks := []string{
+		"KEY_A",
+		"KEY_B",
+	}
+	err := &ErrCollision{keys: ks}
+
+	assert.ElementsMatch(t, ks, err.Keys())
+	assert.Equal(t, "xload: key collisions detected for keys: [KEY_A KEY_B]", err.Error())
+}

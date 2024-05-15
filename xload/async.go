@@ -13,7 +13,31 @@ import (
 type loadAndSet func(context.Context, reflect.Value) error
 type loadAndSetPointer func(context.Context, reflect.Value, reflect.Value, bool) error
 
-func processConcurrently(ctx context.Context, v any, opts *options) error {
+func processConcurrently(ctx context.Context, v any, o *options) error {
+	if !o.detectCollisions {
+		return doProcessConcurrently(ctx, v, o)
+	}
+
+	syncKeyUsage := &collisionSyncMap{}
+	ldr := o.loader
+	o.loader = LoaderFunc(func(ctx context.Context, key string) (string, error) {
+		v, err := ldr.Load(ctx, key)
+
+		if err == nil {
+			syncKeyUsage.add(key)
+		}
+
+		return v, err
+	})
+
+	if err := doProcessConcurrently(ctx, v, o); err != nil {
+		return err
+	}
+
+	return syncKeyUsage.err()
+}
+
+func doProcessConcurrently(ctx context.Context, v any, opts *options) error {
 	doneCh := make(chan struct{}, 1)
 	defer close(doneCh)
 

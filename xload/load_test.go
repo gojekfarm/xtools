@@ -14,11 +14,18 @@ import (
 )
 
 type testcase struct {
-	name   string
-	input  any
-	want   any
-	loader Loader
-	err    error
+	name    string
+	input   any
+	want    any
+	loader  Loader
+	opts    []Option
+	wantErr assert.ErrorAssertionFunc
+}
+
+func errContains(want error) assert.ErrorAssertionFunc {
+	return func(t assert.TestingT, err error, msgArgs ...interface{}) bool {
+		return assert.ErrorContains(t, err, want.Error(), msgArgs...)
+	}
 }
 
 func TestLoad_Default(t *testing.T) {
@@ -48,16 +55,16 @@ func TestLoad_Errors(t *testing.T) {
 			input: struct {
 				Host string `env:"HOST"`
 			}{},
-			loader: MapLoader{},
-			err:    ErrNotPointer,
+			loader:  MapLoader{},
+			wantErr: errContains(ErrNotPointer),
 		},
 
 		// not a struct
 		{
-			name:   "not a struct",
-			input:  ptr.String(""),
-			loader: MapLoader{},
-			err:    ErrNotStruct,
+			name:    "not a struct",
+			input:   ptr.String(""),
+			loader:  MapLoader{},
+			wantErr: errContains(ErrNotStruct),
 		},
 
 		// private fields
@@ -105,7 +112,7 @@ func TestLoad_Errors(t *testing.T) {
 			loader: LoaderFunc(func(ctx context.Context, k string) (string, error) {
 				return "", errors.New("loader error")
 			}),
-			err: errors.New("loader error"),
+			wantErr: errContains(errors.New("loader error")),
 		},
 
 		// unknown tag option
@@ -114,8 +121,8 @@ func TestLoad_Errors(t *testing.T) {
 			input: &struct {
 				Host string `env:"HOST,unknown"`
 			}{},
-			loader: MapLoader{},
-			err:    &ErrUnknownTagOption{key: "HOST", opt: "unknown"},
+			loader:  MapLoader{},
+			wantErr: errContains(&ErrUnknownTagOption{key: "HOST", opt: "unknown"}),
 		},
 	}
 
@@ -158,8 +165,8 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Bool bool `env:"BOOL"`
 			}{},
-			loader: MapLoader{"BOOL": "invalid"},
-			err:    errors.New("invalid syntax"),
+			loader:  MapLoader{"BOOL": "invalid"},
+			wantErr: errContains(errors.New("invalid syntax")),
 		},
 
 		// integer values
@@ -198,8 +205,8 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Int int `env:"INT"`
 			}{},
-			loader: MapLoader{"INT": "invalid"},
-			err:    errors.New("unable to cast"),
+			loader:  MapLoader{"INT": "invalid"},
+			wantErr: errContains(errors.New("unable to cast")),
 		},
 
 		// unsigned integer values
@@ -238,8 +245,8 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Uint uint `env:"UINT"`
 			}{},
-			loader: MapLoader{"UINT": "invalid"},
-			err:    errors.New("unable to cast"),
+			loader:  MapLoader{"UINT": "invalid"},
+			wantErr: errContains(errors.New("unable to cast")),
 		},
 
 		// floating-point values
@@ -266,8 +273,8 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Float float32 `env:"FLOAT"`
 			}{},
-			loader: MapLoader{"FLOAT": "invalid"},
-			err:    errors.New("unable to cast"),
+			loader:  MapLoader{"FLOAT": "invalid"},
+			wantErr: errContains(errors.New("unable to cast")),
 		},
 
 		// duration values
@@ -294,8 +301,8 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Duration time.Duration `env:"DURATION"`
 			}{},
-			loader: MapLoader{"DURATION": "invalid"},
-			err:    errors.New("invalid duration"),
+			loader:  MapLoader{"DURATION": "invalid"},
+			wantErr: errContains(errors.New("invalid duration")),
 		},
 
 		// string values
@@ -374,8 +381,8 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Int64Slice []int64 `env:"INT64_SLICE"`
 			}{},
-			loader: MapLoader{"INT64_SLICE": "invalid,2"},
-			err:    errors.New("unable to cast"),
+			loader:  MapLoader{"INT64_SLICE": "invalid,2"},
+			wantErr: errContains(errors.New("unable to cast")),
 		},
 
 		// map values
@@ -410,24 +417,24 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				StringMap map[string]string `env:"STRING_MAP"`
 			}{},
-			loader: MapLoader{"STRING_MAP": "key1::value1,key2::value2"},
-			err:    &ErrInvalidMapValue{key: "STRING_MAP"},
+			loader:  MapLoader{"STRING_MAP": "key1::value1,key2::value2"},
+			wantErr: errContains(&ErrInvalidMapValue{key: "STRING_MAP"}),
 		},
 		{
 			name: "map: invalid value",
 			input: &struct {
 				Int64Map map[string]int64 `env:"INT64_MAP"`
 			}{},
-			loader: MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
-			err:    errors.New("unable to cast"),
+			loader:  MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
+			wantErr: errContains(errors.New("unable to cast")),
 		},
 		{
 			name: "map: invalid key",
 			input: &struct {
 				Int64Map map[int]int64 `env:"INT64_MAP"`
 			}{},
-			loader: MapLoader{"INT64_MAP": "key1=1,key2=2"},
-			err:    errors.New("unable to cast"),
+			loader:  MapLoader{"INT64_MAP": "key1=1,key2=2"},
+			wantErr: errContains(errors.New("unable to cast")),
 		},
 
 		// unknown key type
@@ -436,8 +443,8 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Unknown interface{} `env:"UNKNOWN"`
 			}{},
-			loader: MapLoader{"UNKNOWN": "1+2i"},
-			err:    &ErrUnknownFieldType{field: "Unknown", key: "UNKNOWN", kind: anyKind},
+			loader:  MapLoader{"UNKNOWN": "1+2i"},
+			wantErr: errContains(&ErrUnknownFieldType{field: "Unknown", key: "UNKNOWN", kind: anyKind}),
 		},
 		{
 			name: "nested unknown key type",
@@ -446,8 +453,8 @@ func TestLoad_NativeTypes(t *testing.T) {
 					Unknown interface{} `env:"UNKNOWN"`
 				} `env:",prefix=NESTED_"`
 			}{},
-			loader: MapLoader{"NESTED_UNKNOWN": "1+2i"},
-			err:    &ErrUnknownFieldType{field: "Unknown", key: "UNKNOWN", kind: anyKind},
+			loader:  MapLoader{"NESTED_UNKNOWN": "1+2i"},
+			wantErr: errContains(&ErrUnknownFieldType{field: "Unknown", key: "UNKNOWN", kind: anyKind}),
 		},
 	}
 
@@ -509,8 +516,8 @@ func TestLoad_ArrayTypes(t *testing.T) {
 			input: &struct {
 				Int64Slice []int64 `env:"INT64_SLICE"`
 			}{},
-			loader: MapLoader{"INT64_SLICE": "invalid,2"},
-			err:    errors.New("unable to cast"),
+			loader:  MapLoader{"INT64_SLICE": "invalid,2"},
+			wantErr: errContains(errors.New("unable to cast")),
 		},
 	}
 
@@ -576,24 +583,24 @@ func TestLoad_MapTypes(t *testing.T) {
 			input: &struct {
 				StringMap map[string]string `env:"STRING_MAP"`
 			}{},
-			loader: MapLoader{"STRING_MAP": "key1::value1,key2::value2"},
-			err:    &ErrInvalidMapValue{key: "STRING_MAP"},
+			loader:  MapLoader{"STRING_MAP": "key1::value1,key2::value2"},
+			wantErr: errContains(&ErrInvalidMapValue{key: "STRING_MAP"}),
 		},
 		{
 			name: "map: invalid value",
 			input: &struct {
 				Int64Map map[string]int64 `env:"INT64_MAP"`
 			}{},
-			loader: MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
-			err:    errors.New("unable to cast"),
+			loader:  MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
+			wantErr: errContains(errors.New("unable to cast")),
 		},
 		{
 			name: "map: invalid key",
 			input: &struct {
 				Int64Map map[int]int64 `env:"INT64_MAP"`
 			}{},
-			loader: MapLoader{"INT64_MAP": "key1=1,key2=2"},
-			err:    errors.New("unable to cast"),
+			loader:  MapLoader{"INT64_MAP": "key1=1,key2=2"},
+			wantErr: errContains(errors.New("unable to cast")),
 		},
 	}
 
@@ -672,32 +679,32 @@ func TestOption_Required(t *testing.T) {
 			input: &struct {
 				Name string `env:"NAME,required"`
 			}{},
-			err:    &ErrRequired{key: "NAME"},
-			loader: MapLoader{},
+			wantErr: errContains(&ErrRequired{key: "NAME"}),
+			loader:  MapLoader{},
 		},
 		{
 			name: "required custom decoder",
 			input: &struct {
 				Name CustomGob `env:"NAME,required"`
 			}{},
-			err:    &ErrRequired{key: "NAME"},
-			loader: MapLoader{},
+			wantErr: errContains(&ErrRequired{key: "NAME"}),
+			loader:  MapLoader{},
 		},
 		{
 			name: "required option: empty value",
 			input: &struct {
 				Name *string `env:"NAME,required"`
 			}{},
-			err:    &ErrRequired{key: "NAME"},
-			loader: MapLoader{"NAME": ""},
+			wantErr: errContains(&ErrRequired{key: "NAME"}),
+			loader:  MapLoader{"NAME": ""},
 		},
 		{
 			name: "missing key",
 			input: &struct {
 				Name string `env:",required"`
 			}{},
-			err:    ErrMissingKey,
-			loader: MapLoader{},
+			wantErr: errContains(ErrMissingKey),
+			loader:  MapLoader{},
 		},
 	}
 
@@ -711,10 +718,9 @@ func runTestcases(t *testing.T, testcases []testcase) {
 		tc := tc
 
 		t.Run("Load_"+tc.name, func(t *testing.T) {
-			err := Load(context.Background(), tc.input, WithLoader(tc.loader))
-			if tc.err != nil {
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, tc.err.Error())
+			err := Load(context.Background(), tc.input, append(tc.opts, WithLoader(tc.loader))...)
+			if tc.wantErr != nil {
+				tc.wantErr(t, err)
 
 				return
 			}
@@ -724,10 +730,9 @@ func runTestcases(t *testing.T, testcases []testcase) {
 		})
 
 		t.Run("LoadAsync_"+tc.name, func(t *testing.T) {
-			err := Load(context.Background(), tc.input, Concurrency(5), WithLoader(tc.loader))
-			if tc.err != nil {
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, tc.err.Error())
+			err := Load(context.Background(), tc.input, append(tc.opts, Concurrency(5), WithLoader(tc.loader))...)
+			if tc.wantErr != nil {
+				tc.wantErr(t, err)
 
 				return
 			}

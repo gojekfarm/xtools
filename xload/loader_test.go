@@ -46,7 +46,7 @@ func TestSerialLoader(t *testing.T) {
 					return "", errors.New("error loading field")
 				}),
 			),
-			err: errors.New("error loading field"),
+			wantErr: errContains(errors.New("error loading field")),
 		},
 	}
 
