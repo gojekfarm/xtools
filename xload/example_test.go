@@ -306,3 +306,23 @@ func ExampleLoad_extendingStructs() {
 		panic(err)
 	}
 }
+
+func ExampleLoad_skipCollisionDetection() {
+	type AppConf struct {
+		Host string `env:"HOST"`
+		// Hostname is also loaded from HOST, and no error is returned
+		Hostname string        `env:"HOST"`
+		Timeout  time.Duration `env:"TIMEOUT"`
+	}
+
+	var conf AppConf
+
+	err := xload.Load(
+		context.Background(),
+		&conf,
+		xload.SkipCollisionDetection,
+	)
+	if err != nil {
+		panic(err)
+	}
+}
