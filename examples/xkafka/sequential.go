@@ -6,9 +6,10 @@ import (
 	"math/rand"
 	"time"
 
+	"log/slog"
+
 	"github.com/rs/xid"
 	"github.com/urfave/cli/v2"
-	"log/slog"
 
 	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
