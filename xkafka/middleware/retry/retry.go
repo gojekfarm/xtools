@@ -62,7 +62,7 @@ func newConfig(opts ...Option) *config {
 	return c
 }
 
-// ExponentialBackoff returns an exponential backoff retry middleware.
+// ExponentialBackoff is a middleware with exponential backoff retry strategy.
 func ExponentialBackoff(opts ...Option) xkafka.MiddlewareFunc {
 	cfg := newConfig(opts...)
 
