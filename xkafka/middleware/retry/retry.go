@@ -60,8 +60,8 @@ func newConfig(opts ...Option) *config {
 	c := &config{
 		maxRetries:  100,
 		maxLifetime: time.Hour,
-		delay:       time.Second,
-		jitter:      100 * time.Millisecond,
+		delay:       200 * time.Millisecond,
+		jitter:      20 * time.Millisecond,
 		multiplier:  1.5,
 	}
 
@@ -78,8 +78,8 @@ func newConfig(opts ...Option) *config {
 // Default values:
 // - MaxRetries: 100
 // - MaxLifetime: 1 hour
-// - Delay: 1 second
-// - Jitter: 100 milliseconds
+// - Delay: 200 milliseconds
+// - Jitter: 20 milliseconds
 // - Multiplier: 1.5
 func ExponentialBackoff(opts ...Option) xkafka.MiddlewareFunc {
 	cfg := newConfig(opts...)
@@ -92,7 +92,8 @@ func ExponentialBackoff(opts ...Option) xkafka.MiddlewareFunc {
 			expBackoff.RandomizationFactor = float64(cfg.jitter) / float64(cfg.delay)
 			expBackoff.Multiplier = cfg.multiplier
 
-			attempt := 0
+			b := backoff.WithMaxRetries(expBackoff, uint64(cfg.maxRetries))
+			b = backoff.WithContext(b, ctx)
 
 			return backoff.Retry(func() error {
 				err := next.Handle(ctx, msg)
@@ -104,14 +105,8 @@ func ExponentialBackoff(opts ...Option) xkafka.MiddlewareFunc {
 					return backoff.Permanent(err)
 				}
 
-				attempt++
-
-				if attempt > cfg.maxRetries {
-					return err
-				}
-
 				return err
-			}, expBackoff)
+			}, b)
 		})
 	}
 }

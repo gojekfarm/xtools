@@ -27,11 +27,13 @@ func TestExponentialBackoff_MaxRetries(t *testing.T) {
 		return assert.AnError
 	})
 
-	mw := ExponentialBackoff(MaxRetries(3))
+	mw := ExponentialBackoff(
+		MaxRetries(3),
+	)
 
 	err := mw(handler).Handle(context.TODO(), msg)
 	assert.ErrorIs(t, err, assert.AnError)
-	assert.Equal(t, 3, attempts)
+	assert.Equal(t, 4, attempts)
 }
 
 func TestExponentialBackoff_MaxLifetime(t *testing.T) {
