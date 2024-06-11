@@ -1,3 +1,4 @@
+// Package retry provides middlewares for retrying transient errors.
 package retry
 
 import (
