@@ -6,11 +6,14 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+
 	"github.com/gojekfarm/xtools/xkafka"
 )
 
-// ErrRetryLimitExceeded is returned when the maximum number of retries is exceeded.
-var ErrRetryLimitExceeded = errors.New("[xkafka/retry] retry limit exceeded")
+var (
+	// ErrPermanent is returned when the error should not be retried.
+	ErrPermanent = errors.New("[xkafka/retry] permanent error")
+)
 
 // Option configures the retry middleware.
 type Option interface {
@@ -53,7 +56,13 @@ type config struct {
 }
 
 func newConfig(opts ...Option) *config {
-	c := &config{}
+	c := &config{
+		maxRetries:  100,
+		maxLifetime: time.Hour,
+		delay:       time.Second,
+		jitter:      100 * time.Millisecond,
+		multiplier:  1.5,
+	}
 
 	for _, opt := range opts {
 		opt.apply(c)
@@ -63,6 +72,14 @@ func newConfig(opts ...Option) *config {
 }
 
 // ExponentialBackoff is a middleware with exponential backoff retry strategy.
+// It retries the handler until the maximum number of retries or the maximum
+// lifetime is reached.
+// Default values:
+// - MaxRetries: 100
+// - MaxLifetime: 1 hour
+// - Delay: 1 second
+// - Jitter: 100 milliseconds
+// - Multiplier: 1.5
 func ExponentialBackoff(opts ...Option) xkafka.MiddlewareFunc {
 	cfg := newConfig(opts...)
 
@@ -77,13 +94,22 @@ func ExponentialBackoff(opts ...Option) xkafka.MiddlewareFunc {
 			attempt := 0
 
 			return backoff.Retry(func() error {
+				err := next.Handle(ctx, msg)
+				if err == nil {
+					return nil
+				}
+
+				if errors.Is(err, ErrPermanent) {
+					return backoff.Permanent(err)
+				}
+
 				attempt++
 
 				if attempt > cfg.maxRetries {
-					return backoff.Permanent(ErrRetryLimitExceeded)
+					return err
 				}
 
-				return next.Handle(ctx, msg)
+				return err
 			}, expBackoff)
 		})
 	}

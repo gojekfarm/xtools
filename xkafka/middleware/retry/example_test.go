@@ -2,8 +2,9 @@ package retry_test
 
 import (
 	"context"
-	"log/slog"
 	"time"
+
+	"log/slog"
 
 	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/gojekfarm/xtools/xkafka/middleware/retry"
@@ -32,11 +33,14 @@ func Example() {
 
 	consumer.Use(
 		retry.ExponentialBackoff(
-			retry.MaxRetries(3),
-			retry.MaxLifetime(10*time.Second),
-			retry.Delay(1*time.Second),
-			retry.Jitter(100*time.Millisecond),
+			retry.MaxRetries(3),                // retry 3 times
+			retry.MaxLifetime(10*time.Second),  // don't retry after 10 seconds
+			retry.Delay(1*time.Second),         // initial delay
+			retry.Jitter(100*time.Millisecond), // random delay to avoid thundering herd
+			retry.Multiplier(1.5),              // multiplier for exponential backoff
 		),
+		// add other middlewares after retry to run them
+		// on each retry, like logging, metrics, etc.
 	)
 
 	// ... run consumer
