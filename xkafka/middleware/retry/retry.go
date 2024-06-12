@@ -27,11 +27,10 @@ type MaxRetries int
 
 func (m MaxRetries) apply(c *config) { c.maxRetries = int(m) }
 
-// MaxLifetime sets the maximum retry duration since the first execution.
-// ErrRetryLimitExceeded is returned after the duration is exceeded.
-type MaxLifetime time.Duration
+// MaxDuration sets the maximum retry duration since the first execution.
+type MaxDuration time.Duration
 
-func (m MaxLifetime) apply(c *config) { c.maxLifetime = time.Duration(m) }
+func (m MaxDuration) apply(c *config) { c.maxDuration = time.Duration(m) }
 
 // Delay sets the delay between each retry.
 type Delay time.Duration
@@ -50,7 +49,7 @@ func (m Multiplier) apply(c *config) { c.multiplier = float64(m) }
 
 type config struct {
 	maxRetries  int
-	maxLifetime time.Duration
+	maxDuration time.Duration
 	delay       time.Duration
 	jitter      time.Duration
 	multiplier  float64
@@ -59,7 +58,7 @@ type config struct {
 func newConfig(opts ...Option) *config {
 	c := &config{
 		maxRetries:  100,
-		maxLifetime: time.Hour,
+		maxDuration: time.Hour,
 		delay:       200 * time.Millisecond,
 		jitter:      20 * time.Millisecond,
 		multiplier:  1.5,
@@ -77,7 +76,7 @@ func newConfig(opts ...Option) *config {
 // lifetime is reached.
 // Default values:
 // - MaxRetries: 100
-// - MaxLifetime: 1 hour
+// - MaxDuration: 1 hour
 // - Delay: 200 milliseconds
 // - Jitter: 20 milliseconds
 // - Multiplier: 1.5
@@ -88,7 +87,7 @@ func ExponentialBackoff(opts ...Option) xkafka.MiddlewareFunc {
 		return xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
 			expBackoff := backoff.NewExponentialBackOff()
 			expBackoff.InitialInterval = cfg.delay
-			expBackoff.MaxElapsedTime = cfg.maxLifetime
+			expBackoff.MaxElapsedTime = cfg.maxDuration
 			expBackoff.RandomizationFactor = float64(cfg.jitter) / float64(cfg.delay)
 			expBackoff.Multiplier = cfg.multiplier
 
@@ -97,10 +96,6 @@ func ExponentialBackoff(opts ...Option) xkafka.MiddlewareFunc {
 
 			return backoff.Retry(func() error {
 				err := next.Handle(ctx, msg)
-				if err == nil {
-					return nil
-				}
-
 				if errors.Is(err, ErrPermanent) {
 					return backoff.Permanent(err)
 				}

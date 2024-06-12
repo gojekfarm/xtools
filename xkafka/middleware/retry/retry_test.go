@@ -36,7 +36,7 @@ func TestExponentialBackoff_MaxRetries(t *testing.T) {
 	assert.Equal(t, 4, attempts)
 }
 
-func TestExponentialBackoff_MaxLifetime(t *testing.T) {
+func TestExponentialBackoff_MaxDuration(t *testing.T) {
 	msg := &xkafka.Message{
 		Topic:     "test-topic",
 		Group:     "test-group",
@@ -51,7 +51,7 @@ func TestExponentialBackoff_MaxLifetime(t *testing.T) {
 
 	mw := ExponentialBackoff(
 		MaxRetries(1000),
-		MaxLifetime(1*time.Second),
+		MaxDuration(1*time.Second),
 		Delay(10*time.Millisecond),
 		Jitter(2*time.Millisecond),
 		Multiplier(1.5),

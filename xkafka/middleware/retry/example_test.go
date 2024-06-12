@@ -34,7 +34,7 @@ func Example() {
 	consumer.Use(
 		retry.ExponentialBackoff(
 			retry.MaxRetries(3),                // retry 3 times
-			retry.MaxLifetime(10*time.Second),  // don't retry after 10 seconds
+			retry.MaxDuration(10*time.Second),  // don't retry after 10 seconds
 			retry.Delay(1*time.Second),         // initial delay
 			retry.Jitter(100*time.Millisecond), // random delay to avoid thundering herd
 			retry.Multiplier(1.5),              // multiplier for exponential backoff
