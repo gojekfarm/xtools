@@ -7,7 +7,7 @@ toolchain go1.21.0
 replace github.com/gojekfarm/xtools/xkafka => ../../
 
 require (
-	github.com/gojekfarm/xtools/xkafka v0.7.0
+	github.com/gojekfarm/xtools/xkafka v0.8.0
 	github.com/rs/zerolog v1.29.0
 )
 
