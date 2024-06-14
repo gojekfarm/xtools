@@ -5,7 +5,7 @@ go 1.20
 replace github.com/gojekfarm/xtools/xload => ../..
 
 require (
-	github.com/gojekfarm/xtools/xload v0.7.0
+	github.com/gojekfarm/xtools/xload v0.8.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

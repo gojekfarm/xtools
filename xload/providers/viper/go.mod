@@ -5,7 +5,7 @@ go 1.21.3
 replace github.com/gojekfarm/xtools/xload => ../..
 
 require (
-	github.com/gojekfarm/xtools/xload v0.7.0
+	github.com/gojekfarm/xtools/xload v0.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 )

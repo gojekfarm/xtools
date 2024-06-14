@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.8.0]
+
+### Added
+
+- [`xkafka`](./xkafka): add slog middleware ([#45](https://github.com/gojekfarm/xtools/pull/45))
+- [`xkafka`](./xkafka): add retry middleware ([#44](https://github.com/gojekfarm/xtools/pull/44))
+
+### Changed
+
+- [`xload`](./xload): add key collision detection ([#43](https://github.com/gojekfarm/xtools/pull/43))
+- [`xkafka`](./xkafka): `xkafka.ErrorHandler` is now a required option ([#41](https://github.com/gojekfarm/xtools/pull/41))
+
 ## [0.7.0]
 
 ### Added
@@ -65,8 +77,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`xpod`](./xpod) Added `xpod` package which contains utilities that help implement best practices for health checks
   and more, while building go apps for kubernetes pods.
 - [`xkafka/middleware`](./xkafka/middleware)
-    - Added Prometheus middleware for `Consumer` and `Producer` implementations.
-    - Added Logging MiddlewareFunc.
+  - Added Prometheus middleware for `Consumer` and `Producer` implementations.
+  - Added Logging MiddlewareFunc.
 
 ## [0.2.0]
 
@@ -89,22 +101,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`generic`](./generic) package added
 - [`xproto`](./xproto) package added
 
-[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.7.0...HEAD
-
+[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.8.0
 [0.7.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.7.0
-
 [0.6.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.6.0
-
 [0.5.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.5.0
-
 [0.4.1]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.1
-
 [0.4.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.4.0
-
 [0.3.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.3.0
-
 [0.2.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.2.0
-
 [0.1.1]: https://github.com/gojekfarm/xtools/releases/tag/v0.1.1
-
 [0.1.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.1.0

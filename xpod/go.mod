@@ -3,7 +3,7 @@ module github.com/gojekfarm/xtools/xpod
 go 1.18
 
 require (
-	github.com/gojekfarm/xtools/generic v0.7.0
+	github.com/gojekfarm/xtools/generic v0.8.0
 	github.com/stretchr/testify v1.8.2
 )
 
