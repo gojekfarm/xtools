@@ -1,0 +1,2 @@
+CREATE DATABASE riverkfq;
+GRANT ALL PRIVILEGES ON DATABASE riverkfq TO postgres;
