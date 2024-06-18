@@ -66,12 +66,12 @@ func (e ErrInvalidPrefixAndKey) Error() string {
 // Collision can happen when two or more fields have the same full key.
 type ErrCollision struct{ keys []string }
 
-func (e *ErrCollision) Error() string {
+func (e ErrCollision) Error() string {
 	return fmt.Sprintf("xload: key collisions detected for keys: %v", e.keys)
 }
 
 // Keys returns the collided keys.
-func (e *ErrCollision) Keys() []string {
+func (e ErrCollision) Keys() []string {
 	keysCopy := make([]string, len(e.keys))
 	copy(keysCopy, e.keys)
 
