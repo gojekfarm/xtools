@@ -360,8 +360,22 @@ func TestLoad_JSON(t *testing.T) {
 			input: &struct {
 				Plot Plot `env:"PLOT"`
 			}{},
-			wantErr: errContains(errors.New("invalid character")),
-			loader:  MapLoader{"PLOT": `invalid`},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errDec := new(ErrDecode)
+				return assert.ErrorAs(t, err, &errDec, i...) && assert.Equal(t, "invalid", errDec.Value())
+			},
+			loader: MapLoader{"PLOT": `invalid`},
+		},
+		{
+			name: "json: array(not-struct) invalid",
+			input: &struct {
+				Plots Plots `env:"PLOTS"`
+			}{},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errDec := new(ErrDecode)
+				return assert.ErrorAs(t, err, &errDec, i...) && assert.Equal(t, "invalid", errDec.Value())
+			},
+			loader: MapLoader{"PLOTS": `invalid`},
 		},
 		{
 			name: "json: loader error",

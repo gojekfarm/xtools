@@ -77,3 +77,19 @@ func (e *ErrCollision) Keys() []string {
 
 	return keysCopy
 }
+
+// ErrDecode wraps the actual error that occurred during decoding value to go type.
+type ErrDecode struct {
+	key string
+	val string
+	err error
+}
+
+// Value returns the raw value that was used to decode the key.
+func (e ErrDecode) Value() string { return e.val }
+
+func (e ErrDecode) Error() string {
+	return fmt.Sprintf("xload: unable to decode value for key %s: %v", e.key, e.err)
+}
+
+func (e ErrDecode) Unwrap() error { return e.err }
