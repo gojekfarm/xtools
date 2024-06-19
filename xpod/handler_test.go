@@ -55,6 +55,8 @@ func TestProbeHandler_serveCheckers(t *testing.T) {
 		})
 	}
 
+	redisErr := errors.New("redis-connect-error")
+
 	tests := []struct {
 		name        string
 		opts        Options
@@ -83,12 +85,12 @@ healthz check passed
 			opts: Options{
 				HealthCheckers: []Checker{
 					CheckerFunc("redis", func(_ *http.Request) error {
-						return errors.New("redis-connect-error")
+						return redisErr
 					}),
 				},
 				ReadyCheckers: []Checker{
 					CheckerFunc("redis", func(_ *http.Request) error {
-						return errors.New("redis-connect-error")
+						return redisErr
 					}),
 				},
 			},
@@ -96,8 +98,15 @@ healthz check passed
 				m.On("Logf", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 					argsMap := args.Get(1).(map[string]interface{})
 
-					assert.Equal(t, "check failed", args.String(0))
+					assert.Equal(t, "healthz check failed", args.String(0))
 					assert.Equal(t, "redis", argsMap["failed_checks"])
+
+					errsV := argsMap["errs"]
+					assert.NotNil(t, errsV)
+					errs, ok := errsV.(error)
+					assert.True(t, ok)
+
+					assert.ErrorIs(t, errs, redisErr)
 				})
 			},
 			want: func(t *testing.T, got string) {
