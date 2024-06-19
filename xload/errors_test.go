@@ -1,6 +1,7 @@
 package xload
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,4 +47,15 @@ func TestErrCollision(t *testing.T) {
 
 	assert.ElementsMatch(t, ks, err.Keys())
 	assert.Equal(t, "xload: key collisions detected for keys: [KEY_A KEY_B]", err.Error())
+}
+
+func TestErrDecodeValue(t *testing.T) {
+	errDecode := errors.New("decode error")
+	err := &ErrDecode{
+		key: "KEY_A",
+		err: errDecode,
+	}
+
+	assert.EqualError(t, err, "xload: unable to decode value for key KEY_A: decode error")
+	assert.ErrorIs(t, err, errDecode)
 }

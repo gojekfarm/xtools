@@ -66,14 +66,30 @@ func (e ErrInvalidPrefixAndKey) Error() string {
 // Collision can happen when two or more fields have the same full key.
 type ErrCollision struct{ keys []string }
 
-func (e *ErrCollision) Error() string {
+func (e ErrCollision) Error() string {
 	return fmt.Sprintf("xload: key collisions detected for keys: %v", e.keys)
 }
 
 // Keys returns the collided keys.
-func (e *ErrCollision) Keys() []string {
+func (e ErrCollision) Keys() []string {
 	keysCopy := make([]string, len(e.keys))
 	copy(keysCopy, e.keys)
 
 	return keysCopy
 }
+
+// ErrDecode wraps the actual error that occurred during decoding value to go type.
+type ErrDecode struct {
+	key string
+	val string
+	err error
+}
+
+// Value returns the raw value that was used to decode the key.
+func (e ErrDecode) Value() string { return e.val }
+
+func (e ErrDecode) Error() string {
+	return fmt.Sprintf("xload: unable to decode value for key %s: %v", e.key, e.err)
+}
+
+func (e ErrDecode) Unwrap() error { return e.err }

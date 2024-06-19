@@ -183,7 +183,11 @@ func loadAndSetWithOriginal(loader Loader, meta *field) loadAndSetPointer {
 
 		if ok, err := decode(fVal, val); ok {
 			if err != nil {
-				return err
+				return &ErrDecode{
+					key: meta.key,
+					val: val,
+					err: err,
+				}
 			}
 
 			setNilStructPtr(original, fVal, isNilStructPtr)

@@ -150,7 +150,11 @@ func doProcess(ctx context.Context, obj any, tagKey string, loader Loader) error
 
 				if ok, err := decode(fVal, val); ok {
 					if err != nil {
-						return err
+						return &ErrDecode{
+							key: meta.key,
+							val: val,
+							err: err,
+						}
 					}
 
 					setNilStructPtr(fVal)
@@ -262,7 +266,15 @@ func setVal(field reflect.Value, val string, meta *field) error {
 
 	dec, err := decode(field, val)
 	if dec || err != nil {
-		return err
+		if err != nil {
+			return &ErrDecode{
+				key: meta.key,
+				val: val,
+				err: err,
+			}
+		}
+
+		return nil
 	}
 
 	ty := field.Type()
