@@ -3,6 +3,7 @@ package sentinel
 import (
 	"bytes"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -79,11 +80,17 @@ func (s *SentinelTestSuite) Test_MasterAddr_WithFailoverCallback_Success() {
 		Dial:       func(addr string) (redigo.Conn, error) { return redigo.Dial("tcp", addr) },
 	}
 
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
 	var buf1, buf2 bytes.Buffer
 	callbackFunc1 := func(oldMasterAddr, newMasterAddr string) {
+		defer wg.Done()
+
 		_, _ = fmt.Fprintf(&buf1, "Executing callback1 func %s %s", oldMasterAddr, newMasterAddr)
 	}
 	callbackFunc2 := func(oldMasterAddr, newMasterAddr string) {
+		defer wg.Done()
+
 		_, _ = fmt.Fprintf(&buf2, "Executing callback2 func %s %s", oldMasterAddr, newMasterAddr)
 	}
 
@@ -98,8 +105,10 @@ func (s *SentinelTestSuite) Test_MasterAddr_WithFailoverCallback_Success() {
 	s.simulateFailover()
 
 	addr, err = sntnl.MasterAddr()
-	time.Sleep(2 * time.Second)
 	s.NoError(err)
+
+	wg.Wait()
+
 	s.Equal("[::]:6378", addr)
 	s.Equal("Executing callback1 func [::]:6379 [::]:6378", buf1.String())
 	s.Equal("Executing callback2 func [::]:6379 [::]:6378", buf2.String())
