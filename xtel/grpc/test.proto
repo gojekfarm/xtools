@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+option go_package = "../grpc;grpc";
+
+service TestService {
+  rpc TestMethod(TestMethodRequest) returns (TestMethodResponse) {}
+}
+
+message TestMethodRequest {
+  string key = 1;
+}
+
+message TestMethodResponse {
+  string value = 1;
+}

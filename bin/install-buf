@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+BIN="/usr/local/bin" && \
+VERSION="1.28.1" && \
+BINARY_NAME="buf" && \
+({ [[ ! -f "${BIN}/${BINARY_NAME}" ]] || [[ $("${BIN}/${BINARY_NAME}" --version) != "${VERSION}" ]]; } && \
+  echo "Installing buf v${VERSION}" && \
+  curl -sSL \
+  "https://github.com/bufbuild/buf/releases/download/v${VERSION}/${BINARY_NAME}-$(uname -s)-$(uname -m)" \
+  -o "${BIN}/${BINARY_NAME}" && \
+  chmod +x "${BIN}/${BINARY_NAME}") || \
+echo "Buf is already installed"
