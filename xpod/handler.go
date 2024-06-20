@@ -2,6 +2,7 @@ package xpod
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -135,15 +136,14 @@ func (h *ProbeHandler) serveCheckers(cs []Checker) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var excluded generic.Set[string]
 		if reqExcludes, ok := r.URL.Query()[excludeQueryParam]; ok && len(reqExcludes) > 0 {
-			excluded = generic.NewSet(flattenElems(slice.Map(
-				r.URL.Query()[excludeQueryParam],
+			excluded = generic.NewSet(flattenElems(slice.Map(r.URL.Query()[excludeQueryParam],
 				func(s string) []string { return strings.Split(s, ",") },
 			))...)
 		}
 
 		var output bytes.Buffer
 		var failedVerboseLogOutput bytes.Buffer
-		var failedChecks []string
+		var failedChecks []*checkFailure
 
 		for _, c := range cs {
 			if excluded.Has(c.Name()) {
@@ -162,7 +162,7 @@ func (h *ProbeHandler) serveCheckers(cs []Checker) http.Handler {
 					_, _ = fmt.Fprintf(&output, " reason hidden\n")
 				}
 
-				failedChecks = append(failedChecks, c.Name())
+				failedChecks = append(failedChecks, &checkFailure{name: c.Name(), err: err})
 				_, _ = fmt.Fprintf(&failedVerboseLogOutput, "[-]%s failed: %v\n", c.Name(), err)
 
 				continue
@@ -176,10 +176,7 @@ func (h *ProbeHandler) serveCheckers(cs []Checker) http.Handler {
 
 		if excluded.Len() > 0 {
 			quotedChecks := strings.Join(
-				slice.Map(excluded.Values(),
-					func(in string) string {
-						return fmt.Sprintf("%q", in)
-					}), ", ")
+				slice.Map(excluded.Values(), func(in string) string { return fmt.Sprintf("%q", in) }), ", ")
 
 			_, _ = fmt.Fprintf(&output, "warn: some checks cannot be excluded: no matches for %s\n", quotedChecks)
 			if h.logDelegate != nil {
@@ -190,10 +187,14 @@ func (h *ProbeHandler) serveCheckers(cs []Checker) http.Handler {
 			}
 		}
 
+		checkPath := strings.TrimPrefix(r.URL.Path, "/")
+
 		if len(failedChecks) > 0 {
 			if h.logDelegate != nil {
-				h.logDelegate("check failed", map[string]interface{}{
-					"failed_checks": strings.Join(failedChecks, ","),
+				h.logDelegate(fmt.Sprintf("%s check failed", checkPath), map[string]interface{}{
+					"failed_checks": strings.Join(
+						slice.Map(failedChecks, func(cf *checkFailure) string { return cf.name }), ", "),
+					"errs": errors.Join(slice.Map(failedChecks, func(cf *checkFailure) error { return cf.err })...),
 				})
 			}
 
@@ -210,7 +211,7 @@ func (h *ProbeHandler) serveCheckers(cs []Checker) http.Handler {
 		}
 
 		_, _ = output.WriteTo(w)
-		_, _ = fmt.Fprintf(w, "%s check passed\n", strings.TrimPrefix(r.URL.Path, "/"))
+		_, _ = fmt.Fprintf(w, "%s check passed\n", checkPath)
 	})
 }
 
@@ -221,6 +222,11 @@ func (h *ProbeHandler) makeHandlers(opts Options) {
 	if opts.BuildInfo != nil {
 		h.vh = h.versionHandler(opts)
 	}
+}
+
+type checkFailure struct {
+	name string
+	err  error
 }
 
 func flattenElems(in [][]string) []string {
