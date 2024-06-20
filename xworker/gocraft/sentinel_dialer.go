@@ -3,9 +3,10 @@ package gocraft
 import (
 	"context"
 
-	"github.com/gojekfarm/xtools/xworker/gocraft/internal/sentinel"
 	"github.com/gomodule/redigo/redis"
 	"github.com/sethvargo/go-retry"
+
+	"github.com/gojekfarm/xtools/xworker/gocraft/internal/sentinel"
 )
 
 func dialSentinelRedisWithRetry(opts SentinelPoolOptions, s *sentinel.Sentinel) func() (conn redis.Conn, err error) {

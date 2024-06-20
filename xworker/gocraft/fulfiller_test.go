@@ -9,9 +9,10 @@ import (
 	"github.com/Bose/minisentinel"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gojek/work"
-	"github.com/gojekfarm/xtools/xworker"
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/gojekfarm/xtools/xworker"
 )
 
 type WorkerFulfillerSuite struct {

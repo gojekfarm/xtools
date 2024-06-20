@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gojekfarm/xtools/xworker"
 	"github.com/rs/zerolog/log"
+
+	"github.com/gojekfarm/xtools/xworker"
 )
 
 func ExampleNewAdapter() {

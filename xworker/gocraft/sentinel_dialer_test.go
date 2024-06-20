@@ -3,8 +3,9 @@ package gocraft
 import (
 	"testing"
 
-	"github.com/gojekfarm/xtools/xworker/gocraft/internal/sentinel"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gojekfarm/xtools/xworker/gocraft/internal/sentinel"
 )
 
 func Test_dialSentinelRedisWithRetry(t *testing.T) {

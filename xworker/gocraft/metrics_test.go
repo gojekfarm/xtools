@@ -7,9 +7,10 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/gojekfarm/xtools/xworker"
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gojekfarm/xtools/xworker"
 )
 
 func TestWorkerAdapter_collectWorkerUpdatesPeriodically(t *testing.T) {

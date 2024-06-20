@@ -1,9 +1,10 @@
 package xworker
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConstantRetryBackoff_RetryBackoff(t *testing.T) {

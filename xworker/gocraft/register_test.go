@@ -1,11 +1,13 @@
 package gocraft
 
 import (
-	"github.com/gojek/work"
-	"github.com/gojekfarm/xtools/xworker"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/gojek/work"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/gojekfarm/xtools/xworker"
 )
 
 func TestFulfiller_backoffCalculatorFunc(t *testing.T) {

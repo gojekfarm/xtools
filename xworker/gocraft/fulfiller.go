@@ -6,10 +6,11 @@ import (
 
 	"github.com/gojek/work"
 	"github.com/gojek/work/webui"
-	"github.com/gojekfarm/xtools/xworker"
-	"github.com/gojekfarm/xtools/xworker/gocraft/internal/sentinel"
 	"github.com/gomodule/redigo/redis"
 	"github.com/rs/zerolog"
+
+	"github.com/gojekfarm/xtools/xworker"
+	"github.com/gojekfarm/xtools/xworker/gocraft/internal/sentinel"
 )
 
 var randInt63n = rand.New(rand.NewSource(time.Now().UnixNano())).Int63n

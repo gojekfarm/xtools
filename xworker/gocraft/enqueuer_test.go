@@ -8,11 +8,12 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gojek/work"
-	"github.com/gojekfarm/xtools/xworker"
 	"github.com/gomodule/redigo/redis"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/gojekfarm/xtools/xworker"
 )
 
 type mapAlias map[string]interface{}
