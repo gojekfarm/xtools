@@ -292,6 +292,7 @@ func (s *Sentinel) hasMasterChanged(newAddress string) bool {
 func (s *Sentinel) execFailoverCallback(oldMasterAddr string, newMasterAddr string) {
 	for _, callbackFunc := range s.failoverCallback {
 		callback := callbackFunc
+
 		go func() {
 			defer s.recover()
 
