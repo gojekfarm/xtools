@@ -148,6 +148,10 @@ func doProcess(ctx context.Context, obj any, tagKey string, loader Loader) error
 					return &ErrRequired{key: meta.key}
 				}
 
+				if val == "" && isNilStructPtr {
+					continue
+				}
+
 				if ok, err := decode(fVal, val); ok {
 					if err != nil {
 						return &ErrDecode{
