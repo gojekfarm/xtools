@@ -38,22 +38,20 @@ func main() {
 	}
 
 	pool := createPool()
-
-	pq, err := riverkfq.NewPublishQueue(pool)
-	if err != nil {
-		panic(err)
-	}
-
 	producer := createProducer()
 
-	wq, err := riverkfq.NewRiverQueue(pool, producer)
+	pq, err := riverkfq.NewPublishQueue(
+		riverkfq.Pool(pool),
+		riverkfq.WithProducer(producer),
+		riverkfq.MaxWorkers(2),
+	)
 	if err != nil {
 		panic(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	go wq.Run(ctx)
+	go pq.Run(ctx)
 
 	messages := generateMessages(topic, 10)
 
