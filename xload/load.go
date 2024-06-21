@@ -287,7 +287,7 @@ func setVal(field reflect.Value, val string, meta *field) error {
 	case reflect.Bool:
 		b, err := cast.ToBoolE(val)
 		if err != nil {
-			return err
+			return &ErrCast{key: meta.key, err: err}
 		}
 
 		field.SetBool(b)
@@ -297,7 +297,7 @@ func setVal(field reflect.Value, val string, meta *field) error {
 		if ty.String() == "time.Duration" {
 			d, err := cast.ToDurationE(val)
 			if err != nil {
-				return err
+				return &ErrCast{key: meta.key, err: err}
 			}
 
 			field.SetInt(int64(d))
@@ -307,7 +307,7 @@ func setVal(field reflect.Value, val string, meta *field) error {
 
 		i, err := cast.ToInt64E(val)
 		if err != nil {
-			return err
+			return &ErrCast{key: meta.key, err: err}
 		}
 
 		field.SetInt(i)
@@ -315,7 +315,7 @@ func setVal(field reflect.Value, val string, meta *field) error {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
 		i, err := cast.ToInt64E(val)
 		if err != nil {
-			return err
+			return &ErrCast{key: meta.key, err: err}
 		}
 
 		field.SetInt(i)
@@ -323,7 +323,7 @@ func setVal(field reflect.Value, val string, meta *field) error {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		i, err := cast.ToUint64E(val)
 		if err != nil {
-			return err
+			return &ErrCast{key: meta.key, err: err}
 		}
 
 		field.SetUint(i)
@@ -331,7 +331,7 @@ func setVal(field reflect.Value, val string, meta *field) error {
 	case reflect.Float32, reflect.Float64:
 		f, err := cast.ToFloat64E(val)
 		if err != nil {
-			return err
+			return &ErrCast{key: meta.key, err: err}
 		}
 
 		field.SetFloat(f)
