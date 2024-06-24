@@ -93,3 +93,15 @@ func (e ErrDecode) Error() string {
 }
 
 func (e ErrDecode) Unwrap() error { return e.err }
+
+// ErrCast wraps the actual error that occurred during casting value to go type.
+type ErrCast struct {
+	key string
+	err error
+}
+
+func (e ErrCast) Error() string {
+	return fmt.Sprintf("xload: unable to type-cast value for key %s: %v", e.key, e.err)
+}
+
+func (e ErrCast) Unwrap() error { return e.err }

@@ -205,8 +205,12 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Int int `env:"INT"`
 			}{},
-			loader:  MapLoader{"INT": "invalid"},
-			wantErr: errContains(errors.New("unable to cast")),
+			loader: MapLoader{"INT": "invalid"},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errCast := new(ErrCast)
+				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT", errCast.key) &&
+					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to int64`)
+			},
 		},
 
 		// unsigned integer values
@@ -245,8 +249,12 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Uint uint `env:"UINT"`
 			}{},
-			loader:  MapLoader{"UINT": "invalid"},
-			wantErr: errContains(errors.New("unable to cast")),
+			loader: MapLoader{"UINT": "invalid"},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errCast := new(ErrCast)
+				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "UINT", errCast.key) &&
+					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to uint64`)
+			},
 		},
 
 		// floating-point values
@@ -273,8 +281,12 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Float float32 `env:"FLOAT"`
 			}{},
-			loader:  MapLoader{"FLOAT": "invalid"},
-			wantErr: errContains(errors.New("unable to cast")),
+			loader: MapLoader{"FLOAT": "invalid"},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errCast := new(ErrCast)
+				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "FLOAT", errCast.key) &&
+					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to float64`)
+			},
 		},
 
 		// duration values
@@ -381,8 +393,12 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Int64Slice []int64 `env:"INT64_SLICE"`
 			}{},
-			loader:  MapLoader{"INT64_SLICE": "invalid,2"},
-			wantErr: errContains(errors.New("unable to cast")),
+			loader: MapLoader{"INT64_SLICE": "invalid,2"},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errCast := new(ErrCast)
+				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_SLICE", errCast.key) &&
+					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to int64`)
+			},
 		},
 
 		// map values
@@ -425,16 +441,24 @@ func TestLoad_NativeTypes(t *testing.T) {
 			input: &struct {
 				Int64Map map[string]int64 `env:"INT64_MAP"`
 			}{},
-			loader:  MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
-			wantErr: errContains(errors.New("unable to cast")),
+			loader: MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errCast := new(ErrCast)
+				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_MAP", errCast.key) &&
+					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to int64`)
+			},
 		},
 		{
 			name: "map: invalid key",
 			input: &struct {
 				Int64Map map[int]int64 `env:"INT64_MAP"`
 			}{},
-			loader:  MapLoader{"INT64_MAP": "key1=1,key2=2"},
-			wantErr: errContains(errors.New("unable to cast")),
+			loader: MapLoader{"INT64_MAP": "key1=1,key2=2"},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errCast := new(ErrCast)
+				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_MAP", errCast.key) &&
+					assert.EqualError(t, errCast.Unwrap(), `unable to cast "key1" of type string to int64`)
+			},
 		},
 
 		// unknown key type
@@ -516,8 +540,12 @@ func TestLoad_ArrayTypes(t *testing.T) {
 			input: &struct {
 				Int64Slice []int64 `env:"INT64_SLICE"`
 			}{},
-			loader:  MapLoader{"INT64_SLICE": "invalid,2"},
-			wantErr: errContains(errors.New("unable to cast")),
+			loader: MapLoader{"INT64_SLICE": "invalid,2"},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errCast := new(ErrCast)
+				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_SLICE", errCast.key) &&
+					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to int64`)
+			},
 		},
 	}
 
@@ -591,16 +619,24 @@ func TestLoad_MapTypes(t *testing.T) {
 			input: &struct {
 				Int64Map map[string]int64 `env:"INT64_MAP"`
 			}{},
-			loader:  MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
-			wantErr: errContains(errors.New("unable to cast")),
+			loader: MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errCast := new(ErrCast)
+				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_MAP", errCast.key) &&
+					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to int64`)
+			},
 		},
 		{
 			name: "map: invalid key",
 			input: &struct {
 				Int64Map map[int]int64 `env:"INT64_MAP"`
 			}{},
-			loader:  MapLoader{"INT64_MAP": "key1=1,key2=2"},
-			wantErr: errContains(errors.New("unable to cast")),
+			loader: MapLoader{"INT64_MAP": "key1=1,key2=2"},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				errCast := new(ErrCast)
+				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_MAP", errCast.key) &&
+					assert.EqualError(t, errCast.Unwrap(), `unable to cast "key1" of type string to int64`)
+			},
 		},
 	}
 
