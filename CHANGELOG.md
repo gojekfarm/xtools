@@ -8,6 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.8.1]
+
+### Changed
+
+- [`xload`](./xload): Fixed a collision check regression when a struct pointer is decodable and value for the `key` is
+  missing. ([#53](https://github.com/gojekfarm/xtools/pull/53))
+- [`xload`](./xload): Added `ErrCast` to let caller know which `key` caused the error. ([#52](https://github.com/gojekfarm/xtools/pull/52))
+- [`xpod`](./xpod): Add errors to log delegate when health change fails. ([#50](https://github.com/gojekfarm/xtools/pull/50))
+- [`xload`](./xload): Added `ErrDecode` to let caller know which `key` caused the error. ([#48](https://github.com/gojekfarm/xtools/pull/48))
+
 ## [0.8.0]
 
 ### Added
@@ -18,7 +28,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - [`xload`](./xload): add key collision detection ([#43](https://github.com/gojekfarm/xtools/pull/43))
-- [`xkafka`](./xkafka): `xkafka.ErrorHandler` is now a required option ([#41](https://github.com/gojekfarm/xtools/pull/41))
+- [`xkafka`](./xkafka): `xkafka.ErrorHandler` is now a required
+  option ([#41](https://github.com/gojekfarm/xtools/pull/41))
 
 ## [0.7.0]
 
@@ -77,8 +88,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`xpod`](./xpod) Added `xpod` package which contains utilities that help implement best practices for health checks
   and more, while building go apps for kubernetes pods.
 - [`xkafka/middleware`](./xkafka/middleware)
-  - Added Prometheus middleware for `Consumer` and `Producer` implementations.
-  - Added Logging MiddlewareFunc.
+    - Added Prometheus middleware for `Consumer` and `Producer` implementations.
+    - Added Logging MiddlewareFunc.
 
 ## [0.2.0]
 
@@ -101,7 +112,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`generic`](./generic) package added
 - [`xproto`](./xproto) package added
 
-[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/gojekfarm/xtools/compare/v0.8.1
 [0.8.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.8.0
 [0.7.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.7.0
 [0.6.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.6.0
