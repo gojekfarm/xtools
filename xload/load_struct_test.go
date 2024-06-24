@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/gotidy/ptr"
 	"github.com/stretchr/testify/assert"
+
+	xloadtype "github.com/gojekfarm/xtools/xload/type"
 )
 
 type House struct {
@@ -398,4 +401,25 @@ func TestLoad_JSON(t *testing.T) {
 	}
 
 	runTestcases(t, testcases)
+}
+
+func TestLoad_keyCollisions(t *testing.T) {
+	t.Run("MissingNestedNillableKeyRegression", func(t *testing.T) {
+		type ServerConfig struct {
+			HTTP *xloadtype.Listener `env:"ADDRESS"`
+		}
+		type Config struct {
+			Server ServerConfig `env:",prefix=SERVER_"`
+		}
+
+		cfg1 := new(Config)
+		assert.NoError(t, Load(context.TODO(), cfg1))
+		assert.Nil(t, cfg1.Server.HTTP)
+
+		cfg2 := new(Config)
+		assert.NoError(t, Load(context.TODO(), cfg2, MapLoader{"SERVER_ADDRESS": "127.0.0.1:80"}))
+		assert.NotNil(t, cfg2.Server.HTTP)
+		assert.Equal(t, net.IPv4(127, 0, 0, 1), cfg2.Server.HTTP.IP)
+		assert.Equal(t, 80, cfg2.Server.HTTP.Port)
+	})
 }
