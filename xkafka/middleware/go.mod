@@ -7,7 +7,7 @@ toolchain go1.21.0
 replace github.com/gojekfarm/xtools/xkafka => ../
 
 require (
-	github.com/gojekfarm/xtools/xkafka v0.8.0
+	github.com/gojekfarm/xtools/xkafka v0.8.1
 	github.com/stretchr/testify v1.8.1
 )
 
