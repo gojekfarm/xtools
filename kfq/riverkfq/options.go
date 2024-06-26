@@ -3,10 +3,9 @@ package riverkfq
 import (
 	"context"
 
-	"github.com/gojekfarm/xtools/xkafka"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/riverqueue/river"
+
+	"github.com/gojekfarm/xtools/xkafka"
 )
 
 // Option defines interface for configuring riverkfq
@@ -27,7 +26,9 @@ func Pool(p *pgxpool.Pool) Option {
 	})
 }
 
-// Producer is a Kafka producer
+// Producer is a Kafka producer.
+//
+//go:generate mockery --name Producer --output . --outpkg riverkfq --filename producer_mock_test.go --structname MockProducer
 type Producer interface {
 	Publish(ctx context.Context, msg *xkafka.Message) error
 }
@@ -36,14 +37,6 @@ type Producer interface {
 func WithProducer(p Producer) Option {
 	return optionFunc(func(pq *PublishQueue) {
 		pq.producer = p
-	})
-}
-
-// WithClient sets the river.Client.
-// Useful for integrating with existing river queues.
-func WithClient(c *river.Client[pgx.Tx]) Option {
-	return optionFunc(func(pq *PublishQueue) {
-		pq.queue = c
 	})
 }
 

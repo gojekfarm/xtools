@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
-	"github.com/gojekfarm/xtools/xq"
 	"github.com/rs/xid"
 	"github.com/vmihailenco/msgpack/v4"
+
+	"github.com/gojekfarm/xtools/xq"
 )
 
 // BadgerQueue implements a queue using Badger.
