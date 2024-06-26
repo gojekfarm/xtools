@@ -6,16 +6,16 @@ import (
 	"os"
 	"time"
 
-	"log/slog"
-
-	"github.com/gojekfarm/xtools/kfq/riverkfq"
-	"github.com/gojekfarm/xtools/xkafka"
-	slogmw "github.com/gojekfarm/xtools/xkafka/middleware/slog"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lmittmann/tint"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivermigrate"
 	"github.com/rs/xid"
+	"log/slog"
+
+	"github.com/gojekfarm/xtools/kfq/riverkfq"
+	"github.com/gojekfarm/xtools/xkafka"
+	slogmw "github.com/gojekfarm/xtools/xkafka/middleware/slog"
 )
 
 var (
@@ -51,7 +51,9 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	go pq.Run(ctx)
+	go func() {
+		_ = pq.Run(ctx)
+	}()
 
 	messages := generateMessages(topic, 10)
 
@@ -104,6 +106,7 @@ func createPool() *pgxpool.Pool {
 	if err != nil {
 		panic(err)
 	}
+
 	return pool
 }
 

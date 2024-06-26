@@ -3,17 +3,18 @@ package riverkfq
 import (
 	"context"
 
-	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+
+	"github.com/gojekfarm/xtools/xkafka"
 )
 
 // PublishQueue is a thin wrapper around river.Client
 // that enqueues messages are asynchronously published to Kafka.
 type PublishQueue struct {
-	queue    *river.Client[pgx.Tx]
+	client   *river.Client[pgx.Tx]
 	pool     *pgxpool.Pool
 	producer Producer
 
@@ -23,28 +24,34 @@ type PublishQueue struct {
 
 // NewPublishQueue creates a new PublishQueue.
 func NewPublishQueue(opts ...Option) (*PublishQueue, error) {
-	pq := &PublishQueue{}
+	pq := &PublishQueue{
+		maxWorkers: 1,
+	}
 
 	for _, opt := range opts {
 		opt.apply(pq)
 	}
 
-	if pq.queue != nil {
-		workers := river.NewWorkers()
-		river.AddWorker(workers, NewPublishWorker(pq.producer))
+	workers := river.NewWorkers()
 
-		client, err := river.NewClient(riverpgxv5.New(pq.pool), &river.Config{
+	if pq.producer != nil {
+		river.AddWorker(workers, NewPublishWorker(pq.producer))
+	}
+
+	client, err := river.NewClient(
+		riverpgxv5.New(pq.pool),
+		&river.Config{
 			Queues: map[string]river.QueueConfig{
 				river.QueueDefault: {MaxWorkers: pq.maxWorkers},
 			},
 			Workers: workers,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		pq.queue = client
+		},
+	)
+	if err != nil {
+		return nil, err
 	}
+
+	pq.client = client
 
 	return pq, nil
 }
@@ -59,7 +66,7 @@ func (q *PublishQueue) Add(ctx context.Context, msgs ...*xkafka.Message) error {
 		}
 	}
 
-	_, err := q.queue.InsertMany(ctx, args)
+	_, err := q.client.InsertMany(ctx, args)
 
 	return err
 }
@@ -74,20 +81,20 @@ func (q *PublishQueue) AddTx(ctx context.Context, tx pgx.Tx, msgs ...*xkafka.Mes
 		}
 	}
 
-	_, err := q.queue.InsertManyTx(ctx, tx, args)
+	_, err := q.client.InsertManyTx(ctx, tx, args)
 
 	return err
 }
 
-// Run starts the queue and begins publishing messages to Kafka.
+// Run starts the client and begins publishing messages to Kafka.
 func (q *PublishQueue) Run(ctx context.Context) error {
-	if err := q.queue.Start(ctx); err != nil {
+	if err := q.client.Start(ctx); err != nil {
 		return err
 	}
 
 	<-ctx.Done()
 
-	if err := q.queue.Stop(ctx); err != nil {
+	if err := q.client.Stop(ctx); err != nil {
 		return err
 	}
 
