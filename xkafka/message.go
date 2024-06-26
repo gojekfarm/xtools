@@ -29,21 +29,21 @@ func (s Status) String() string {
 // Message holds the Kafka message data and manages the
 // lifecycle of the message.
 type Message struct {
-	ID        string
-	Topic     string
-	Partition int32
-	Group     string
-	Key       []byte
-	Value     []byte
-	Timestamp time.Time
-	Status    Status
-	ErrMsg    string
-	Offset    int64
+	ID        string    `json:"id,omitempty"`
+	Topic     string    `json:"topic,omitempty"`
+	Partition int32     `json:"partition,omitempty"`
+	Group     string    `json:"group,omitempty"`
+	Key       []byte    `json:"key,omitempty"`
+	Value     []byte    `json:"value,omitempty"`
+	Timestamp time.Time `json:"timestamp,omitempty"`
+	Status    Status    `json:"status,omitempty"`
+	ErrMsg    string    `json:"err_msg,omitempty"`
+	Offset    int64     `json:"offset,omitempty"`
 
-	headers      map[string][]byte
-	ackCallbacks []AckFunc
-	mutex        sync.Mutex
-	err          error
+	headers      map[string][]byte `json:"-"`
+	ackCallbacks []AckFunc         `json:"-"`
+	mutex        sync.Mutex        `json:"-"`
+	err          error             `json:"-"`
 }
 
 // newMessage creates a new message from a kafka message.
