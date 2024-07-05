@@ -1,4 +1,4 @@
-package xkafkaprom
+package xpromkafka
 
 import (
 	"context"

@@ -1,6 +1,6 @@
-module github.com/gojekfarm/xtools/xprom/xkafkaprom
+module github.com/gojekfarm/xtools/xprom/xpromkafka
 
-go 1.22.2
+go 1.21
 
 replace (
 	github.com/gojekfarm/xtools/xkafka => ../../xkafka

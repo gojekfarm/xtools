@@ -1,4 +1,4 @@
-package xkafkaprom
+package xpromkafka
 
 // Option configures the collector.
 type Option interface {

@@ -1,4 +1,4 @@
-package xkafkaprom_test
+package xpromkafka_test
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/gojekfarm/xtools/xkafka"
-	"github.com/gojekfarm/xtools/xprom/xkafkaprom"
+	"github.com/gojekfarm/xtools/xprom/xpromkafka"
 )
 
 var handler = xkafka.HandlerFunc(func(ctx context.Context, m *xkafka.Message) error {
@@ -23,11 +23,11 @@ func ExampleCollector_ConsumerMiddleware() {
 	)
 
 	reg := prometheus.NewRegistry()
-	collector := xkafkaprom.RegisterCollector(
+	collector := xpromkafka.RegisterCollector(
 		reg,
-		xkafkaprom.LatencyBuckets{0.1, 0.5, 1, 2, 5},
-		xkafkaprom.Address("localhost:9092"),
-		xkafkaprom.ErrorClassifer(func(err error) string {
+		xpromkafka.LatencyBuckets{0.1, 0.5, 1, 2, 5},
+		xpromkafka.Address("localhost:9092"),
+		xpromkafka.ErrorClassifer(func(err error) string {
 			// Classify errors.
 			return "CustomError"
 		}),
@@ -40,10 +40,10 @@ func ExampleCollector_ConsumerMiddleware() {
 
 func ExampleCollector_ConsumerMiddleware_multipleConsumers() {
 	reg := prometheus.NewRegistry()
-	collector := xkafkaprom.RegisterCollector(
+	collector := xpromkafka.RegisterCollector(
 		reg,
-		xkafkaprom.LatencyBuckets{0.1, 0.5, 1, 2, 5},
-		xkafkaprom.ErrorClassifer(func(err error) string {
+		xpromkafka.LatencyBuckets{0.1, 0.5, 1, 2, 5},
+		xpromkafka.ErrorClassifer(func(err error) string {
 			// Classify errors.
 			return "CustomError"
 		}),
@@ -57,7 +57,7 @@ func ExampleCollector_ConsumerMiddleware_multipleConsumers() {
 	)
 
 	consumer1.Use(collector.ConsumerMiddleware(
-		xkafkaprom.Address("localhost:9092"),
+		xpromkafka.Address("localhost:9092"),
 	))
 
 	consumer2, _ := xkafka.NewConsumer(
@@ -68,7 +68,7 @@ func ExampleCollector_ConsumerMiddleware_multipleConsumers() {
 	)
 
 	consumer2.Use(collector.ConsumerMiddleware(
-		xkafkaprom.Address("another-host:9092"),
+		xpromkafka.Address("another-host:9092"),
 	))
 
 	// Start consuming messages.
@@ -81,11 +81,11 @@ func ExampleCollector_ProducerMiddleware() {
 	)
 
 	reg := prometheus.NewRegistry()
-	collector := xkafkaprom.RegisterCollector(
+	collector := xpromkafka.RegisterCollector(
 		reg,
-		xkafkaprom.LatencyBuckets{0.1, 0.5, 1, 2, 5},
-		xkafkaprom.Address("localhost:9092"),
-		xkafkaprom.ErrorClassifer(func(err error) string {
+		xpromkafka.LatencyBuckets{0.1, 0.5, 1, 2, 5},
+		xpromkafka.Address("localhost:9092"),
+		xpromkafka.ErrorClassifer(func(err error) string {
 			// Classify errors.
 			return "CustomError"
 		}),
@@ -98,10 +98,10 @@ func ExampleCollector_ProducerMiddleware() {
 
 func ExampleCollector_ProducerMiddleware_multipleProducers() {
 	reg := prometheus.NewRegistry()
-	collector := xkafkaprom.RegisterCollector(
+	collector := xpromkafka.RegisterCollector(
 		reg,
-		xkafkaprom.LatencyBuckets{0.1, 0.5, 1, 2, 5},
-		xkafkaprom.ErrorClassifer(func(err error) string {
+		xpromkafka.LatencyBuckets{0.1, 0.5, 1, 2, 5},
+		xpromkafka.ErrorClassifer(func(err error) string {
 			// Classify errors.
 			return "CustomError"
 		}),
@@ -113,7 +113,7 @@ func ExampleCollector_ProducerMiddleware_multipleProducers() {
 	)
 
 	producer1.Use(collector.ProducerMiddleware(
-		xkafkaprom.Address("localhost:9092"),
+		xpromkafka.Address("localhost:9092"),
 	))
 
 	producer2, _ := xkafka.NewProducer(
@@ -122,7 +122,7 @@ func ExampleCollector_ProducerMiddleware_multipleProducers() {
 	)
 
 	producer2.Use(collector.ProducerMiddleware(
-		xkafkaprom.Address("another-host:9092"),
+		xpromkafka.Address("another-host:9092"),
 	))
 
 	// Produce messages.
