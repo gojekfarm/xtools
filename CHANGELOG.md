@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.9.0]
+
+### Added
+
+- [`xprom`](./xprom): Add `xprom` package to standardize Prometheus metrics with OTEL conventions. ([#55](https://github.com/gojekfarm/xtools/pull/55))
+- [`riverkfq`](./riverkfq): Add `riverkfq` package to provide async publishing of messages to Kafka. ([#47](https://github.com/gojekfarm/xtools/pull/47))
+
 ## [0.8.1]
 
 ### Changed
@@ -88,8 +95,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`xpod`](./xpod) Added `xpod` package which contains utilities that help implement best practices for health checks
   and more, while building go apps for kubernetes pods.
 - [`xkafka/middleware`](./xkafka/middleware)
-    - Added Prometheus middleware for `Consumer` and `Producer` implementations.
-    - Added Logging MiddlewareFunc.
+  - Added Prometheus middleware for `Consumer` and `Producer` implementations.
+  - Added Logging MiddlewareFunc.
 
 ## [0.2.0]
 
@@ -112,8 +119,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [`generic`](./generic) package added
 - [`xproto`](./xproto) package added
 
-[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.8.1...HEAD
-[0.8.1]: https://github.com/gojekfarm/xtools/compare/v0.8.1
+[Unreleased]: https://github.com/gojekfarm/xtools/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.9.0
+[0.8.1]: https://github.com/gojekfarm/xtools/releases/tag/v0.8.1
 [0.8.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.8.0
 [0.7.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.7.0
 [0.6.0]: https://github.com/gojekfarm/xtools/releases/tag/v0.6.0
