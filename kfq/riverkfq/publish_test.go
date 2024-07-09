@@ -18,8 +18,6 @@ import (
 )
 
 func TestNewPublishQueue(t *testing.T) {
-	t.Parallel()
-
 	pool, err := setupDB(t)
 	require.NoError(t, err)
 
@@ -46,8 +44,6 @@ func TestNewPublishQueue(t *testing.T) {
 }
 
 func TestPublishQueue_AddTx(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 
 	pool, err := setupDB(t)
@@ -77,8 +73,6 @@ func TestPublishQueue_AddTx(t *testing.T) {
 }
 
 func TestPublishQueue_E2E(t *testing.T) {
-	t.Parallel()
-
 	pool, err := setupDB(t)
 	require.NoError(t, err)
 
@@ -130,9 +124,11 @@ func TestPublishQueue_E2E(t *testing.T) {
 func setupDB(t *testing.T) (*pgxpool.Pool, error) {
 	t.Helper()
 
+	createTestDB(t)
+
 	ctx := context.Background()
 
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/postgres")
+	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/riverkfq_test")
 	require.NoError(t, err)
 
 	migrator := rivermigrate.New(riverpgxv5.New(pool), nil)
@@ -140,4 +136,23 @@ func setupDB(t *testing.T) (*pgxpool.Pool, error) {
 	_, err = migrator.Migrate(ctx, rivermigrate.DirectionUp, &rivermigrate.MigrateOpts{})
 
 	return pool, err
+}
+
+func createTestDB(t *testing.T) {
+	t.Helper()
+
+	ctx := context.Background()
+
+	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/postgres")
+	require.NoError(t, err)
+
+	_, err = pool.Exec(ctx, "CREATE DATABASE riverkfq_test")
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		_, err = pool.Exec(ctx, "DROP DATABASE riverkfq_test")
+		require.NoError(t, err)
+
+		pool.Close()
+	})
 }
