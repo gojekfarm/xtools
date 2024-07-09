@@ -33,7 +33,7 @@ run:
   skip-files:
     - .*mock.*\.go$
     - version.go
-    - example_test.go
+    - .*\_test\.go$
     - generate.go
   modules-download-mode: readonly
 linters-settings:
