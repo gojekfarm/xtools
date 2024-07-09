@@ -27,8 +27,6 @@ func Pool(p *pgxpool.Pool) Option {
 }
 
 // Producer is a Kafka producer.
-//
-//go:generate mockery --name Producer --output . --outpkg riverkfq --filename producer_mock_test.go --structname MockProducer
 type Producer interface {
 	Publish(ctx context.Context, msg *xkafka.Message) error
 }

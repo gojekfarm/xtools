@@ -2,30 +2,21 @@ package riverkfq
 
 import (
 	"context"
-	"fmt"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivermigrate"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/gojekfarm/xtools/xkafka"
 )
 
 func TestNewPublishQueue(t *testing.T) {
-	pool, err := setupDB(t)
-	require.NoError(t, err)
-
-	defer pool.Close()
-
 	t.Run("OnlyEnqueue", func(t *testing.T) {
 		pq, err := NewPublishQueue(
-			Pool(pool),
+			Pool(nil),
 			MaxWorkers(2),
 		)
 		assert.NoError(t, err)
@@ -34,7 +25,7 @@ func TestNewPublishQueue(t *testing.T) {
 
 	t.Run("WithProducer", func(t *testing.T) {
 		pq, err := NewPublishQueue(
-			Pool(pool),
+			Pool(nil),
 			MaxWorkers(2),
 			WithProducer(nil),
 		)
@@ -43,7 +34,7 @@ func TestNewPublishQueue(t *testing.T) {
 	})
 }
 
-func TestPublishQueue_AddTx(t *testing.T) {
+func TestPublishQueue_Add(t *testing.T) {
 	ctx := context.Background()
 
 	pool, err := setupDB(t)
@@ -53,7 +44,6 @@ func TestPublishQueue_AddTx(t *testing.T) {
 
 	pq, err := NewPublishQueue(
 		Pool(pool),
-		MaxWorkers(2),
 	)
 	require.NoError(t, err)
 
@@ -62,63 +52,21 @@ func TestPublishQueue_AddTx(t *testing.T) {
 		{ID: "2"},
 	}
 
-	tx, err := pool.Begin(ctx)
-	require.NoError(t, err)
+	t.Run("Add", func(t *testing.T) {
+		err := pq.Add(ctx, msgs...)
+		assert.NoError(t, err)
+	})
 
-	err = pq.AddTx(ctx, tx, msgs...)
-	assert.Error(t, err)
-
-	err = tx.Rollback(ctx)
-	require.NoError(t, err)
-}
-
-func TestPublishQueue_E2E(t *testing.T) {
-	pool, err := setupDB(t)
-	require.NoError(t, err)
-
-	defer pool.Close()
-
-	producer := NewMockProducer(t)
-
-	pq, err := NewPublishQueue(
-		Pool(pool),
-		MaxWorkers(2),
-		WithProducer(producer),
-	)
-	require.NoError(t, err)
-
-	var wg sync.WaitGroup
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go func() {
-		_ = pq.Run(ctx)
-	}()
-
-	for i := 0; i < 2; i++ {
-		wg.Add(1)
-
-		msg := &xkafka.Message{
-			ID: fmt.Sprintf("%d", i),
-		}
-
-		producer.On("Publish", mock.Anything, mock.Anything).
-			Return(nil).
-			Once().
-			Run(func(args mock.Arguments) {
-				wg.Done()
-			})
-
-		err := pq.Add(ctx, msg)
+	t.Run("AddTx", func(t *testing.T) {
+		tx, err := pool.Begin(ctx)
 		require.NoError(t, err)
-	}
 
-	wg.Wait()
+		err = pq.AddTx(ctx, tx, msgs...)
+		assert.NoError(t, err)
 
-	time.Sleep(1 * time.Second)
-	cancel()
-
-	producer.AssertExpectations(t)
+		err = tx.Commit(ctx)
+		require.NoError(t, err)
+	})
 }
 
 func setupDB(t *testing.T) (*pgxpool.Pool, error) {

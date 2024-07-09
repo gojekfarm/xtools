@@ -23,7 +23,6 @@ require (
 	github.com/riverqueue/river/riverdriver v0.7.0 // indirect
 	github.com/riverqueue/river/rivertype v0.7.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect

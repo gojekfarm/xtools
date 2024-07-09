@@ -32,20 +32,22 @@ func NewPublishQueue(opts ...Option) (*PublishQueue, error) {
 		opt.apply(pq)
 	}
 
-	workers := river.NewWorkers()
+	rivercfg := &river.Config{}
 
 	if pq.producer != nil {
+		workers := river.NewWorkers()
+
 		river.AddWorker(workers, NewPublishWorker(pq.producer))
+
+		rivercfg.Workers = workers
+		rivercfg.Queues = map[string]river.QueueConfig{
+			river.QueueDefault: {MaxWorkers: pq.maxWorkers},
+		}
 	}
 
 	client, err := river.NewClient(
 		riverpgxv5.New(pq.pool),
-		&river.Config{
-			Queues: map[string]river.QueueConfig{
-				river.QueueDefault: {MaxWorkers: pq.maxWorkers},
-			},
-			Workers: workers,
-		},
+		rivercfg,
 	)
 	if err != nil {
 		return nil, err
