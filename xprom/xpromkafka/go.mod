@@ -1,13 +1,15 @@
-module github.com/gojekfarm/xtools/xkafka/middleware/prometheus
+module github.com/gojekfarm/xtools/xprom/xpromkafka
 
 go 1.21
 
-toolchain go1.21.0
-
-replace github.com/gojekfarm/xtools/xkafka => ../../
+replace (
+	github.com/gojekfarm/xtools/xkafka => ../../xkafka
+	github.com/gojekfarm/xtools/xprom/semconv => ../semconv
+)
 
 require (
 	github.com/gojekfarm/xtools/xkafka v0.8.1
+	github.com/gojekfarm/xtools/xprom/semconv v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.14.0
 	github.com/stretchr/testify v1.8.1
 )
