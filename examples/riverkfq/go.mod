@@ -1,6 +1,8 @@
 module github.com/gojekfarm/xtools/examples/riverkfq
 
-go 1.22
+go 1.21.4
+
+toolchain go1.22.2
 
 replace (
 	github.com/gojekfarm/xtools => ../../
@@ -12,7 +14,7 @@ replace (
 require (
 	github.com/confluentinc/confluent-kafka-go/v2 v2.0.2
 	github.com/gojekfarm/xtools/kfq/riverkfq v0.0.0-00010101000000-000000000000
-	github.com/gojekfarm/xtools/xkafka v0.8.0
+	github.com/gojekfarm/xtools/xkafka v0.8.1
 	github.com/gojekfarm/xtools/xkafka/middleware v0.0.0-00010101000000-000000000000
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/lmittmann/tint v1.0.4

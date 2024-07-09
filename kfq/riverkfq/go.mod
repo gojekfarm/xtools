@@ -1,6 +1,6 @@
 module github.com/gojekfarm/xtools/kfq/riverkfq
 
-go 1.22
+go 1.21.4
 
 replace github.com/gojekfarm/xtools/xkafka => ../../xkafka
 
