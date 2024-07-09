@@ -23,8 +23,7 @@ func ExampleCollector_ConsumerMiddleware() {
 	)
 
 	reg := prometheus.NewRegistry()
-	collector := xpromkafka.RegisterCollector(
-		reg,
+	collector := xpromkafka.NewCollector(
 		xpromkafka.LatencyBuckets{0.1, 0.5, 1, 2, 5},
 		xpromkafka.Address("localhost:9092"),
 		xpromkafka.ErrorClassifer(func(err error) string {
@@ -33,6 +32,7 @@ func ExampleCollector_ConsumerMiddleware() {
 		}),
 	)
 
+	collector.Register(reg)
 	consumer.Use(collector.ConsumerMiddleware())
 
 	// Start consuming messages.
@@ -40,14 +40,15 @@ func ExampleCollector_ConsumerMiddleware() {
 
 func ExampleCollector_ConsumerMiddleware_multipleConsumers() {
 	reg := prometheus.NewRegistry()
-	collector := xpromkafka.RegisterCollector(
-		reg,
+	collector := xpromkafka.NewCollector(
 		xpromkafka.LatencyBuckets{0.1, 0.5, 1, 2, 5},
 		xpromkafka.ErrorClassifer(func(err error) string {
 			// Classify errors.
 			return "CustomError"
 		}),
 	)
+
+	collector.Register(reg)
 
 	consumer1, _ := xkafka.NewConsumer(
 		"test-group-1",
@@ -81,8 +82,7 @@ func ExampleCollector_ProducerMiddleware() {
 	)
 
 	reg := prometheus.NewRegistry()
-	collector := xpromkafka.RegisterCollector(
-		reg,
+	collector := xpromkafka.NewCollector(
 		xpromkafka.LatencyBuckets{0.1, 0.5, 1, 2, 5},
 		xpromkafka.Address("localhost:9092"),
 		xpromkafka.ErrorClassifer(func(err error) string {
@@ -91,6 +91,8 @@ func ExampleCollector_ProducerMiddleware() {
 		}),
 	)
 
+	collector.Register(reg)
+
 	producer.Use(collector.ProducerMiddleware())
 
 	// Produce messages.
@@ -98,14 +100,15 @@ func ExampleCollector_ProducerMiddleware() {
 
 func ExampleCollector_ProducerMiddleware_multipleProducers() {
 	reg := prometheus.NewRegistry()
-	collector := xpromkafka.RegisterCollector(
-		reg,
+	collector := xpromkafka.NewCollector(
 		xpromkafka.LatencyBuckets{0.1, 0.5, 1, 2, 5},
 		xpromkafka.ErrorClassifer(func(err error) string {
 			// Classify errors.
 			return "CustomError"
 		}),
 	)
+
+	collector.Register(reg)
 
 	producer1, _ := xkafka.NewProducer(
 		"test-publisher-1",

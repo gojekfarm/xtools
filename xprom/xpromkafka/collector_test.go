@@ -31,10 +31,11 @@ func TestConsumerMiddleware(t *testing.T) {
 	})
 
 	reg := prometheus.NewRegistry()
-	collector := RegisterCollector(
-		reg,
+	collector := NewCollector(
 		LatencyBuckets{0.1, 0.5, 1, 2, 5},
 	)
+
+	collector.Register(reg)
 
 	instrumentedHandler := collector.ConsumerMiddleware(
 		Address("localhost"),
@@ -80,10 +81,11 @@ func TestProducerMiddleware(t *testing.T) {
 	})
 
 	reg := prometheus.NewRegistry()
-	collector := RegisterCollector(
-		reg,
+	collector := NewCollector(
 		LatencyBuckets{0.1, 0.5, 1, 2, 5},
 	)
+
+	collector.Register(reg)
 
 	instrumentedHandler := collector.ProducerMiddleware(
 		Address("localhost"),

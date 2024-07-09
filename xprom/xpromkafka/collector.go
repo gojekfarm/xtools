@@ -38,17 +38,8 @@ type Collector struct {
 	consumed  *prometheus.CounterVec
 }
 
-// RegisterCollector creates and registers a new Collector with the
-// provided registerer.
-func RegisterCollector(r prometheus.Registerer, opts ...Option) *Collector {
-	c := newCollector(opts...)
-
-	r.MustRegister(c.duration, c.inflight, c.published, c.consumed)
-
-	return c
-}
-
-func newCollector(opts ...Option) *Collector {
+// NewCollector creates a new Collector.
+func NewCollector(opts ...Option) *Collector {
 	o := options{
 		latencyBuckets: defaultLatencyBuckets,
 	}
@@ -119,6 +110,27 @@ func newCollector(opts ...Option) *Collector {
 			semconv.ErrorType,
 		}),
 	}
+}
+
+// Register registers the metrics with the provided registry.
+func (c *Collector) Register(registry prometheus.Registerer) error {
+	if err := registry.Register(c.duration); err != nil {
+		return err
+	}
+
+	if err := registry.Register(c.inflight); err != nil {
+		return err
+	}
+
+	if err := registry.Register(c.published); err != nil {
+		return err
+	}
+
+	if err := registry.Register(c.consumed); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ConsumerMiddleware returns a middleware that instruments xkafka.Consumer.
