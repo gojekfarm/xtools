@@ -5,7 +5,7 @@ go 1.21.4
 replace github.com/gojekfarm/xtools/xkafka => ../../xkafka
 
 require (
-	github.com/gojekfarm/xtools/xkafka v0.0.0-00010101000000-000000000000
+	github.com/gojekfarm/xtools/xkafka v0.9.0
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/riverqueue/river v0.7.0
 	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.7.0

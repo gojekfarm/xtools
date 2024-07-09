@@ -13,9 +13,9 @@ replace (
 
 require (
 	github.com/confluentinc/confluent-kafka-go/v2 v2.0.2
-	github.com/gojekfarm/xtools/kfq/riverkfq v0.0.0-00010101000000-000000000000
-	github.com/gojekfarm/xtools/xkafka v0.8.1
-	github.com/gojekfarm/xtools/xkafka/middleware v0.0.0-00010101000000-000000000000
+	github.com/gojekfarm/xtools/kfq/riverkfq v0.9.0
+	github.com/gojekfarm/xtools/xkafka v0.9.0
+	github.com/gojekfarm/xtools/xkafka/middleware v0.9.0
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/lmittmann/tint v1.0.4
 	github.com/riverqueue/river v0.7.0
