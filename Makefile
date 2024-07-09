@@ -86,7 +86,7 @@ gocov-xml:
 
 MOCKERY = $(BIN_DIR)/mockery
 mockery:
-	$(call go-get-tool,$(MOCKERY),github.com/vektra/mockery/v2@v2.20.0)
+	$(call go-get-tool,$(MOCKERY),github.com/vektra/mockery/v2@v2.43.0)
 
 PROTOC = $(BIN_DIR)/protoc
 protoc:
