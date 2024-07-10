@@ -153,7 +153,14 @@ main() {
     for dir in $( package_dirs )
     do
         git_tag "${dir}/$TAG" "$SHA"
-        printf "created tag: %s\n" "${dir}/$TAG"
+        printf "created tag: %s\n" "${dir}/$TAG"        
+    done
+
+    printf "\nPushing tags to remote\n"
+
+    for dir in $( package_dirs )
+    do
+        git push origin "${dir}/$TAG"
     done
 
     print_changes "$TAG"
