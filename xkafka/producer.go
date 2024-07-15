@@ -15,7 +15,7 @@ type Producer struct {
 	config              *producerConfig
 	kafka               producerClient
 	events              chan kafka.Event
-	middlewares         []middleware
+	middlewares         []Middlewarer
 	wrappedPublish      Handler
 	wrappedAsyncPublish Handler
 }
