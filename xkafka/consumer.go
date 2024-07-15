@@ -17,7 +17,7 @@ type Consumer struct {
 	name        string
 	kafka       consumerClient
 	handler     Handler
-	middlewares []middleware
+	middlewares []Middlewarer
 	config      *consumerConfig
 	cancelCtx   atomic.Pointer[context.CancelFunc]
 }
