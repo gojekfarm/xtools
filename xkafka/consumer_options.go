@@ -37,6 +37,8 @@ func newConsumerConfig(opts ...ConsumerOption) (*consumerConfig, error) {
 		pollTimeout:     10 * time.Second,
 		shutdownTimeout: 1 * time.Second,
 		concurrency:     1,
+		batchSize:       1000,
+		batchTimeout:    5 * time.Second,
 	}
 
 	for _, opt := range opts {
