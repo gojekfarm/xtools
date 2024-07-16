@@ -28,6 +28,7 @@ type MaxRetries int
 func (m MaxRetries) apply(c *config) { c.maxRetries = int(m) }
 
 // MaxDuration sets the maximum retry duration since the first execution.
+// It should be less than `max.poll.interval.ms` kafka consumer config.
 type MaxDuration time.Duration
 
 func (m MaxDuration) apply(c *config) { c.maxDuration = time.Duration(m) }
@@ -57,8 +58,9 @@ type config struct {
 
 func newConfig(opts ...Option) *config {
 	c := &config{
-		maxRetries:  100,
-		maxDuration: time.Hour,
+		maxRetries: 100,
+		// less than 5 minutes default max.poll.interval.ms
+		maxDuration: 299 * time.Second,
 		delay:       200 * time.Millisecond,
 		jitter:      20 * time.Millisecond,
 		multiplier:  1.5,
@@ -76,7 +78,7 @@ func newConfig(opts ...Option) *config {
 // lifetime is reached.
 // Default values:
 // - MaxRetries: 100
-// - MaxDuration: 1 hour
+// - MaxDuration: 5 minutes
 // - Delay: 200 milliseconds
 // - Jitter: 20 milliseconds
 // - Multiplier: 1.5

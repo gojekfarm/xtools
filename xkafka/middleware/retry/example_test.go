@@ -33,7 +33,8 @@ func Example() {
 
 	consumer.Use(
 		retry.ExponentialBackoff(
-			retry.MaxRetries(3),                // retry 3 times
+			retry.MaxRetries(3), // retry 3 times
+			// MaxDuration should be less than `max.poll.interval.ms` kafka consumer config
 			retry.MaxDuration(10*time.Second),  // don't retry after 10 seconds
 			retry.Delay(1*time.Second),         // initial delay
 			retry.Jitter(100*time.Millisecond), // random delay to avoid thundering herd
