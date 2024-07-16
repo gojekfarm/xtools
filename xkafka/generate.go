@@ -2,4 +2,3 @@
 //go:generate mockery --name producerClient --structname MockProducerClient --filename producer_mock_test.go --outpkg xkafka --output .
 
 package xkafka
-

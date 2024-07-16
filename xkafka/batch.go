@@ -92,7 +92,10 @@ func (b *Batch) GroupMaxOffset() []kafka.TopicPartition {
 	}
 
 	var tps []kafka.TopicPartition
+
 	for topic, partitions := range offsets {
+		topic := topic
+
 		for partition, offset := range partitions {
 			tps = append(tps, kafka.TopicPartition{
 				Topic:     &topic,

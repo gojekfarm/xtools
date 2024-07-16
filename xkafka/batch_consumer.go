@@ -67,11 +67,44 @@ func (c *BatchConsumer) Use(mws ...BatchMiddlewarer) {
 
 // Run starts the consumer and blocks until context is cancelled.
 func (c *BatchConsumer) Run(ctx context.Context) error {
+	if err := c.subscribe(); err != nil {
+		return err
+	}
+
 	if err := c.start(ctx); err != nil {
 		return err
 	}
 
+	return c.close()
+}
+
+// Start subscribes to the configured topics and starts consuming messages.
+// This method is non-blocking and returns immediately post subscribe.
+// Instead, use Run if you want to block until the context is closed or an error occurs.
+//
+// Errors are handled by the ErrorHandler if set, otherwise they stop the consumer
+// and are returned.
+func (c *BatchConsumer) Start() error {
+	if err := c.subscribe(); err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	c.cancelCtx.Store(&cancel)
+
+	go func() { _ = c.start(ctx) }()
+
 	return nil
+}
+
+// Close closes the consumer.
+func (c *BatchConsumer) Close() {
+	cancel := c.cancelCtx.Load()
+	if cancel != nil {
+		(*cancel)()
+	}
+
+	_ = c.close()
 }
 
 func (c *BatchConsumer) start(ctx context.Context) error {
@@ -125,7 +158,12 @@ func (c *BatchConsumer) processAsync(ctx context.Context) error {
 		case <-ctx.Done():
 			st.Wait()
 
-			return context.Cause(ctx)
+			err := context.Cause(ctx)
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+
+			return err
 		case batch := <-c.batch.Receive():
 			st.Go(func() stream.Callback {
 				err := c.handler.HandleBatch(ctx, batch)
@@ -189,7 +227,15 @@ func (c *BatchConsumer) subscribe() error {
 }
 
 func (c *BatchConsumer) unsubscribe() error {
+	_, _ = c.kafka.Commit()
+
 	return c.kafka.Unsubscribe()
+}
+
+func (c *BatchConsumer) close() error {
+	<-time.After(c.config.shutdownTimeout)
+
+	return c.kafka.Close()
 }
 
 func (c *BatchConsumer) concatMiddlewares(handler BatchHandler) BatchHandler {
@@ -201,7 +247,7 @@ func (c *BatchConsumer) concatMiddlewares(handler BatchHandler) BatchHandler {
 }
 
 func (c *BatchConsumer) saveOffset(batch *Batch) error {
-	if batch.Status == Fail {
+	if batch.Status != Success && batch.Status != Skip {
 		return nil
 	}
 
