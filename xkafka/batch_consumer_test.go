@@ -226,6 +226,36 @@ func TestBatchConsumer_MiddlewareExecutionOrder(t *testing.T) {
 	mockKafka.AssertExpectations(t)
 }
 
+func TestBatchConsumer_ManualCommit(t *testing.T) {
+	t.Parallel()
+
+	consumer, mockKafka := newTestBatchConsumer(t, defaultOpts...)
+
+	km := newFakeKafkaMessage()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	mockKafka.On("Unsubscribe").Return(nil)
+	mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
+	mockKafka.On("Commit").Return(nil, nil)
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+	mockKafka.On("Close").Return(nil)
+
+	handler := BatchHandlerFunc(func(ctx context.Context, b *Batch) error {
+		b.AckSuccess()
+
+		cancel()
+
+		return nil
+	})
+
+	consumer.handler = handler
+	err := consumer.Run(ctx)
+	assert.NoError(t, err)
+
+	mockKafka.AssertExpectations(t)
+}
+
 func noopBatchHandler() BatchHandler {
 	return BatchHandlerFunc(func(ctx context.Context, b *Batch) error {
 		return nil

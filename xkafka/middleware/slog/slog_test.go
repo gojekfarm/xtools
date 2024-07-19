@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"log/slog"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/gojekfarm/xtools/xkafka"
 )
@@ -54,4 +55,46 @@ func TestLoggingMiddlewareWithError(t *testing.T) {
 
 	err := handler.Handle(context.Background(), msg)
 	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestBatchLoggingMiddleware(t *testing.T) {
+	batch := xkafka.NewBatch()
+	msg := &xkafka.Message{
+		Topic:     "test-topic",
+		Partition: 0,
+		Offset:    0,
+		Key:       []byte("test-key"),
+	}
+
+	batch.Messages = append(batch.Messages, msg)
+
+	t.Run("success", func(t *testing.T) {
+		loggingMiddleware := BatchLoggingMiddleware(
+			Level(slog.LevelInfo),
+			logger,
+		)
+		handler := loggingMiddleware(xkafka.BatchHandlerFunc(func(ctx context.Context, b *xkafka.Batch) error {
+			b.AckSuccess()
+
+			return nil
+		}))
+
+		err := handler.HandleBatch(context.Background(), batch)
+		assert.NoError(t, err)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		loggingMiddleware := BatchLoggingMiddleware(
+			Level(slog.LevelInfo),
+			logger,
+		)
+		handler := loggingMiddleware(xkafka.BatchHandlerFunc(func(ctx context.Context, b *xkafka.Batch) error {
+			b.AckFail(assert.AnError)
+
+			return assert.AnError
+		}))
+
+		err := handler.HandleBatch(context.Background(), batch)
+		assert.ErrorIs(t, err, assert.AnError)
+	})
 }
