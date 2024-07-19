@@ -80,3 +80,32 @@ func LoggingMiddleware(opts ...Option) xkafka.MiddlewareFunc {
 		})
 	}
 }
+
+// BatchLoggingMiddleware is a middleware that logs batch messages using log/slog.
+func BatchLoggingMiddleware(opts ...Option) xkafka.BatchMiddlewareFunc {
+	cfg := newLogOptions(opts...)
+
+	return func(next xkafka.BatchHandler) xkafka.BatchHandler {
+		return xkafka.BatchHandlerFunc(func(ctx context.Context, b *xkafka.Batch) error {
+			start := time.Now()
+			logger := cfg.logger.WithGroup("xkafka")
+
+			err := next.HandleBatch(ctx, b)
+
+			args := []slog.Attr{
+				slog.Int("count", len(b.Messages)),
+				slog.Int64("max_offset", b.MaxOffset()),
+				slog.Duration("duration", time.Since(start)),
+				slog.String("batch_id", b.ID),
+			}
+
+			if err != nil {
+				logger.LogAttrs(ctx, slog.LevelError, "[xkafka] batch processing failed", args...)
+			} else {
+				logger.LogAttrs(ctx, cfg.level, "[xkafka] batch processed", args...)
+			}
+
+			return err
+		})
+	}
+}

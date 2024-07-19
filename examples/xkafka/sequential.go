@@ -6,9 +6,10 @@ import (
 	"math/rand"
 	"time"
 
+	"log/slog"
+
 	"github.com/rs/xid"
 	"github.com/urfave/cli/v2"
-	"log/slog"
 
 	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
@@ -36,8 +37,7 @@ func runSequential(c *cli.Context) error {
 			"auto.offset.reset": "earliest",
 		},
 		xkafka.ErrorHandler(func(err error) error {
-			slog.Error(err.Error())
-			return nil
+			return err
 		}),
 	}
 
@@ -115,6 +115,11 @@ func publishMessages(messages []*xkafka.Message) error {
 	producer, err := xkafka.NewProducer(
 		"test-seq-producer",
 		xkafka.Brokers(brokers),
+		xkafka.ErrorHandler(func(err error) error {
+			slog.Error(err.Error())
+
+			return nil
+		}),
 	)
 	if err != nil {
 		return err
