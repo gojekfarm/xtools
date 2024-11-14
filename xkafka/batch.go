@@ -34,12 +34,14 @@ func (b *Batch) AckSuccess() {
 }
 
 // AckFail marks the batch as failed to process.
-func (b *Batch) AckFail(err error) {
+func (b *Batch) AckFail(err error) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.Status = Fail
 	b.err = err
+
+	return err
 }
 
 // AckSkip marks the batch as skipped.

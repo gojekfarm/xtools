@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"time"
+
+	"log/slog"
 
 	"github.com/urfave/cli/v2"
-	"log/slog"
 
 	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
@@ -38,8 +40,10 @@ func runBatch(c *cli.Context) error {
 		xkafka.ConfigMap{
 			"auto.offset.reset": "earliest",
 		},
+		xkafka.PollTimeout(10 * time.Second),
 		xkafka.Concurrency(concurrency),
 		xkafka.BatchSize(size),
+		xkafka.BatchTimeout(10 * time.Second),
 		xkafka.ErrorHandler(func(err error) error {
 			// return error to stop consumer
 			return err

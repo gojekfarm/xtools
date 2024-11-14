@@ -66,6 +66,8 @@ func (t *Tracker) CancelIfDone() {
 	defer t.mu.Unlock()
 
 	if len(t.received) == len(t.expect) {
+		slog.Info("[TRACKER] all messages received, cancelling context")
+
 		t.cancel()
 	}
 }

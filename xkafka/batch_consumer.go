@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
-	"github.com/sourcegraph/conc/pool"
 	"github.com/sourcegraph/conc/stream"
 )
 
@@ -66,16 +65,19 @@ func (c *BatchConsumer) Use(mws ...BatchMiddlewarer) {
 }
 
 // Run starts the consumer and blocks until context is cancelled.
-func (c *BatchConsumer) Run(ctx context.Context) error {
+func (c *BatchConsumer) Run(ctx context.Context) (err error) {
+	defer func() {
+		cerr := c.close()
+		err = errors.Join(err, cerr)
+	}()
+
 	if err := c.subscribe(); err != nil {
 		return err
 	}
 
-	if err := c.start(ctx); err != nil {
-		return err
-	}
+	err = c.start(ctx)
 
-	return c.close()
+	return err
 }
 
 // Start subscribes to the configured topics and starts consuming messages.
@@ -110,24 +112,54 @@ func (c *BatchConsumer) Close() {
 func (c *BatchConsumer) start(ctx context.Context) error {
 	c.handler = c.concatMiddlewares(c.handler)
 
-	pool := pool.New().
-		WithContext(ctx).
-		WithMaxGoroutines(2).
-		WithCancelOnError()
+	// Create a context that can be cancelled with cause
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer func() {
+		cancel(nil)
+		c.batch.Stop()
+	}()
 
-	pool.Go(func(ctx context.Context) error {
+	errChan := make(chan error, 2)
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Start process goroutine
+	go func() {
+		defer wg.Done()
+		var err error
 		if c.config.concurrency > 1 {
-			return c.processAsync(ctx)
+			err = c.processAsync(ctx)
+		} else {
+			err = c.process(ctx)
 		}
+		if err != nil {
+			cancel(err)
+			errChan <- err
+		}
+	}()
 
-		return c.process(ctx)
-	})
+	// Start consume goroutine
+	go func() {
+		defer wg.Done()
+		err := c.consume(ctx)
+		if err != nil {
+			cancel(err)
+			errChan <- err
+		}
+	}()
 
-	pool.Go(func(ctx context.Context) error {
-		return c.consume(ctx)
-	})
+	// Wait for completion and collect errors
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
 
-	return pool.Wait()
+	// Return the first error that occurred
+	for err := range errChan {
+		return err
+	}
+
+	return context.Cause(ctx)
 }
 
 func (c *BatchConsumer) process(ctx context.Context) error {
@@ -157,7 +189,6 @@ func (c *BatchConsumer) processAsync(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			st.Wait()
-
 			err := context.Cause(ctx)
 			if errors.Is(err, context.Canceled) {
 				return nil
@@ -197,7 +228,7 @@ func (c *BatchConsumer) consume(ctx context.Context) (err error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return err
+			return context.Cause(ctx)
 		default:
 			km, err := c.kafka.ReadMessage(c.config.pollTimeout)
 			if err != nil {
@@ -216,7 +247,6 @@ func (c *BatchConsumer) consume(ctx context.Context) (err error) {
 			}
 
 			msg := newMessage(c.name, km)
-
 			c.batch.Add(msg)
 		}
 	}
@@ -274,18 +304,18 @@ type BatchManager struct {
 	batch     *Batch
 	mutex     *sync.RWMutex
 	flushChan chan *Batch
+	done      chan struct{}
 }
 
 // NewBatchManager creates a new BatchManager.
 func NewBatchManager(size int, timeout time.Duration) *BatchManager {
 	b := &BatchManager{
-		size:    size,
-		timeout: timeout,
-		mutex:   &sync.RWMutex{},
-		batch: &Batch{
-			Messages: make([]*Message, 0, size),
-		},
+		size:      size,
+		timeout:   timeout,
+		mutex:     &sync.RWMutex{},
+		batch:     NewBatch(),
 		flushChan: make(chan *Batch),
+		done:      make(chan struct{}),
 	}
 
 	go b.runFlushByTime()
@@ -312,11 +342,21 @@ func (b *BatchManager) Receive() <-chan *Batch {
 
 func (b *BatchManager) runFlushByTime() {
 	t := time.NewTicker(b.timeout)
+	defer t.Stop()
 
-	for range t.C {
-		b.mutex.Lock()
-		b.flush()
-		b.mutex.Unlock()
+	for {
+		select {
+		case <-b.done:
+			b.mutex.Lock()
+			b.flush()
+			close(b.flushChan)
+			b.mutex.Unlock()
+			return
+		case <-t.C:
+			b.mutex.Lock()
+			b.flush()
+			b.mutex.Unlock()
+		}
 	}
 }
 
@@ -330,7 +370,10 @@ func (b *BatchManager) flush() {
 
 	b.flushChan <- b.batch
 
-	b.batch = &Batch{
-		Messages: make([]*Message, 0, b.size),
-	}
+	b.batch = NewBatch()
+}
+
+// Stop signals the batch manager to stop and clean up
+func (b *BatchManager) Stop() {
+	close(b.done)
 }

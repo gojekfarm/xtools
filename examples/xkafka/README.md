@@ -15,7 +15,7 @@ $ docker-compose up -d
 The basic consumer reads messages from a Kafka topic and prints them to the console. It simulates a process crash by restarting the consumer after a random number of messages have been consumed.
 
 ```bash
-$ go run *.go basic --partitions=2 --consumers=2 --messages=10
+go run *.go basic --partitions=2 --consumers=2 --messages=10
 ```
 
 ### Async Consumer
@@ -23,7 +23,7 @@ $ go run *.go basic --partitions=2 --consumers=2 --messages=10
 The async consumer reads messages concurrently using a configurable pool of goroutines.
 
 ```bash
-$ go run *.go basic --partitions=2 --consumers=2 --messages=10 --concurrency=4
+go run *.go basic --partitions=2 --consumers=2 --messages=10 --concurrency=4
 ```
 
 ### Batch Consumer
@@ -31,7 +31,7 @@ $ go run *.go basic --partitions=2 --consumers=2 --messages=10 --concurrency=4
 The batch consumer reads messages in batches of a configurable size.
 
 ```bash
-$ go run *.go batch --partitions=2 --consumers=2 --messages=1000 --batch-size=100
+go run *.go batch --partitions=2 --consumers=2 --messages=20 --batch-size=3
 ```
 
 ### Async Batch Consumer
@@ -39,5 +39,5 @@ $ go run *.go batch --partitions=2 --consumers=2 --messages=1000 --batch-size=10
 The async batch consumer processes batches concurrently using a configurable pool of goroutines.
 
 ```bash
-$ go run *.go batch --partitions=2 --consumers=2 --messages=1000 --batch-size=100 --concurrency=4
+go run *.go batch --partitions=2 --consumers=2 --messages=20 --batch-size=3 --concurrency=4
 ```
