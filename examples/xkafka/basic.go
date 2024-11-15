@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 
+	"github.com/rs/zerolog"
 	"github.com/urfave/cli/v2"
-	"log/slog"
 
 	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
-	slogmw "github.com/gojekfarm/xtools/xkafka/middleware/slog"
+	logmw "github.com/gojekfarm/xtools/xkafka/middleware/zerolog"
 )
 
 func runBasic(c *cli.Context) error {
@@ -76,6 +76,7 @@ func runConsumers(
 	pods int,
 	opts ...xkafka.ConsumerOption,
 ) {
+	log := zerolog.Ctx(ctx)
 	handler := basicHandler(tracker)
 
 	for {
@@ -92,7 +93,7 @@ func runConsumers(
 
 			err := xrun.All(xrun.NoTimeout, components...).Run(ctx)
 			if err != nil {
-				slog.Error("Error running consumers", "error", err)
+				log.Error().Err(err).Msg("Error running consumers")
 			}
 		}
 	}
@@ -108,7 +109,7 @@ func createConsumer(handler xkafka.HandlerFunc, opts ...xkafka.ConsumerOption) *
 		panic(err)
 	}
 
-	consumer.Use(slogmw.LoggingMiddleware())
+	consumer.Use(logmw.LoggingMiddleware(zerolog.DebugLevel))
 
 	return consumer
 }

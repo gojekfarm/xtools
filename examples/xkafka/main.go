@@ -1,22 +1,19 @@
 package main
 
 import (
-	"log"
 	"os"
 	"time"
 
-	"github.com/lmittmann/tint"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
-	"log/slog"
 )
 
 func main() {
-	slog.SetDefault(slog.New(
-		tint.NewHandler(os.Stderr, &tint.Options{
-			Level:      slog.LevelDebug,
-			TimeFormat: time.Kitchen,
-		}),
-	))
+	// Configure zerolog
+	zerolog.TimeFieldFormat = time.Kitchen
+	console := zerolog.ConsoleWriter{Out: os.Stderr}
+	log.Logger = log.Output(console)
 
 	app := cli.NewApp()
 
@@ -67,6 +64,6 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
 }

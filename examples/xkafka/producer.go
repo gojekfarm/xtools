@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"log/slog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/gojekfarm/xtools/xkafka"
 )
@@ -13,8 +13,7 @@ func publishMessages(messages []*xkafka.Message) {
 		"test-seq-producer",
 		xkafka.Brokers(brokers),
 		xkafka.ErrorHandler(func(err error) error {
-			slog.Error(err.Error())
-
+			log.Error().Err(err).Msg("")
 			return err
 		}),
 	)
@@ -30,5 +29,7 @@ func publishMessages(messages []*xkafka.Message) {
 		}
 	}
 
-	slog.Info("[PRODUCER] published messages", "count", len(messages))
+	log.Info().
+		Int("count", len(messages)).
+		Msg("[PRODUCER] published messages")
 }

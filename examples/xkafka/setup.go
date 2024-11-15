@@ -6,7 +6,7 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/rs/xid"
-	"log/slog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/gojekfarm/xtools/xkafka"
 )
@@ -35,7 +35,11 @@ func createTopic(partitions int) string {
 		panic(err)
 	}
 
-	slog.Info("[ADMIN] created topic", "name", name, "partitions", partitions, "result", res)
+	log.Info().
+		Str("name", name).
+		Int("partitions", partitions).
+		Interface("result", res).
+		Msg("[ADMIN] created topic")
 
 	return name
 }

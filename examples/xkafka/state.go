@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"golang.org/x/exp/rand"
-	"log/slog"
 
 	"github.com/gojekfarm/xtools/xkafka"
 )
@@ -66,8 +66,7 @@ func (t *Tracker) CancelIfDone() {
 	defer t.mu.Unlock()
 
 	if len(t.received) == len(t.expect) {
-		slog.Info("[TRACKER] all messages received, cancelling context")
-
+		log.Info().Msg("[TRACKER] all messages received, cancelling context")
 		t.cancel()
 	}
 }
@@ -76,18 +75,8 @@ func (t *Tracker) Summary() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	slog.Info("[TRACKER] summary",
-		"received", len(t.received),
-		"expected", len(t.expect),
-	)
-
-	for _, key := range t.order {
-		msg := t.received[key]
-		slog.Info("[TRACKER] message",
-			"key", string(msg.Key),
-			"offset", msg.Offset,
-			"partition", msg.Partition,
-			"topic", msg.Topic,
-		)
-	}
+	log.Info().
+		Int("received", len(t.received)).
+		Int("expected", len(t.expect)).
+		Msg("[TRACKER] summary")
 }

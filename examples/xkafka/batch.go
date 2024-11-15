@@ -4,13 +4,12 @@ import (
 	"context"
 	"time"
 
-	"log/slog"
-
+	"github.com/rs/zerolog"
 	"github.com/urfave/cli/v2"
 
 	"github.com/gojekfarm/xrun"
 	"github.com/gojekfarm/xtools/xkafka"
-	slogmw "github.com/gojekfarm/xtools/xkafka/middleware/slog"
+	logmw "github.com/gojekfarm/xtools/xkafka/middleware/zerolog"
 )
 
 func runBatch(c *cli.Context) error {
@@ -80,6 +79,7 @@ func batchHandler(tracker *Tracker) xkafka.BatchHandlerFunc {
 }
 
 func runBatchConsumers(ctx context.Context, tracker *Tracker, pods int, opts ...xkafka.ConsumerOption) {
+	log := zerolog.Ctx(ctx)
 	handler := batchHandler(tracker)
 
 	for {
@@ -99,14 +99,14 @@ func runBatchConsumers(ctx context.Context, tracker *Tracker, pods int, opts ...
 					panic(err)
 				}
 
-				bc.Use(slogmw.BatchLoggingMiddleware())
+				bc.Use(logmw.BatchLoggingMiddleware(zerolog.DebugLevel))
 
 				components = append(components, bc)
 			}
 
 			err := xrun.All(xrun.NoTimeout, components...).Run(ctx)
 			if err != nil {
-				slog.Error("Error running consumers", "error", err)
+				log.Error().Err(err).Msg("Error running consumers")
 			}
 		}
 	}
