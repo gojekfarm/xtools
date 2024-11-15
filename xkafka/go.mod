@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/confluentinc/confluent-kafka-go/v2 v2.0.2
 	github.com/pkg/errors v0.9.1
+	github.com/rs/xid v1.5.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.8.1
 )

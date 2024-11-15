@@ -2,17 +2,25 @@ package main
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"log/slog"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/rs/xid"
+	"github.com/rs/zerolog/log"
+
+	"github.com/gojekfarm/xtools/xkafka"
 )
 
-func createTopic(name string, partitions int) error {
+var brokers = []string{"localhost:9092"}
+
+func createTopic(partitions int) string {
+	name := "xkafka-" + xid.New().String()
+
 	admin, err := kafka.NewAdminClient(&kafka.ConfigMap{
 		"bootstrap.servers": "localhost:9092",
 	})
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	res, err := admin.CreateTopics(
@@ -24,10 +32,28 @@ func createTopic(name string, partitions int) error {
 		}},
 	)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
-	slog.Info("[ADMIN] created topic", "name", name, "partitions", partitions, "result", res)
+	log.Info().
+		Str("name", name).
+		Int("partitions", partitions).
+		Interface("result", res).
+		Msg("[ADMIN] created topic")
 
-	return nil
+	return name
+}
+
+func generateMessages(topic string, count int) []*xkafka.Message {
+	messages := make([]*xkafka.Message, count)
+
+	for i := 0; i < count; i++ {
+		messages[i] = &xkafka.Message{
+			Topic: topic,
+			Key:   []byte(fmt.Sprintf("key-%d", i)),
+			Value: []byte(fmt.Sprintf("value-%d : %s", i, xid.New().String())),
+		}
+	}
+
+	return messages
 }

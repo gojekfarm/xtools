@@ -3,6 +3,7 @@ package zerolog
 
 import (
 	"context"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -40,6 +41,38 @@ func LoggingMiddleware(lvl zerolog.Level) xkafka.MiddlewareFunc {
 			ctx = l.WithContext(ctx)
 
 			return next.Handle(ctx, msg)
+		})
+	}
+}
+
+// BatchLoggingMiddleware is a middleware that logs batch processing using zerolog.
+// Also adds a structured logger to the context.
+func BatchLoggingMiddleware(lvl zerolog.Level) xkafka.BatchMiddlewareFunc {
+	return func(next xkafka.BatchHandler) xkafka.BatchHandler {
+		return xkafka.BatchHandlerFunc(func(ctx context.Context, b *xkafka.Batch) error {
+			start := time.Now()
+			fields := log.With().
+				Int("count", len(b.Messages)).
+				Int64("max_offset", b.MaxOffset()).
+				Str("batch_id", b.ID)
+
+			l := fields.Logger()
+
+			ctx = l.WithContext(ctx)
+
+			err := next.HandleBatch(ctx, b)
+			if err != nil {
+				l.WithLevel(zerolog.ErrorLevel).
+					Dur("duration", time.Since(start)).
+					Err(err).
+					Msg("[xkafka] batch processing failed")
+			} else {
+				l.WithLevel(lvl).
+					Dur("duration", time.Since(start)).
+					Msg("[xkafka] batch processed")
+			}
+
+			return err
 		})
 	}
 }

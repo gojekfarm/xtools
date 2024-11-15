@@ -1,16 +1,14 @@
-package slog
+package zerolog
 
 import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-	"log/slog"
 
 	"github.com/gojekfarm/xtools/xkafka"
 )
-
-var logger = Logger(slog.Default())
 
 func TestLoggingMiddleware(t *testing.T) {
 	msg := &xkafka.Message{
@@ -20,10 +18,7 @@ func TestLoggingMiddleware(t *testing.T) {
 		Key:       []byte("test-key"),
 	}
 
-	loggingMiddleware := LoggingMiddleware(
-		Level(slog.LevelInfo),
-		logger,
-	)
+	loggingMiddleware := LoggingMiddleware(zerolog.InfoLevel)
 	t.Run("success", func(t *testing.T) {
 		handler := loggingMiddleware(xkafka.HandlerFunc(func(ctx context.Context, msg *xkafka.Message) error {
 			msg.AckSuccess()
@@ -56,14 +51,11 @@ func TestBatchLoggingMiddleware(t *testing.T) {
 
 	batch.Messages = append(batch.Messages, msg)
 
+	loggingMiddleware := BatchLoggingMiddleware(zerolog.InfoLevel)
+
 	t.Run("success", func(t *testing.T) {
-		loggingMiddleware := BatchLoggingMiddleware(
-			Level(slog.LevelInfo),
-			logger,
-		)
 		handler := loggingMiddleware(xkafka.BatchHandlerFunc(func(ctx context.Context, b *xkafka.Batch) error {
 			b.AckSuccess()
-
 			return nil
 		}))
 
@@ -72,13 +64,8 @@ func TestBatchLoggingMiddleware(t *testing.T) {
 	})
 
 	t.Run("error", func(t *testing.T) {
-		loggingMiddleware := BatchLoggingMiddleware(
-			Level(slog.LevelInfo),
-			logger,
-		)
 		handler := loggingMiddleware(xkafka.BatchHandlerFunc(func(ctx context.Context, b *xkafka.Batch) error {
 			b.AckFail(assert.AnError)
-
 			return assert.AnError
 		}))
 

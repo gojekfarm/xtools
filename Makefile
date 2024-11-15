@@ -52,6 +52,12 @@ test-cov: gocov
 test-xml: test-cov gocov-xml
 	@jq -n '{ Packages: [ inputs.Packages ] | add }' $(shell find . -type f -name 'coverage.json' | sort) | $(GOCOVXML) > coverage.xml
 
+.PHONY: test-html
+
+test-html: test-cov gocov-html
+	@jq -n '{ Packages: [ inputs.Packages ] | add }' $(shell find . -type f -name 'coverage.json' | sort) | $(GOCOVHTML) -t kit -r > coverage.html
+	@open coverage.html
+
 .PHONY: check
 check: fmt vet imports lint
 	@git diff --quiet || test $$(git diff --name-only | grep -v -e 'go.mod$$' -e 'go.sum$$' | wc -l) -eq 0 || ( echo "The following changes (result of code generators and code checks) have been detected:" && git --no-pager diff && false ) # fail if Git working tree is dirty
@@ -83,6 +89,10 @@ gocov:
 GOCOVXML = $(BIN_DIR)/gocov-xml
 gocov-xml:
 	$(call go-get-tool,$(GOCOVXML),github.com/AlekSi/gocov-xml@v1.0.0)
+
+GOCOVHTML = $(BIN_DIR)/gocov-html
+gocov-html:
+	$(call go-get-tool,$(GOCOVHTML),github.com/matm/gocov-html/cmd/gocov-html@v1.4.0)
 
 MOCKERY = $(BIN_DIR)/mockery
 mockery:
