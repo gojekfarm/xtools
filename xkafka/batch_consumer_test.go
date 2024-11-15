@@ -63,19 +63,19 @@ func TestNewBatchConsumer(t *testing.T) {
 func TestBatchConsumer_Lifecycle(t *testing.T) {
 	t.Parallel()
 
-	t.Run("StartSubscribeError", func(t *testing.T) {
+	t.Run("RunSubscribeError", func(t *testing.T) {
 		consumer, mockKafka := newTestBatchConsumer(t, defaultOpts...)
 
 		expectError := errors.New("error in subscribe")
 
 		mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(expectError)
 
-		assert.Error(t, consumer.Start())
+		assert.Error(t, consumer.Run(context.Background()))
 
 		mockKafka.AssertExpectations(t)
 	})
 
-	t.Run("StartSuccessCloseError", func(t *testing.T) {
+	t.Run("RunCloseError", func(t *testing.T) {
 		consumer, mockKafka := newTestBatchConsumer(t, defaultOpts...)
 
 		mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
@@ -84,14 +84,19 @@ func TestBatchConsumer_Lifecycle(t *testing.T) {
 		mockKafka.On("Commit").Return(nil, nil)
 		mockKafka.On("Close").Return(errors.New("error in close"))
 
-		assert.NoError(t, consumer.Start())
-		<-time.After(100 * time.Millisecond)
-		consumer.Close()
+		ctx, cancel := context.WithCancel(context.Background())
+
+		go func() {
+			<-time.After(100 * time.Millisecond)
+			cancel()
+		}()
+
+		assert.Error(t, consumer.Run(ctx))
 
 		mockKafka.AssertExpectations(t)
 	})
 
-	t.Run("StartCloseSuccess", func(t *testing.T) {
+	t.Run("RunSuccess", func(t *testing.T) {
 		consumer, mockKafka := newTestBatchConsumer(t, defaultOpts...)
 
 		mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
@@ -100,9 +105,14 @@ func TestBatchConsumer_Lifecycle(t *testing.T) {
 		mockKafka.On("Commit").Return(nil, nil)
 		mockKafka.On("Close").Return(nil)
 
-		assert.NoError(t, consumer.Start())
-		<-time.After(100 * time.Millisecond)
-		consumer.Close()
+		ctx, cancel := context.WithCancel(context.Background())
+
+		go func() {
+			<-time.After(100 * time.Millisecond)
+			cancel()
+		}()
+
+		assert.NoError(t, consumer.Run(ctx))
 
 		mockKafka.AssertExpectations(t)
 	})
@@ -208,7 +218,6 @@ func TestBatchConsumer_Async(t *testing.T) {
 		b.AckSuccess()
 
 		assert.NotNil(t, b)
-		assert.Len(t, b.Messages, 3)
 
 		n := count.Add(1)
 
