@@ -61,9 +61,7 @@ func batchHandler(tracker *Tracker) xkafka.BatchHandlerFunc {
 	return func(ctx context.Context, batch *xkafka.Batch) error {
 		err := tracker.SimulateWork()
 		if err != nil {
-			batch.AckFail(err)
-
-			return err
+			return batch.AckFail(err)
 		}
 
 		for _, msg := range batch.Messages {

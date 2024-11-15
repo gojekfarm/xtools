@@ -14,6 +14,7 @@ func publishMessages(messages []*xkafka.Message) {
 		xkafka.Brokers(brokers),
 		xkafka.ErrorHandler(func(err error) error {
 			log.Error().Err(err).Msg("")
+
 			return err
 		}),
 	)

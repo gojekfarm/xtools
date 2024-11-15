@@ -90,25 +90,27 @@ func (c *BatchConsumer) runSequential(ctx context.Context) (err error) {
 
 	batch := NewBatch()
 	timer := time.NewTimer(c.config.batchTimeout)
+
 	defer timer.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			if len(batch.Messages) > 0 {
-				if err := c.processBatch(ctx, batch); err != nil {
-					return err
-				}
+			if err := c.processBatch(ctx, batch); err != nil {
+				return err
 			}
-			return err
+
+			return nil
 
 		case <-timer.C:
 			if len(batch.Messages) > 0 {
 				if err := c.processBatch(ctx, batch); err != nil {
 					return err
 				}
+
 				batch = NewBatch()
 			}
+
 			timer.Reset(c.config.batchTimeout)
 
 		default:
@@ -122,6 +124,7 @@ func (c *BatchConsumer) runSequential(ctx context.Context) (err error) {
 				if ferr := c.config.errorHandler(err); ferr != nil {
 					return ferr
 				}
+
 				continue
 			}
 
@@ -132,7 +135,9 @@ func (c *BatchConsumer) runSequential(ctx context.Context) (err error) {
 				if err := c.processBatch(ctx, batch); err != nil {
 					return err
 				}
+
 				batch = NewBatch()
+
 				timer.Reset(c.config.batchTimeout)
 			}
 		}
@@ -145,6 +150,7 @@ func (c *BatchConsumer) runAsync(ctx context.Context) error {
 
 	batch := NewBatch()
 	timer := time.NewTimer(c.config.batchTimeout)
+
 	defer timer.Stop()
 
 	for {
@@ -152,12 +158,7 @@ func (c *BatchConsumer) runAsync(ctx context.Context) error {
 		case <-ctx.Done():
 			st.Wait()
 
-			var err error
-
-			if len(batch.Messages) > 0 {
-				err = c.processBatch(ctx, batch)
-			}
-
+			err := c.processBatch(ctx, batch)
 			uerr := c.unsubscribe()
 			err = errors.Join(err, uerr)
 
@@ -173,6 +174,7 @@ func (c *BatchConsumer) runAsync(ctx context.Context) error {
 				c.processBatchAsync(ctx, batch, st, cancel)
 				batch = NewBatch()
 			}
+
 			timer.Reset(c.config.batchTimeout)
 
 		default:
@@ -196,6 +198,7 @@ func (c *BatchConsumer) runAsync(ctx context.Context) error {
 			if len(batch.Messages) >= c.config.batchSize {
 				c.processBatchAsync(ctx, batch, st, cancel)
 				batch = NewBatch()
+
 				timer.Reset(c.config.batchTimeout)
 			}
 		}
@@ -203,6 +206,10 @@ func (c *BatchConsumer) runAsync(ctx context.Context) error {
 }
 
 func (c *BatchConsumer) processBatch(ctx context.Context, batch *Batch) error {
+	if len(batch.Messages) == 0 {
+		return nil
+	}
+
 	err := c.handler.HandleBatch(ctx, batch)
 	if ferr := c.config.errorHandler(err); ferr != nil {
 		return ferr
@@ -211,11 +218,17 @@ func (c *BatchConsumer) processBatch(ctx context.Context, batch *Batch) error {
 	return c.storeBatch(batch)
 }
 
-func (c *BatchConsumer) processBatchAsync(ctx context.Context, batch *Batch, st *stream.Stream, cancel context.CancelCauseFunc) {
+func (c *BatchConsumer) processBatchAsync(
+	ctx context.Context,
+	batch *Batch,
+	st *stream.Stream,
+	cancel context.CancelCauseFunc,
+) {
 	st.Go(func() stream.Callback {
 		err := c.handler.HandleBatch(ctx, batch)
 		if ferr := c.config.errorHandler(err); ferr != nil {
 			cancel(ferr)
+
 			return func() {}
 		}
 
@@ -233,6 +246,7 @@ func (c *BatchConsumer) storeBatch(batch *Batch) error {
 	}
 
 	tps := batch.GroupMaxOffset()
+
 	_, err := c.kafka.StoreOffsets(tps)
 	if err != nil {
 		return err
@@ -252,6 +266,7 @@ func (c *BatchConsumer) concatMiddlewares(h BatchHandler) BatchHandler {
 	for i := len(c.middlewares) - 1; i >= 0; i-- {
 		h = c.middlewares[i].BatchMiddleware(h)
 	}
+
 	return h
 }
 
@@ -261,10 +276,12 @@ func (c *BatchConsumer) subscribe() error {
 
 func (c *BatchConsumer) unsubscribe() error {
 	_, _ = c.kafka.Commit()
+
 	return c.kafka.Unsubscribe()
 }
 
 func (c *BatchConsumer) close() error {
 	<-time.After(c.config.shutdownTimeout)
+
 	return c.kafka.Close()
 }
