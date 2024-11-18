@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 
 	"github.com/gojekfarm/xrun"
@@ -59,12 +60,12 @@ func runBatch(c *cli.Context) error {
 
 func batchHandler(tracker *Tracker) xkafka.BatchHandlerFunc {
 	return func(ctx context.Context, batch *xkafka.Batch) error {
-		err := tracker.SimulateWork()
-		if err != nil {
-			return batch.AckFail(err)
-		}
-
 		for _, msg := range batch.Messages {
+			err := tracker.SimulateWork(msg)
+			if err != nil {
+				return batch.AckFail(err)
+			}
+
 			tracker.Ack(msg)
 		}
 
@@ -77,7 +78,6 @@ func batchHandler(tracker *Tracker) xkafka.BatchHandlerFunc {
 }
 
 func runBatchConsumers(ctx context.Context, tracker *Tracker, pods int, opts ...xkafka.ConsumerOption) {
-	log := zerolog.Ctx(ctx)
 	handler := batchHandler(tracker)
 
 	for {
@@ -101,6 +101,8 @@ func runBatchConsumers(ctx context.Context, tracker *Tracker, pods int, opts ...
 
 				components = append(components, bc)
 			}
+
+			log.Info().Msg("Running consumers")
 
 			err := xrun.All(xrun.NoTimeout, components...).Run(ctx)
 			if err != nil {

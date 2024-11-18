@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -41,10 +41,12 @@ func (t *Tracker) Ack(msg *xkafka.Message) {
 
 	t.received[string(msg.Key)] = msg
 	t.order = append(t.order, string(msg.Key))
+
+	log.Info().Msgf("[TRACKER] %d/%d", len(t.received), len(t.expect))
 }
 
-func (t *Tracker) SimulateWork() error {
-	<-time.After(time.Duration(rand.Int63n(200)) * time.Millisecond)
+func (t *Tracker) SimulateWork(msg *xkafka.Message) error {
+	<-time.After(time.Duration(rand.Int63n(50)) * time.Millisecond)
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -55,7 +57,10 @@ func (t *Tracker) SimulateWork() error {
 	if len(t.received) >= after && !t.simulateError {
 		t.simulateError = true
 
-		return errors.New("simulated error")
+		return fmt.Errorf(
+			"simulated error. partition %d, offset %d",
+			msg.Partition, msg.Offset,
+		)
 	}
 
 	return nil

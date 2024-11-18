@@ -20,6 +20,7 @@ type Consumer struct {
 	middlewares []Middlewarer
 	config      *consumerConfig
 	cancelCtx   atomic.Pointer[context.CancelFunc]
+	stopOffset  atomic.Bool
 }
 
 // NewConsumer creates a new Consumer instance.
@@ -207,7 +208,9 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 				if ferr := c.config.errorHandler(err); ferr != nil {
 					cancel(ferr)
 
-					return func() {}
+					return func() {
+						c.stopOffset.Store(true)
+					}
 				}
 
 				return func() {
@@ -222,6 +225,10 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 
 func (c *Consumer) storeMessage(msg *Message) error {
 	if msg.Status != Success && msg.Status != Skip {
+		return nil
+	}
+
+	if c.stopOffset.Load() {
 		return nil
 	}
 

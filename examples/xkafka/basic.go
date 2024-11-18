@@ -54,7 +54,7 @@ func runBasic(c *cli.Context) error {
 
 func basicHandler(tracker *Tracker) xkafka.HandlerFunc {
 	return func(ctx context.Context, msg *xkafka.Message) error {
-		err := tracker.SimulateWork()
+		err := tracker.SimulateWork(msg)
 		if err != nil {
 			msg.AckFail(err)
 

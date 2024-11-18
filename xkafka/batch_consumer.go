@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -18,6 +19,7 @@ type BatchConsumer struct {
 	handler     BatchHandler
 	middlewares []BatchMiddlewarer
 	config      *consumerConfig
+	stopOffset  atomic.Bool
 }
 
 // NewBatchConsumer creates a new BatchConsumer instance.
@@ -229,7 +231,9 @@ func (c *BatchConsumer) processBatchAsync(
 		if ferr := c.config.errorHandler(err); ferr != nil {
 			cancel(ferr)
 
-			return func() {}
+			return func() {
+				c.stopOffset.Store(true)
+			}
 		}
 
 		return func() {
@@ -242,6 +246,10 @@ func (c *BatchConsumer) processBatchAsync(
 
 func (c *BatchConsumer) storeBatch(batch *Batch) error {
 	if batch.Status != Success && batch.Status != Skip {
+		return nil
+	}
+
+	if c.stopOffset.Load() {
 		return nil
 	}
 

@@ -24,8 +24,10 @@ func publishMessages(messages []*xkafka.Message) {
 
 	defer producer.Close()
 
+	ctx := context.Background()
+
 	for _, msg := range messages {
-		if err := producer.Publish(context.Background(), msg); err != nil {
+		if err := producer.AsyncPublish(ctx, msg); err != nil {
 			panic(err)
 		}
 	}
