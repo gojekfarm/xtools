@@ -574,6 +574,56 @@ func TestConsumerAsync(t *testing.T) {
 	mockKafka.AssertExpectations(t)
 }
 
+func TestConsumerAsync_StopOffsetOnError(t *testing.T) {
+	t.Parallel()
+
+	consumer, mockKafka := newTestConsumer(t,
+		append(defaultOpts, Concurrency(2))...)
+
+	km := newFakeKafkaMessage()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	mockKafka.On("Unsubscribe").Return(nil)
+	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+	mockKafka.On("Commit").Return(nil, nil)
+	mockKafka.On("Close").Return(nil)
+
+	mockKafka.On("StoreOffsets", mock.Anything).
+		Return(nil, nil).
+		Times(2)
+
+	var recv []*Message
+	var mu sync.Mutex
+
+	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
+		mu.Lock()
+		defer mu.Unlock()
+
+		recv = append(recv, msg)
+
+		if len(recv) > 2 {
+			err := assert.AnError
+			msg.AckFail(err)
+
+			cancel()
+
+			return err
+		}
+
+		msg.AckSuccess()
+
+		return nil
+	})
+
+	consumer.handler = handler
+
+	err := consumer.Run(ctx)
+	assert.NoError(t, err)
+
+	mockKafka.AssertExpectations(t)
+}
+
 func TestConsumerStoreOffsetsError(t *testing.T) {
 	t.Parallel()
 
