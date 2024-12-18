@@ -14,17 +14,17 @@ var (
 	Join   = errors.Join
 )
 
-// ErrorData is an error that has key-value metadata attached to it.
-type ErrorData struct {
+// ErrorTags is an error that has key-value tags attached to it.
+type ErrorTags struct {
 	err  error
-	data map[string]string
+	tags map[string]string
 }
 
-// Error returns the error message and any attached metadata.
-func (e *ErrorData) Error() string {
+// Error returns the error message with the tags attached.
+func (e *ErrorTags) Error() string {
 	md := []string{}
 
-	for k, v := range e.data {
+	for k, v := range e.tags {
 		md = append(md, k+"="+v)
 	}
 
@@ -32,21 +32,21 @@ func (e *ErrorData) Error() string {
 }
 
 // Unwrap returns the underlying error.
-func (e *ErrorData) Unwrap() error {
+func (e *ErrorTags) Unwrap() error {
 	return e.err
 }
 
 // Is returns true if the error is the same as the target error.
-func (e *ErrorData) Is(target error) bool {
+func (e *ErrorTags) Is(target error) bool {
 	return Is(e.err, target)
 }
 
-// Data returns the attached metadata.
-func (e *ErrorData) Data() map[string]string {
-	return e.data
+// All returns all the tags attached to the error.
+func (e *ErrorTags) All() map[string]string {
+	return e.tags
 }
 
-// Wrap attaches additional metadata to an error.
+// Wrap attaches additional tags to an error.
 func Wrap(err error, attrs ...string) error {
 	if err == nil {
 		return nil
@@ -56,13 +56,13 @@ func Wrap(err error, attrs ...string) error {
 		panic("[xtools/errors] attrs must be key/value pairs")
 	}
 
-	e := &ErrorData{
+	e := &ErrorTags{
 		err:  err,
-		data: map[string]string{},
+		tags: map[string]string{},
 	}
 
 	for i := 0; i < len(attrs); i += 2 {
-		e.data[attrs[i]] = attrs[i+1]
+		e.tags[attrs[i]] = attrs[i+1]
 	}
 
 	return e
