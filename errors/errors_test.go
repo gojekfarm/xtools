@@ -22,6 +22,15 @@ func TestWrap(t *testing.T) {
 	assert.EqualValues(t, map[string]string{"foo": "bar"}, tags.All())
 }
 
+func TestWrap_MultipleWraps(t *testing.T) {
+	err := errors.New("test error")
+
+	wrapped1 := errors.Wrap(err, "foo", "bar")
+	wrapped2 := errors.Wrap(wrapped1, "baz", "qux")
+
+	assert.Equal(t, "test error [foo=bar, baz=qux]", wrapped2.Error())
+}
+
 func TestWrap_PanicsOnOddNumberOfAttrs(t *testing.T) {
 	assert.Panics(t, func() {
 		errors.Wrap(errors.New("test error"), "foo")

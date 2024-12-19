@@ -56,9 +56,13 @@ func Wrap(err error, attrs ...string) error {
 		panic("[xtools/errors] attrs must be key/value pairs")
 	}
 
-	e := &ErrorTags{
-		err:  err,
-		tags: map[string]string{},
+	var e *ErrorTags
+
+	if !As(err, &e) {
+		e = &ErrorTags{
+			err:  err,
+			tags: map[string]string{},
+		}
 	}
 
 	for i := 0; i < len(attrs); i += 2 {
