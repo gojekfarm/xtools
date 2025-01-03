@@ -21,6 +21,10 @@ type consumerConfig struct {
 	pollTimeout     time.Duration
 	concurrency     int
 	manualCommit    bool
+
+	// batch options
+	batchSize    int
+	batchTimeout time.Duration
 }
 
 func newConsumerConfig(opts ...ConsumerOption) (*consumerConfig, error) {
@@ -33,6 +37,8 @@ func newConsumerConfig(opts ...ConsumerOption) (*consumerConfig, error) {
 		pollTimeout:     10 * time.Second,
 		shutdownTimeout: 1 * time.Second,
 		concurrency:     1,
+		batchSize:       1000,
+		batchTimeout:    5 * time.Second,
 	}
 
 	for _, opt := range opts {
@@ -99,4 +105,18 @@ type ManualCommit bool
 
 func (mc ManualCommit) setConsumerConfig(o *consumerConfig) {
 	o.manualCommit = bool(mc)
+}
+
+// BatchSize defines the maximum number of messages in a batch.
+type BatchSize int
+
+func (bs BatchSize) setConsumerConfig(o *consumerConfig) {
+	o.batchSize = int(bs)
+}
+
+// BatchTimeout defines the maximum time to wait for a batch to be filled.
+type BatchTimeout time.Duration
+
+func (bt BatchTimeout) setConsumerConfig(o *consumerConfig) {
+	o.batchTimeout = time.Duration(bt)
 }
