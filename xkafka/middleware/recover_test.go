@@ -26,3 +26,20 @@ func TestRecoverMiddleware(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, xkafka.Fail, msg.Status)
 }
+
+func TestBatchRecoverMiddleware(t *testing.T) {
+	var handler xkafka.BatchHandler
+
+	handler = xkafka.BatchHandlerFunc(func(ctx context.Context, batch *xkafka.Batch) error {
+		panic("test panic")
+	})
+
+	m := middleware.BatchRecoverMiddleware()
+
+	handler = m.BatchMiddleware(handler)
+	batch := xkafka.Batch{}
+
+	err := handler.HandleBatch(context.Background(), &batch)
+	assert.NoError(t, err)
+	assert.Equal(t, xkafka.Fail, batch.Status)
+}
