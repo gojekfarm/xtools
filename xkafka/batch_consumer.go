@@ -150,6 +150,8 @@ func (c *BatchConsumer) runAsync(ctx context.Context) error {
 	st := stream.New().WithMaxGoroutines(c.config.concurrency)
 	ctx, cancel := context.WithCancelCause(ctx)
 
+	defer cancel(nil)
+
 	batch := NewBatch()
 	timer := time.NewTimer(c.config.batchTimeout)
 
