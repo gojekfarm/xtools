@@ -31,7 +31,7 @@ func BatchRecoverMiddleware() xkafka.BatchMiddlewareFunc {
 		return xkafka.BatchHandlerFunc(func(ctx context.Context, batch *xkafka.Batch) error {
 			defer func() {
 				if r := recover(); r != nil {
-					batch.AckFail(fmt.Errorf("%+v", r))
+					_ = batch.AckFail(fmt.Errorf("%+v", r))
 
 					return
 				}
