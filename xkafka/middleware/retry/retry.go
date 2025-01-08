@@ -107,3 +107,26 @@ func ExponentialBackoff(opts ...Option) xkafka.MiddlewareFunc {
 		})
 	}
 }
+
+// BatchExponentialBackoff is a middleware with exponential backoff retry strategy
+// for xkafka.BatchConsumer.
+func BatchExponentialBackoff(opts ...Option) xkafka.BatchMiddlewareFunc {
+	cfg := newConfig(opts...)
+
+	return func(next xkafka.BatchHandler) xkafka.BatchHandler {
+		return xkafka.BatchHandlerFunc(func(ctx context.Context, batch *xkafka.Batch) error {
+			expBackoff := backoff.NewExponentialBackOff()
+			expBackoff.InitialInterval = cfg.delay
+			expBackoff.MaxElapsedTime = cfg.maxDuration
+			expBackoff.RandomizationFactor = float64(cfg.jitter) / float64(cfg.delay)
+			expBackoff.Multiplier = cfg.multiplier
+
+			b := backoff.WithMaxRetries(expBackoff, uint64(cfg.maxRetries))
+			b = backoff.WithContext(b, ctx)
+
+			return backoff.Retry(func() error {
+				return next.HandleBatch(ctx, batch)
+			}, b)
+		})
+	}
+}
