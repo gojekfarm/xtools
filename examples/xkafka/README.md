@@ -1,4 +1,4 @@
-Examples of how to use the xkafka package to read and write messages to a Kafka topic using `xkafka.Consumer` and `xkafka.Producer`.
+Examples of how to use the xkafka package to publish and consume messages from a Kafka broker. Simulates different Kafka consumer use cases.
 
 ## Running Kafka
 
@@ -10,18 +10,34 @@ $ docker-compose up -d
 
 ## Scenarios
 
-### Sequential Consumer
+### Basic Consumer
 
-This is the default behavior of the consumer. The consumer will process messages sequentially and commit the offset based on the `auto.commit.interval.ms` configuration.
+The basic consumer reads messages from a Kafka topic and prints them to the console. It simulates a process crash by restarting the consumer after a random number of messages have been consumed.
 
 ```bash
-go run *.go sequential
+go run *.go basic --partitions=2 --consumers=2 --messages=10
 ```
 
 ### Async Consumer
 
-Async mode is enabled by setting `xkafka.Concurrency` to a value greater than 1. The consumer will process messages using a pool of Go routines.
+The async consumer reads messages concurrently using a configurable pool of goroutines.
 
 ```bash
-go run *.go async
+go run *.go basic --partitions=2 --consumers=2 --messages=10 --concurrency=4
+```
+
+### Batch Consumer
+
+The batch consumer reads messages in batches of a configurable size.
+
+```bash
+go run *.go batch --partitions=2 --consumers=2 --messages=20 --batch-size=3
+```
+
+### Async Batch Consumer
+
+The async batch consumer processes batches concurrently using a configurable pool of goroutines.
+
+```bash
+go run *.go batch --partitions=2 --consumers=2 --messages=20 --batch-size=3 --concurrency=4
 ```
