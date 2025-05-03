@@ -6,7 +6,7 @@ replace github.com/gojekfarm/xtools/xkafka => ../../
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/gojekfarm/xtools/xkafka v0.9.0
+	github.com/gojekfarm/xtools/xkafka v0.10.0
 	github.com/stretchr/testify v1.8.1
 )
 
