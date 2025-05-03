@@ -89,12 +89,11 @@ if [ -n "${XTOOLS_TAG}" ]; then
     patch_gomods github.com/gojekfarm/xtools "${XTOOLS_TAG}"
 fi
 
-# Run lint to update go.sum
-make lint
+# Run gomod.tidy to update go.sum
+make gomod.tidy
 
 # Add changes and commit.
 git add .
-make ci
 
 declare COMMIT_MSG=""
 COMMIT_MSG+="Releasing ${XTOOLS_TAG}"
