@@ -8,8 +8,8 @@ replace (
 )
 
 require (
-	github.com/gojekfarm/xtools/xkafka v0.9.0
-	github.com/gojekfarm/xtools/xprom/semconv v0.9.0
+	github.com/gojekfarm/xtools/xkafka v0.10.0
+	github.com/gojekfarm/xtools/xprom/semconv v0.10.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/stretchr/testify v1.8.1
 )
