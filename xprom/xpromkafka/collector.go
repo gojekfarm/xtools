@@ -185,6 +185,73 @@ func (c *Collector) ConsumerMiddleware(opts ...Option) xkafka.MiddlewareFunc {
 	}
 }
 
+// BatchConsumerMiddleware returns a middleware that instruments xkafka.BatchConsumer.
+// Options passed to this function will override the Collector options.
+func (c *Collector) BatchConsumerMiddleware(opts ...Option) xkafka.BatchMiddlewareFunc {
+	mwopts := &options{
+		errFn:   c.opts.errFn,
+		address: c.opts.address,
+		port:    c.opts.port,
+	}
+
+	for _, opt := range opts {
+		opt.apply(mwopts)
+	}
+
+	return func(next xkafka.BatchHandler) xkafka.BatchHandler {
+		return xkafka.BatchHandlerFunc(func(ctx context.Context, batch *xkafka.Batch) error {
+			start := time.Now()
+
+			for _, msg := range batch.Messages {
+				labels := prometheus.Labels{
+					semconv.MessagingOperationName:      semconv.OperationConsume,
+					semconv.ServerAddress:               mwopts.address,
+					semconv.MessagingKafkaConsumerGroup: msg.Group,
+					semconv.MessagingKafkaTopic:         msg.Topic,
+					semconv.MessagingKafkaPartition:     fmt.Sprintf("%d", msg.Partition),
+				}
+
+				if mwopts.port != 0 {
+					labels[semconv.ServerPort] = fmt.Sprintf("%d", mwopts.port)
+				}
+
+				inflight := c.inflight.With(labels)
+
+				inflight.Inc()
+				defer inflight.Dec()
+			}
+
+			err := next.HandleBatch(ctx, batch)
+
+			for _, msg := range batch.Messages {
+				labels := prometheus.Labels{
+					semconv.MessagingOperationName:      semconv.OperationConsume,
+					semconv.ServerAddress:               mwopts.address,
+					semconv.MessagingKafkaConsumerGroup: msg.Group,
+					semconv.MessagingKafkaTopic:         msg.Topic,
+					semconv.MessagingKafkaPartition:     fmt.Sprintf("%d", msg.Partition),
+				}
+
+				if mwopts.port != 0 {
+					labels[semconv.ServerPort] = fmt.Sprintf("%d", mwopts.port)
+				}
+
+				labels[semconv.MessagingKafkaMessageStatus] = batch.Status.String()
+				labels[semconv.ErrorType] = ""
+
+				if batch.Err() != nil && mwopts.errFn != nil {
+					labels[semconv.ErrorType] = mwopts.errFn(batch.Err())
+				}
+
+				c.duration.With(labels).Observe(time.Since(start).Seconds())
+				c.consumed.With(labels).Inc()
+			}
+
+			return err
+		})
+	}
+}
+
 // ProducerMiddleware returns a middleware that instruments xkafka.Producer.
 // Options passed to this function will override the Collector options.
 func (c *Collector) ProducerMiddleware(opts ...Option) xkafka.MiddlewareFunc {

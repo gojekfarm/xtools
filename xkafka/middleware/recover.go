@@ -23,3 +23,21 @@ func RecoverMiddleware() xkafka.MiddlewareFunc {
 		})
 	}
 }
+
+// BatchRecoverMiddleware catches panics and prevents the request goroutine from crashing
+// for xkafka.BatchConsumer.
+func BatchRecoverMiddleware() xkafka.BatchMiddlewareFunc {
+	return func(next xkafka.BatchHandler) xkafka.BatchHandler {
+		return xkafka.BatchHandlerFunc(func(ctx context.Context, batch *xkafka.Batch) error {
+			defer func() {
+				if r := recover(); r != nil {
+					_ = batch.AckFail(fmt.Errorf("%+v", r))
+
+					return
+				}
+			}()
+
+			return next.HandleBatch(ctx, batch)
+		})
+	}
+}

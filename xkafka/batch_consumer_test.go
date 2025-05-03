@@ -312,49 +312,68 @@ func TestBatchConsumer_Async(t *testing.T) {
 func TestBatchConsumer_StopOffsetOnError(t *testing.T) {
 	t.Parallel()
 
-	opts := append(defaultOpts,
-		Concurrency(2),
-		BatchSize(3),
-	)
-	consumer, mockKafka := newTestBatchConsumer(t, opts...)
+	testcases := []struct {
+		name    string
+		options []ConsumerOption
+	}{
+		{
+			name: "sequential",
+			options: []ConsumerOption{
+				BatchSize(3),
+			},
+		},
+		{
+			name: "async",
+			options: []ConsumerOption{
+				Concurrency(2),
+				BatchSize(3),
+			},
+		},
+	}
 
-	km := newFakeKafkaMessage()
-	ctx, cancel := context.WithCancel(context.Background())
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			consumer, mockKafka := newTestBatchConsumer(t, append(defaultOpts, tc.options...)...)
 
-	count := atomic.Int32{}
+			km := newFakeKafkaMessage()
+			ctx, cancel := context.WithCancel(context.Background())
 
-	handler := BatchHandlerFunc(func(ctx context.Context, b *Batch) error {
-		assert.NotNil(t, b)
+			count := atomic.Int32{}
 
-		n := count.Add(1)
+			handler := BatchHandlerFunc(func(ctx context.Context, b *Batch) error {
+				assert.NotNil(t, b)
 
-		if n > 2 {
-			err := assert.AnError
-			cancel()
+				n := count.Add(1)
 
-			return b.AckFail(err)
-		}
+				if n > 2 {
+					err := assert.AnError
+					cancel()
 
-		b.AckSuccess()
+					return b.AckFail(err)
+				}
 
-		return nil
-	})
+				b.AckSuccess()
 
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
-	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("Commit").Return(nil, nil)
-	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
-	mockKafka.On("Close").Return(nil)
+				return nil
+			})
 
-	mockKafka.On("StoreOffsets", mock.Anything).
-		Return(nil, nil).
-		Times(2)
+			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+			mockKafka.On("Unsubscribe").Return(nil)
+			mockKafka.On("Commit").Return(nil, nil)
+			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
+			mockKafka.On("Close").Return(nil)
 
-	consumer.handler = handler
-	err := consumer.Run(ctx)
-	assert.ErrorIs(t, err, assert.AnError)
+			mockKafka.On("StoreOffsets", mock.Anything).
+				Return(nil, nil).
+				Times(2)
 
-	mockKafka.AssertExpectations(t)
+			consumer.handler = handler
+			err := consumer.Run(ctx)
+			assert.ErrorIs(t, err, assert.AnError)
+
+			mockKafka.AssertExpectations(t)
+		})
+	}
 }
 
 func TestBatchConsumer_BatchTimeout(t *testing.T) {

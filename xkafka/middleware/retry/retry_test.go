@@ -81,3 +81,43 @@ func TestExponentialBackoff_PermanentError(t *testing.T) {
 	err := mw(handler).Handle(context.TODO(), msg)
 	assert.ErrorIs(t, err, ErrPermanent)
 }
+
+func TestBatchExponentialBackoff(t *testing.T) {
+	batch := xkafka.NewBatch()
+	msg := &xkafka.Message{
+		Topic:     "test-topic",
+		Group:     "test-group",
+		Partition: 2,
+		Key:       []byte("key"),
+		Value:     []byte("value"),
+	}
+
+	batch.Messages = append(batch.Messages, msg)
+
+	mw := BatchExponentialBackoff(MaxRetries(3))
+
+	err := mw(xkafka.BatchHandlerFunc(func(ctx context.Context, b *xkafka.Batch) error {
+		return assert.AnError
+	})).HandleBatch(context.TODO(), batch)
+	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestBatchExponentialBackoff_PermanentError(t *testing.T) {
+	batch := xkafka.NewBatch()
+	msg := &xkafka.Message{
+		Topic:     "test-topic",
+		Group:     "test-group",
+		Partition: 2,
+		Key:       []byte("key"),
+		Value:     []byte("value"),
+	}
+
+	batch.Messages = append(batch.Messages, msg)
+
+	mw := BatchExponentialBackoff(MaxRetries(3))
+
+	err := mw(xkafka.BatchHandlerFunc(func(ctx context.Context, b *xkafka.Batch) error {
+		return ErrPermanent
+	})).HandleBatch(context.TODO(), batch)
+	assert.ErrorIs(t, err, ErrPermanent)
+}

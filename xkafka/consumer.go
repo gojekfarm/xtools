@@ -176,6 +176,8 @@ func (c *Consumer) runAsync(ctx context.Context) error {
 		case <-ctx.Done():
 			st.Wait()
 
+			defer cancel(nil)
+
 			uerr := c.unsubscribe()
 
 			err := context.Cause(ctx)
