@@ -9,6 +9,14 @@
 
 ## Usage
 
+### List Modules
+
+`list` command lists all the modules along with their versions & dependencies within the project.
+
+```bash
+$ release list
+```
+
 ### Build Manifest
 
 `manifest` command builds the manifest file for the project. It crawls the project, finds all modules and their dependencies, and reads the respective Git tags to determine the version of each module.
