@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"golang.org/x/mod/semver"
 )
 
 func GetAllTags(dir string) (map[string][]string, error) {
@@ -37,4 +38,32 @@ func GetAllTags(dir string) (map[string][]string, error) {
 	})
 
 	return tagMap, nil
+}
+
+func GetLatestTag(dir string) (string, error) {
+	allTags, err := GetAllTags(dir)
+	if err != nil {
+		return "", err
+	}
+
+	versions := allTags[""]
+	semver.Sort(versions)
+
+	return versions[len(versions)-1], nil
+}
+
+func HasUncommittedChanges(dir string) (bool, error) {
+	repo, err := git.PlainOpen(dir)
+	if err != nil {
+		return false, err
+	}
+	wt, err := repo.Worktree()
+	if err != nil {
+		return false, err
+	}
+	status, err := wt.Status()
+	if err != nil {
+		return false, err
+	}
+	return !status.IsClean(), nil
 }

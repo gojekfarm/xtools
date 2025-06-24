@@ -9,8 +9,7 @@ import (
 )
 
 func ListModules(ctx context.Context, cmd *cli.Command) error {
-	fmt.Println("Listing modules...")
-	mods, err := FindModules(".")
+	root, mods, err := FindModules(".")
 	if err != nil {
 		return err
 	}
@@ -21,6 +20,8 @@ func ListModules(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	indexed := indexModules(mods, versions)
+
+	fmt.Println(root.ShortName, root.Version)
 
 	for _, mod := range mods {
 		fmt.Println(mod.ShortName, mod.Version)

@@ -3,6 +3,7 @@ module github.com/gojekfarm/xtools/cmd/release
 go 1.24
 
 require (
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/go-git/go-git/v5 v5.16.0
 	github.com/urfave/cli/v3 v3.3.3
 	golang.org/x/mod v0.24.0

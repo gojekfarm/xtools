@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,16 +18,15 @@ type Module struct {
 	Dependencies []string
 }
 
-// FindModules finds all Go modules in the given directory.
-func FindModules(dir string) ([]*Module, error) {
+// FindModules returns the root module and all the sub-modules
+// in the given directory.
+func FindModules(dir string) (*Module, []*Module, error) {
 	var mods []*Module
 
 	root, err := ParseGoModule(dir, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	mods = append(mods, root)
 
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -47,7 +47,7 @@ func FindModules(dir string) ([]*Module, error) {
 		return nil
 	})
 
-	return mods, err
+	return root, mods, err
 }
 
 func ParseGoModule(dir string, root *Module) (*Module, error) {
@@ -84,4 +84,41 @@ func ParseGoModule(dir string, root *Module) (*Module, error) {
 	}
 
 	return m, nil
+}
+
+// UpdateDependencies updates the inter-module dependencies of a
+// module to use the given version.
+func UpdateDependencies(root *Module, mod *Module, version string) error {
+	modPath := filepath.Join(mod.Path, "go.mod")
+
+	contentBytes, err := os.ReadFile(modPath)
+	if err != nil {
+		return err
+	}
+
+	goMod, err := modfile.Parse(modPath, contentBytes, nil)
+	if err != nil {
+		return err
+	}
+
+	for _, r := range goMod.Require {
+		fmt.Println(r.Mod.Path)
+
+		if strings.HasPrefix(r.Mod.Path, root.Name) {
+			fmt.Println("|- Updating dependency", r.Mod.Path, "to", version)
+
+			if err := goMod.AddRequire(r.Mod.Path, version); err != nil {
+				return err
+			}
+		}
+	}
+
+	goMod.Cleanup()
+
+	content, err := goMod.Format()
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(modPath, content, 0644)
 }

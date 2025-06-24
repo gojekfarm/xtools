@@ -17,31 +17,23 @@
 $ release list
 ```
 
-### Build Manifest
-
-`manifest` command builds the manifest file for the project. It crawls the project, finds all modules and their dependencies, and reads the respective Git tags to determine the version of each module.
-
-The manifest file contains the following information:
-
-- Module path
-- Current version
-- Dependencies and their versions (within the same repository)
-
-_Note: Manifest file is temporary and is deleted after the release is created._
-
-```bash
-$ release manifest
-```
-
 ### Create Release
 
-`create` command creates a release branch and updates the version of the project. It reads the manifest file and updates the version of the project and all the modules within the same repository. It updates the new version in the manifest file.
+`create` command automates the release process for all modules in the repository. It performs the following steps:
+
+- Checks for uncommitted changes and aborts if any are found.
+- Determines the new version to use, either from `--version` or by auto-incrementing with `--major`, `--minor`, or `--patch` (only one may be specified).
+- Updates the version in all `go.mod` files for every module in the repository.
+- Updates inter-module dependencies so that modules within the repo reference the new version of each other.
+- Writes all changes back to disk atomically, or aborts with an error if any step fails.
 
 ```bash
 $ release create --version v0.1.0
 # or auto-increment the version
 $ release create --major | --minor | --patch
 ```
+
+If any error occurs (such as invalid version, conflicting options, or file write failure), the process aborts and prints a clear error message.
 
 ### Tag
 
