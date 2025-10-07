@@ -10,25 +10,47 @@ import (
 	"github.com/gojekfarm/xtools/xapi"
 )
 
+type CreateUserRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Language string `json:"-"`
+}
+
+func (user *CreateUserRequest) Validate() error {
+	if user.Name == "" {
+		return fmt.Errorf("name is required")
+	}
+	if user.Email == "" {
+		return fmt.Errorf("email is required")
+	}
+	return nil
+}
+
+func (user *CreateUserRequest) Extract(r *http.Request) error {
+	user.Language = r.Header.Get("Language")
+	return nil
+}
+
+type CreateUserResponse struct {
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Language string `json:"language"`
+}
+
+func (user *CreateUserResponse) StatusCode() int {
+	return http.StatusCreated
+}
+
 func ExampleEndpoint_basic() {
-	type CreateUserRequest struct {
-		Name  string `json:"name"`
-		Email string `json:"email"`
-	}
-
-	type CreateUserResponse struct {
-		ID    int    `json:"id"`
-		Name  string `json:"name"`
-		Email string `json:"email"`
-	}
-
 	createUser := xapi.EndpointFunc[CreateUserRequest, CreateUserResponse](
 		func(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
 			// Simulate user creation logic
 			return &CreateUserResponse{
-				ID:    1,
-				Name:  req.Name,
-				Email: req.Email,
+				ID:       1,
+				Name:     req.Name,
+				Email:    req.Email,
+				Language: req.Language,
 			}, nil
 		},
 	)
@@ -147,4 +169,45 @@ func ExampleEndpoint_withMiddleware() {
 	)
 
 	http.Handle("/data", endpoint.Handler())
+}
+
+type GetArticleRequest struct {
+	ID string `json:"-"`
+}
+
+func (article *GetArticleRequest) Extract(r *http.Request) error {
+	article.ID = r.PathValue("id")
+
+	return nil
+}
+
+type GetArticleResponse struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+func (article *GetArticleResponse) Write(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/html")
+	w.WriteHeader(http.StatusOK)
+
+	_, _ = fmt.Fprintf(w, "<html><body><h1>%s</h1></body></html>", article.Title)
+
+	return nil
+}
+
+func ExampleEndpoint_withCustomResponseWriter() {
+	getArticle := xapi.EndpointFunc[GetArticleRequest, GetArticleResponse](
+		func(ctx context.Context, req *GetArticleRequest) (*GetArticleResponse, error) {
+			return &GetArticleResponse{
+				ID:    req.ID,
+				Title: "Article " + req.ID,
+			}, nil
+		},
+	)
+
+	endpoint := xapi.NewEndpoint(getArticle)
+
+	http.Handle("/articles/{id}", endpoint.Handler())
+	log.Println("Server starting on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

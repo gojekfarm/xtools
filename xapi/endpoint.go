@@ -19,6 +19,28 @@ func (e EndpointFunc[TReq, TRes]) Handle(ctx context.Context, req *TReq) (*TRes,
 	return e(ctx, req)
 }
 
+// Extracter allows extracting additional data - headers, query params, etc.
+// from the HTTP request.
+type Extracter interface {
+	Extract(r *http.Request) error
+}
+
+// Validator allows validating endpoint requests.
+type Validator interface {
+	Validate() error
+}
+
+// StatusSetter allows setting a custom HTTP status code of the response.
+type StatusSetter interface {
+	StatusCode() int
+}
+
+// RawWriter allows writing raw data to the HTTP response instead of
+// the default JSON encoder.
+type RawWriter interface {
+	Write(w http.ResponseWriter) error
+}
+
 // Endpoint represents a type-safe HTTP endpoint with middleware and error handling.
 type Endpoint[TReq, TRes any] struct {
 	handler EndpointHandler[TReq, TRes]
@@ -46,9 +68,21 @@ func NewEndpoint[TReq, TRes any](handler EndpointHandler[TReq, TRes], opts ...En
 func (e *Endpoint[TReq, TRes]) Handler() http.Handler {
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req TReq
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			e.opts.errorHandler.HandleError(w, err)
-			return
+
+		if r.Body != nil {
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				e.opts.errorHandler.HandleError(w, err)
+				return
+			}
+
+			defer r.Body.Close()
+		}
+
+		if validator, ok := any(&req).(Validator); ok {
+			if err := validator.Validate(); err != nil {
+				e.opts.errorHandler.HandleError(w, err)
+				return
+			}
 		}
 
 		res, err := e.handler.Handle(r.Context(), &req)
@@ -56,6 +90,24 @@ func (e *Endpoint[TReq, TRes]) Handler() http.Handler {
 			e.opts.errorHandler.HandleError(w, err)
 			return
 		}
+
+		if rawWriter, ok := any(res).(RawWriter); ok {
+			if err := rawWriter.Write(w); err != nil {
+				e.opts.errorHandler.HandleError(w, err)
+				return
+			}
+
+			return
+		}
+
+		statusCode := http.StatusOK
+
+		if statusSetter, ok := any(res).(StatusSetter); ok {
+			statusCode = statusSetter.StatusCode()
+		}
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(statusCode)
 
 		if err := json.NewEncoder(w).Encode(res); err != nil {
 			e.opts.errorHandler.HandleError(w, err)
