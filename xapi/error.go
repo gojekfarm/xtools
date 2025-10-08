@@ -21,13 +21,17 @@ func (e ErrorFunc) HandleError(w http.ResponseWriter, err error) {
 
 // DefaultErrorHandler provides default error handling for common JSON errors.
 func DefaultErrorHandler(w http.ResponseWriter, err error) {
+	var syntaxError *json.SyntaxError
+	var unmarshalTypeError *json.UnmarshalTypeError
+	var invalidUnmarshalError *json.InvalidUnmarshalError
+
 	switch {
-	case errors.Is(err, &json.SyntaxError{}):
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	case errors.Is(err, &json.UnmarshalTypeError{}):
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	case errors.Is(err, &json.InvalidUnmarshalError{}):
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	case errors.As(err, &syntaxError):
+		http.Error(w, syntaxError.Error(), http.StatusBadRequest)
+	case errors.As(err, &unmarshalTypeError):
+		http.Error(w, unmarshalTypeError.Error(), http.StatusBadRequest)
+	case errors.As(err, &invalidUnmarshalError):
+		http.Error(w, invalidUnmarshalError.Error(), http.StatusBadRequest)
 	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

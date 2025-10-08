@@ -78,6 +78,13 @@ func (e *Endpoint[TReq, TRes]) Handler() http.Handler {
 			defer r.Body.Close()
 		}
 
+		if extracter, ok := any(&req).(Extracter); ok {
+			if err := extracter.Extract(r); err != nil {
+				e.opts.errorHandler.HandleError(w, err)
+				return
+			}
+		}
+
 		if validator, ok := any(&req).(Validator); ok {
 			if err := validator.Validate(); err != nil {
 				e.opts.errorHandler.HandleError(w, err)
@@ -106,13 +113,15 @@ func (e *Endpoint[TReq, TRes]) Handler() http.Handler {
 			statusCode = statusSetter.StatusCode()
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(statusCode)
-
-		if err := json.NewEncoder(w).Encode(res); err != nil {
+		resBody, err := json.Marshal(res)
+		if err != nil {
 			e.opts.errorHandler.HandleError(w, err)
 			return
 		}
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(statusCode)
+		w.Write(resBody)
 	})
 
 	if len(e.opts.middleware) > 0 {
