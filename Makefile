@@ -15,8 +15,7 @@ vet:
 	@$(call run-go-mod-dir,go vet ./...,"go vet")
 
 lint: golangci-lint
-	$(GOLANGCI_LINT) run --timeout=10m -v
-
+	$(GOLANGCI_LINT) run --timeout=10m -v --fix
 
 .PHONY: tidy
 tidy:
@@ -46,7 +45,7 @@ test-html: test-cov gocov-html
 	@open coverage.html
 
 .PHONY: check
-check: fmt vet lint
+check: tidy fmt vet lint
 	@git diff --quiet || test $$(git diff --name-only | grep -v -e 'go.mod$$' -e 'go.sum$$' | wc -l) -eq 0 || ( echo "The following changes (result of code generators and code checks) have been detected:" && git --no-pager diff && false ) # fail if Git working tree is dirty
 
 # ========= Helpers ===========
