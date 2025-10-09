@@ -26,7 +26,7 @@ func TestEncoder_Encode(t *testing.T) {
 		w io.Writer
 	}
 	type args struct {
-		v interface{}
+		v any
 	}
 	tests := []struct {
 		name    string

@@ -24,18 +24,18 @@ func (m MapLoader) Load(_ context.Context, key string) (string, error) {
 
 // FlattenMap flattens a map[string]interface{} into a map[string]string.
 // Nested maps are flattened using given separator.
-func FlattenMap(m map[string]interface{}, sep string) map[string]string {
+func FlattenMap(m map[string]any, sep string) map[string]string {
 	return flatten(m, "", sep)
 }
 
 func (m MapLoader) apply(opts *options) { opts.loader = m }
 
-func flatten(m map[string]interface{}, prefix string, sep string) map[string]string {
+func flatten(m map[string]any, prefix string, sep string) map[string]string {
 	flattened := make(map[string]string)
 
 	for key, value := range m {
 		switch value := value.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			for k, v := range flatten(value, key+sep, sep) {
 				flattened[prefix+k] = v
 			}

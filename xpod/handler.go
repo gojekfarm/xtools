@@ -70,7 +70,7 @@ type ProbeHandler struct {
 	rh             http.Handler
 	vh             http.Handler
 	showErrReasons bool
-	logDelegate    func(string, map[string]interface{})
+	logDelegate    func(string, map[string]any)
 }
 
 func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) { h.sm.ServeHTTP(w, r) }
@@ -180,7 +180,7 @@ func (h *ProbeHandler) serveCheckers(cs []Checker) http.Handler {
 
 			_, _ = fmt.Fprintf(&output, "warn: some checks cannot be excluded: no matches for %s\n", quotedChecks)
 			if h.logDelegate != nil {
-				h.logDelegate("cannot exclude some checks", map[string]interface{}{
+				h.logDelegate("cannot exclude some checks", map[string]any{
 					"checks": quotedChecks,
 					"reason": "no matches",
 				})
@@ -191,7 +191,7 @@ func (h *ProbeHandler) serveCheckers(cs []Checker) http.Handler {
 
 		if len(failedChecks) > 0 {
 			if h.logDelegate != nil {
-				h.logDelegate(fmt.Sprintf("%s check failed", checkPath), map[string]interface{}{
+				h.logDelegate(fmt.Sprintf("%s check failed", checkPath), map[string]any{
 					"failed_checks": strings.Join(
 						slice.Map(failedChecks, func(cf *checkFailure) string { return cf.name }), ", "),
 					"errs": errors.Join(slice.Map(failedChecks, func(cf *checkFailure) error { return cf.err })...),

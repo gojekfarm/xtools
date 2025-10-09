@@ -198,7 +198,7 @@ func TestLoad_Structs(t *testing.T) {
 				Address1 Address  `env:",prefix=ADDRESS_"`
 				Address2 *Address `env:",prefix=ADDRESS_"`
 			}{},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				tErr := &ErrCollision{}
 				assert.ErrorAs(t, err, &tErr)
 				return assert.ElementsMatch(t, tErr.Keys(), []string{
@@ -363,7 +363,7 @@ func TestLoad_JSON(t *testing.T) {
 			input: &struct {
 				Plot Plot `env:"PLOT"`
 			}{},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errDec := new(ErrDecode)
 				return assert.ErrorAs(t, err, &errDec, i...) && assert.Equal(t, "invalid", errDec.Value())
 			},
@@ -374,7 +374,7 @@ func TestLoad_JSON(t *testing.T) {
 			input: &struct {
 				Plots Plots `env:"PLOTS"`
 			}{},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errDec := new(ErrDecode)
 				return assert.ErrorAs(t, err, &errDec, i...) && assert.Equal(t, "invalid", errDec.Value())
 			},

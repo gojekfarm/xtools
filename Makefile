@@ -1,48 +1,35 @@
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
-# extract go minor version from go version output
-GO_MINOR_VERSION := $(shell go version | cut -d' ' -f3 | cut -d'.' -f2)
 
 EXCLUDE_DIRS := ./examples
 EXCLUDE_GO_MOD_DIRS := $(shell find $(EXCLUDE_DIRS) -type f -name 'go.mod' -exec dirname {} \; | sort)
 
-# set build directory based on go minor version
-GO_BUILD_DIRS := $(foreach dir,$(ALL_GO_MOD_DIRS),$(shell GO_MOD_VERSION=$$(grep "go 1.[0-9]*" $(dir)/go.mod | cut -d' ' -f2 | cut -d'.' -f2) && [ -n "$$GO_MOD_VERSION" ] && [ $(GO_MINOR_VERSION) -ge $$GO_MOD_VERSION ] && echo $(dir)))
+GO_BUILD_DIRS := $(ALL_GO_MOD_DIRS)
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 BIN_DIR := $(PROJECT_DIR)/.bin
 
-fmt:
-	@$(call run-go-mod-dir,go fmt ./...,"go fmt")
-
-gofmt:
-	@$(call run-go-mod-dir,go fmt ./...,"gofmt -s -w")
+fmt: golangci-lint
+	@$(call run-go-mod-dir,$(GOLANGCI_LINT) fmt,".bin/golangci-lint fmt")
 
 vet:
 	@$(call run-go-mod-dir,go vet ./...,"go vet")
 
 lint: golangci-lint
-	@$(call run-go-mod-dir,$(GOLANGCI_LINT) run --timeout=10m -v,".bin/golangci-lint")
+	$(GOLANGCI_LINT) run --timeout=10m -v
 
-.PHONY: ci
-ci: test test-cov test-xml
 
-imports: gci
-	@$(call run-go-mod-dir,$(GCI) -w -local github.com/gojekfarm ./ | { grep -v -e 'skip file .*' || true; },".bin/gci")
-
-.PHONY: gomod.tidy
-gomod.tidy:
+.PHONY: tidy
+tidy:
 	@$(call run-go-mod-dir,go mod tidy,"go mod tidy")
 
-.PHONY: go.generate
-go.generate: mockery protoc
+.PHONY: generate
+generate: mockery protoc
 	@$(call run-go-mod-dir,go generate ./...,"go generate")
 
 ## test: Run all tests
 .PHONY: test test-run test-cov test-xml
 
-test: check test-run
-
-test-run:
+test:
 	@$(call run-go-mod-dir,go test -race -covermode=atomic -coverprofile=coverage.out ./...,"go test")
 
 test-cov: gocov
@@ -59,28 +46,14 @@ test-html: test-cov gocov-html
 	@open coverage.html
 
 .PHONY: check
-check: fmt vet imports lint
+check: fmt vet lint
 	@git diff --quiet || test $$(git diff --name-only | grep -v -e 'go.mod$$' -e 'go.sum$$' | wc -l) -eq 0 || ( echo "The following changes (result of code generators and code checks) have been detected:" && git --no-pager diff && false ) # fail if Git working tree is dirty
 
 # ========= Helpers ===========
 
-## Determine the golangci-lint version based on $(GO_MINOR_VERSION)
-###################
-GOLANGCI_LINT_V18 := v1.50.1
-GOLANGCI_LINT_DEFAULT := v1.53.3
-
-get-golangci-lint-version = $(or $(value GOLANGCI_LINT_V$(1)), $(GOLANGCI_LINT_DEFAULT))
-GOLANGCI_LINT_VERSION := $(call get-golangci-lint-version,$(GO_MINOR_VERSION))
-
-###################
-
 GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 golangci-lint:
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION))
-
-GCI = $(BIN_DIR)/gci
-gci:
-	$(call go-get-tool,$(GCI),github.com/daixiang0/gci@v0.2.9)
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest)
 
 GOCOV = $(BIN_DIR)/gocov
 gocov:

@@ -96,7 +96,7 @@ healthz check passed
 			},
 			logDelegate: func(t *testing.T, m *mock.Mock) {
 				m.On("Logf", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
-					argsMap := args.Get(1).(map[string]interface{})
+					argsMap := args.Get(1).(map[string]any)
 
 					assert.Equal(t, "healthz check failed", args.String(0))
 					assert.Equal(t, "redis", argsMap["failed_checks"])
@@ -174,7 +174,7 @@ healthz check passed
 			},
 			logDelegate: func(t *testing.T, m *mock.Mock) {
 				m.On("Logf", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
-					argsMap := args.Get(1).(map[string]interface{})
+					argsMap := args.Get(1).(map[string]any)
 
 					assert.Equal(t, "cannot exclude some checks", args.String(0))
 					assert.ElementsMatch(t, []string{"foo", "bar", "baz"}, slice.Map(
@@ -278,7 +278,7 @@ func newMockLogDelegate(t *testing.T) *mockLogDelegate {
 
 type mockLogDelegate struct{ mock.Mock }
 
-func (m *mockLogDelegate) Logf(format string, args map[string]interface{}) { m.Called(format, args) }
+func (m *mockLogDelegate) Logf(format string, args map[string]any) { m.Called(format, args) }
 
 func Test_pathOrDefault(t *testing.T) {
 	tests := []struct {

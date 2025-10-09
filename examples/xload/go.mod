@@ -1,6 +1,6 @@
 module github.com/gojekfarm/xtools/examples/xload
 
-go 1.20
+go 1.25
 
 replace (
 	github.com/gojekfarm/xtools/xload => ../../xload

@@ -1,8 +1,6 @@
 module github.com/gojekfarm/xtools/xkafka/middleware/zerolog
 
-go 1.21
-
-toolchain go1.21.0
+go 1.25
 
 replace github.com/gojekfarm/xtools/xkafka => ../../
 

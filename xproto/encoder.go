@@ -18,7 +18,7 @@ type Encoder struct {
 }
 
 // Encode writes the proto encoding of v to the stream.
-func (e *Encoder) Encode(v interface{}) error {
+func (e *Encoder) Encode(v any) error {
 	m, ok := v.(proto.Message)
 	if !ok {
 		return errors.New("value should be a proto.Message")
