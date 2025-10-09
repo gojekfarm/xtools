@@ -1,6 +1,6 @@
 module github.com/gojekfarm/xtools/errors
 
-go 1.21
+go 1.25
 
 require github.com/stretchr/testify v1.10.0
 

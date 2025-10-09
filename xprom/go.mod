@@ -1,3 +1,3 @@
 module github.com/gojekfarm/xtools/xprom
 
-go 1.21
+go 1.25

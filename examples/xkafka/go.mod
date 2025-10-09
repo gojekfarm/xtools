@@ -1,6 +1,6 @@
 module github.com/gojekfarm/xtools/examples/xkafka
 
-go 1.21
+go 1.25
 
 replace (
 	github.com/gojekfarm/xtools => ../../

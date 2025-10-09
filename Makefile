@@ -29,12 +29,12 @@ ci: test test-cov test-xml
 imports: gci
 	@$(call run-go-mod-dir,$(GCI) -w -local github.com/gojekfarm ./ | { grep -v -e 'skip file .*' || true; },".bin/gci")
 
-.PHONY: gomod.tidy
-gomod.tidy:
+.PHONY: tidy
+tidy:
 	@$(call run-go-mod-dir,go mod tidy,"go mod tidy")
 
-.PHONY: go.generate
-go.generate: mockery protoc
+.PHONY: generate
+generate: mockery protoc
 	@$(call run-go-mod-dir,go generate ./...,"go generate")
 
 ## test: Run all tests

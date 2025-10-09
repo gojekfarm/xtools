@@ -1,6 +1,6 @@
 module github.com/gojekfarm/xtools/xpod
 
-go 1.20
+go 1.25
 
 require (
 	github.com/gojekfarm/xtools/generic v0.10.0

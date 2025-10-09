@@ -1,6 +1,6 @@
 module github.com/gojekfarm/xtools/xkafka
 
-go 1.21
+go 1.25
 
 require (
 	github.com/confluentinc/confluent-kafka-go/v2 v2.0.2

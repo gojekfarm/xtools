@@ -1,6 +1,6 @@
 module github.com/gojekfarm/xtools/xload/providers/cached
 
-go 1.20
+go 1.25
 
 replace github.com/gojekfarm/xtools/xload => ../..
 

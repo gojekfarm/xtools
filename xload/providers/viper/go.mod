@@ -1,6 +1,6 @@
 module github.com/gojekfarm/xtools/xload/providers/viper
 
-go 1.21.3
+go 1.25
 
 replace github.com/gojekfarm/xtools/xload => ../..
 

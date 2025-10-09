@@ -47,3 +47,4 @@ go.work
 go.work.sum
 
 .envrc
+.claude/
