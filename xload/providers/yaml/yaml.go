@@ -39,7 +39,7 @@ func NewLoader(r io.Reader, sep string) (xload.MapLoader, error) {
 		return nil, err
 	}
 
-	var out map[string]interface{}
+	var out map[string]any
 
 	err = yaml.Unmarshal(b, &out)
 	if err != nil {

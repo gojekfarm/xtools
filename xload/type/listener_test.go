@@ -36,7 +36,7 @@ func TestListener_Decode(t *testing.T) {
 			name: "missing port",
 			in:   "localhost",
 			want: &Listener{},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.EqualError(t, err, "address localhost: missing port in address")
 			},
 		},
@@ -44,7 +44,7 @@ func TestListener_Decode(t *testing.T) {
 			name: "invalid port",
 			in:   "127.0.0.1:port",
 			want: &Listener{IP: net.IPv4(127, 0, 0, 1)},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.EqualError(t, err, `strconv.ParseInt: parsing "port": invalid syntax`)
 			},
 		},
@@ -52,7 +52,7 @@ func TestListener_Decode(t *testing.T) {
 			name: "invalid ip",
 			in:   "localhost:8080",
 			want: &Listener{},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.EqualError(t, err, "invalid IP address")
 			},
 		},

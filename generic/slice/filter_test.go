@@ -22,7 +22,7 @@ func TestFilter(t *testing.T) {
 	}{
 		{
 			name:  "EvenIntegers",
-			elems: []interface{}{1, 2, 3, 4, 5, 6, 7},
+			elems: []any{1, 2, 3, 4, 5, 6, 7},
 			predicate: func(i any) bool {
 				return i.(int)%2 == 0
 			},
@@ -30,7 +30,7 @@ func TestFilter(t *testing.T) {
 		},
 		{
 			name: "ValidStructs",
-			elems: []interface{}{
+			elems: []any{
 				testStruct{ID: 1, Valid: true},
 				testStruct{ID: 2},
 				testStruct{ID: 3, Valid: true},

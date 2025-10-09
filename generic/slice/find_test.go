@@ -22,7 +22,7 @@ func TestFind(t *testing.T) {
 	}{
 		{
 			name: "StructWithID2",
-			elems: []interface{}{
+			elems: []any{
 				testStruct{ID: 1},
 				testStruct{ID: 2},
 				testStruct{ID: 3},
@@ -36,7 +36,7 @@ func TestFind(t *testing.T) {
 		},
 		{
 			name: "PointerToStructWithID3",
-			elems: []interface{}{
+			elems: []any{
 				&testStruct{ID: 1},
 				&testStruct{ID: 2},
 				&testStruct{ID: 3},
@@ -50,7 +50,7 @@ func TestFind(t *testing.T) {
 		},
 		{
 			name: "NoStructWithMatchingID",
-			elems: []interface{}{
+			elems: []any{
 				testStruct{ID: 1},
 				testStruct{ID: 2},
 				testStruct{ID: 3},
@@ -62,7 +62,7 @@ func TestFind(t *testing.T) {
 		},
 		{
 			name: "NoPointerStructWithMatchingID",
-			elems: []interface{}{
+			elems: []any{
 				&testStruct{ID: 1},
 				&testStruct{ID: 2},
 				&testStruct{ID: 4},

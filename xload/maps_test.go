@@ -7,13 +7,13 @@ import (
 )
 
 func TestFlattenMap(t *testing.T) {
-	input := map[string]interface{}{
+	input := map[string]any{
 		"NAME":    "xload",
 		"VERSION": 1.1,
-		"AUTHOR": map[string]interface{}{
+		"AUTHOR": map[string]any{
 			"NAME":  "gojek",
 			"EMAIL": "test@gojek.com",
-			"ADDRESS": map[string]interface{}{
+			"ADDRESS": map[string]any{
 				"CITY": "Bombay",
 			},
 		},

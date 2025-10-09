@@ -10,7 +10,7 @@ import (
 )
 
 var bufPool = &sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return new(bytes.Buffer)
 	},
 }
@@ -29,7 +29,7 @@ type Decoder struct {
 
 // Decode reads the proto-encoded value from its
 // input and stores it in the value pointed to by v.
-func (d *Decoder) Decode(v interface{}) error {
+func (d *Decoder) Decode(v any) error {
 	m, ok := v.(proto.Message)
 	if !ok {
 		return errors.New("value should be a proto.Message")

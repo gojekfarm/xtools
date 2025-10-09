@@ -12,7 +12,7 @@ func (b Brokers) setConsumerConfig(o *consumerConfig) { o.brokers = b }
 func (b Brokers) setProducerConfig(o *producerConfig) { o.brokers = b }
 
 // ConfigMap allows setting kafka configuration.
-type ConfigMap map[string]interface{}
+type ConfigMap map[string]any
 
 func (cm ConfigMap) setConsumerConfig(o *consumerConfig) {
 	for k, v := range cm {

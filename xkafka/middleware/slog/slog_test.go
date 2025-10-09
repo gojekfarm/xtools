@@ -2,10 +2,10 @@ package slog
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"log/slog"
 
 	"github.com/gojekfarm/xtools/xkafka"
 )

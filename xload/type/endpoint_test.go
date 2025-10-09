@@ -26,7 +26,7 @@ func TestEndpoint_Decode(t *testing.T) {
 			name: "invalid",
 			in:   "localhost",
 			want: &Endpoint{},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.EqualError(t, err, "address localhost: missing port in address")
 			},
 		},
@@ -34,7 +34,7 @@ func TestEndpoint_Decode(t *testing.T) {
 			name: "invalid port",
 			in:   "localhost:port",
 			want: &Endpoint{Host: "localhost"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.EqualError(t, err, `strconv.ParseInt: parsing "port": invalid syntax`)
 			},
 		},

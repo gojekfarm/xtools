@@ -27,7 +27,7 @@ func TestMap(t *testing.T) {
 	}{
 		{
 			name:  "DoubleIntegers",
-			elems: []interface{}{1, 2, 3, 4, 5, 6},
+			elems: []any{1, 2, 3, 4, 5, 6},
 			mapper: func(i any) any {
 				return i.(int) * 2
 			},
@@ -35,7 +35,7 @@ func TestMap(t *testing.T) {
 		},
 		{
 			name:  "MapStructs",
-			elems: []interface{}{testStructA{Value: 2}, testStructA{Value: 4}, testStructA{Value: 6}},
+			elems: []any{testStructA{Value: 2}, testStructA{Value: 4}, testStructA{Value: 6}},
 			mapper: func(i any) any {
 				return testStructB{Value: i.(testStructA).Value * 2}
 			},
@@ -75,7 +75,7 @@ func TestMapConcurrentWithContext(t *testing.T) {
 		{
 			name:  "DoubleIntegers",
 			ctx:   context.Background(),
-			elems: []interface{}{1, 2, 3, 4, 5, 6},
+			elems: []any{1, 2, 3, 4, 5, 6},
 			mapper: func(_ context.Context, i any) any {
 				return i.(int) * 2
 			},
@@ -84,7 +84,7 @@ func TestMapConcurrentWithContext(t *testing.T) {
 		{
 			name:  "MapStructs",
 			ctx:   context.Background(),
-			elems: []interface{}{testStructA{Value: 2}, testStructA{Value: 4}, testStructA{Value: 6}},
+			elems: []any{testStructA{Value: 2}, testStructA{Value: 4}, testStructA{Value: 6}},
 			mapper: func(_ context.Context, i any) any {
 				return testStructB{Value: i.(testStructA).Value * 2}
 			},
@@ -93,7 +93,7 @@ func TestMapConcurrentWithContext(t *testing.T) {
 		{
 			name:  "SlowMapper",
 			ctx:   tCtx,
-			elems: []interface{}{1, 2, 4, 8, 16, 32},
+			elems: []any{1, 2, 4, 8, 16, 32},
 			mapper: func(_ context.Context, i any) any {
 				ii := i.(int)
 				time.Sleep(time.Duration(ii) * time.Second)
@@ -104,7 +104,7 @@ func TestMapConcurrentWithContext(t *testing.T) {
 		{
 			name:  "AlreadyCancelledContext",
 			ctx:   cCtx,
-			elems: []interface{}{1, 2, 4, 8, 16, 32},
+			elems: []any{1, 2, 4, 8, 16, 32},
 			mapper: func(_ context.Context, i any) any {
 				return i.(int) * 2
 			},
@@ -128,7 +128,7 @@ func TestMapConcurrent(t *testing.T) {
 	}{
 		{
 			name:  "DoubleIntegers",
-			elems: []interface{}{1, 2, 3, 4, 5, 6},
+			elems: []any{1, 2, 3, 4, 5, 6},
 			mapper: func(i any) any {
 				return i.(int) * 2
 			},
@@ -136,7 +136,7 @@ func TestMapConcurrent(t *testing.T) {
 		},
 		{
 			name:  "MapStructs",
-			elems: []interface{}{testStructA{Value: 2}, testStructA{Value: 4}, testStructA{Value: 6}},
+			elems: []any{testStructA{Value: 2}, testStructA{Value: 4}, testStructA{Value: 6}},
 			mapper: func(i any) any {
 				return testStructB{Value: i.(testStructA).Value * 2}
 			},

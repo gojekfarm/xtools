@@ -22,7 +22,7 @@ func TestURL_Decode(t *testing.T) {
 		{
 			name: "schema missing",
 			in:   "://localhost:8080",
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.EqualError(t, err, `parse "://localhost:8080": missing protocol scheme`)
 			},
 		},
@@ -93,14 +93,14 @@ func TestURL_Endpoint(t *testing.T) {
 		{
 			name: "invalid",
 			u:    URL{Scheme: "http", Host: "localhost"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.EqualError(t, err, "address localhost: missing port in address")
 			},
 		},
 		{
 			name: "invalid port",
 			u:    URL{Scheme: "http", Host: "localhost:port"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.EqualError(t, err, `strconv.ParseInt: parsing "port": invalid syntax`)
 			},
 		},

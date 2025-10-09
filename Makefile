@@ -8,11 +8,8 @@ GO_BUILD_DIRS := $(ALL_GO_MOD_DIRS)
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 BIN_DIR := $(PROJECT_DIR)/.bin
 
-fmt:
-	@$(call run-go-mod-dir,go fmt ./...,"go fmt")
-
-gofmt:
-	@$(call run-go-mod-dir,go fmt ./...,"gofmt -s -w")
+fmt: golangci-lint
+	@$(call run-go-mod-dir,$(GOLANGCI_LINT) fmt,".bin/golangci-lint fmt")
 
 vet:
 	@$(call run-go-mod-dir,go vet ./...,"go vet")
@@ -20,8 +17,6 @@ vet:
 lint: golangci-lint
 	$(GOLANGCI_LINT) run --timeout=10m -v
 
-imports: gci
-	@$(call run-go-mod-dir,$(GCI) -w -local github.com/gojekfarm ./ | { grep -v -e 'skip file .*' || true; },".bin/gci")
 
 .PHONY: tidy
 tidy:
@@ -51,7 +46,7 @@ test-html: test-cov gocov-html
 	@open coverage.html
 
 .PHONY: check
-check: fmt vet imports lint
+check: fmt vet lint
 	@git diff --quiet || test $$(git diff --name-only | grep -v -e 'go.mod$$' -e 'go.sum$$' | wc -l) -eq 0 || ( echo "The following changes (result of code generators and code checks) have been detected:" && git --no-pager diff && false ) # fail if Git working tree is dirty
 
 # ========= Helpers ===========
@@ -59,10 +54,6 @@ check: fmt vet imports lint
 GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 golangci-lint:
 	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest)
-
-GCI = $(BIN_DIR)/gci
-gci:
-	$(call go-get-tool,$(GCI),github.com/daixiang0/gci@v0.2.9)
 
 GOCOV = $(BIN_DIR)/gocov
 gocov:

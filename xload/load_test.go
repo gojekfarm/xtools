@@ -23,7 +23,7 @@ type testcase struct {
 }
 
 func errContains(want error) assert.ErrorAssertionFunc {
-	return func(t assert.TestingT, err error, msgArgs ...interface{}) bool {
+	return func(t assert.TestingT, err error, msgArgs ...any) bool {
 		return assert.ErrorContains(t, err, want.Error(), msgArgs...)
 	}
 }
@@ -206,7 +206,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 				Int int `env:"INT"`
 			}{},
 			loader: MapLoader{"INT": "invalid"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errCast := new(ErrCast)
 				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT", errCast.key) &&
 					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to int64`)
@@ -250,7 +250,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 				Uint uint `env:"UINT"`
 			}{},
 			loader: MapLoader{"UINT": "invalid"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errCast := new(ErrCast)
 				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "UINT", errCast.key) &&
 					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to uint64`)
@@ -282,7 +282,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 				Float float32 `env:"FLOAT"`
 			}{},
 			loader: MapLoader{"FLOAT": "invalid"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errCast := new(ErrCast)
 				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "FLOAT", errCast.key) &&
 					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to float64`)
@@ -394,7 +394,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 				Int64Slice []int64 `env:"INT64_SLICE"`
 			}{},
 			loader: MapLoader{"INT64_SLICE": "invalid,2"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errCast := new(ErrCast)
 				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_SLICE", errCast.key) &&
 					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to int64`)
@@ -442,7 +442,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 				Int64Map map[string]int64 `env:"INT64_MAP"`
 			}{},
 			loader: MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errCast := new(ErrCast)
 				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_MAP", errCast.key) &&
 					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to int64`)
@@ -454,7 +454,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 				Int64Map map[int]int64 `env:"INT64_MAP"`
 			}{},
 			loader: MapLoader{"INT64_MAP": "key1=1,key2=2"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errCast := new(ErrCast)
 				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_MAP", errCast.key) &&
 					assert.EqualError(t, errCast.Unwrap(), `unable to cast "key1" of type string to int64`)
@@ -465,7 +465,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 		{
 			name: "unknown key type",
 			input: &struct {
-				Unknown interface{} `env:"UNKNOWN"`
+				Unknown any `env:"UNKNOWN"`
 			}{},
 			loader:  MapLoader{"UNKNOWN": "1+2i"},
 			wantErr: errContains(&ErrUnknownFieldType{field: "Unknown", key: "UNKNOWN", kind: anyKind}),
@@ -474,7 +474,7 @@ func TestLoad_NativeTypes(t *testing.T) {
 			name: "nested unknown key type",
 			input: &struct {
 				Nested struct {
-					Unknown interface{} `env:"UNKNOWN"`
+					Unknown any `env:"UNKNOWN"`
 				} `env:",prefix=NESTED_"`
 			}{},
 			loader:  MapLoader{"NESTED_UNKNOWN": "1+2i"},
@@ -541,7 +541,7 @@ func TestLoad_ArrayTypes(t *testing.T) {
 				Int64Slice []int64 `env:"INT64_SLICE"`
 			}{},
 			loader: MapLoader{"INT64_SLICE": "invalid,2"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errCast := new(ErrCast)
 				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_SLICE", errCast.key) &&
 					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to int64`)
@@ -620,7 +620,7 @@ func TestLoad_MapTypes(t *testing.T) {
 				Int64Map map[string]int64 `env:"INT64_MAP"`
 			}{},
 			loader: MapLoader{"INT64_MAP": "key1=1,key2=invalid"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errCast := new(ErrCast)
 				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_MAP", errCast.key) &&
 					assert.EqualError(t, errCast.Unwrap(), `unable to cast "invalid" of type string to int64`)
@@ -632,7 +632,7 @@ func TestLoad_MapTypes(t *testing.T) {
 				Int64Map map[int]int64 `env:"INT64_MAP"`
 			}{},
 			loader: MapLoader{"INT64_MAP": "key1=1,key2=2"},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				errCast := new(ErrCast)
 				return assert.ErrorAs(t, err, &errCast) && assert.Equal(t, "INT64_MAP", errCast.key) &&
 					assert.EqualError(t, errCast.Unwrap(), `unable to cast "key1" of type string to int64`)

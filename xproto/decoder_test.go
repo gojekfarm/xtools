@@ -37,7 +37,7 @@ func TestDecoder_Decode(t *testing.T) {
 		r io.Reader
 	}
 	type args struct {
-		v interface{}
+		v any
 	}
 	tests := []struct {
 		name    string

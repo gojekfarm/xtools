@@ -3,9 +3,8 @@ package slog
 
 import (
 	"context"
-	"time"
-
 	"log/slog"
+	"time"
 
 	"github.com/gojekfarm/xtools/xkafka"
 )

@@ -109,7 +109,7 @@ formatters:
         - default
         - blank
         - dot
-        - alias
+        - prefix(github.com/gojekfarm)
       custom-order: true
 
 run:

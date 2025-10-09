@@ -2,9 +2,8 @@ package retry_test
 
 import (
 	"context"
-	"time"
-
 	"log/slog"
+	"time"
 
 	"github.com/gojekfarm/xtools/xkafka"
 	"github.com/gojekfarm/xtools/xkafka/middleware/retry"

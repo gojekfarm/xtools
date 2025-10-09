@@ -87,7 +87,7 @@ func main() {
 	_ = f.Close()
 }
 
-func prettyPrint(v interface{}) {
+func prettyPrint(v any) {
 	out, _ := json.MarshalIndent(v, "", "  ")
 	println(string(out))
 }
