@@ -1,12 +1,9 @@
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
-# extract go minor version from go version output
-GO_MINOR_VERSION := $(shell go version | cut -d' ' -f3 | cut -d'.' -f2)
 
 EXCLUDE_DIRS := ./examples
 EXCLUDE_GO_MOD_DIRS := $(shell find $(EXCLUDE_DIRS) -type f -name 'go.mod' -exec dirname {} \; | sort)
 
-# set build directory based on go minor version
-GO_BUILD_DIRS := $(foreach dir,$(ALL_GO_MOD_DIRS),$(shell GO_MOD_VERSION=$$(grep "go 1.[0-9]*" $(dir)/go.mod | cut -d' ' -f2 | cut -d'.' -f2) && [ -n "$$GO_MOD_VERSION" ] && [ $(GO_MINOR_VERSION) -ge $$GO_MOD_VERSION ] && echo $(dir)))
+GO_BUILD_DIRS := $(ALL_GO_MOD_DIRS)
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 BIN_DIR := $(PROJECT_DIR)/.bin
@@ -21,10 +18,7 @@ vet:
 	@$(call run-go-mod-dir,go vet ./...,"go vet")
 
 lint: golangci-lint
-	@$(call run-go-mod-dir,$(GOLANGCI_LINT) run --timeout=10m -v,".bin/golangci-lint")
-
-.PHONY: ci
-ci: test test-cov test-xml
+	$(GOLANGCI_LINT) run --timeout=10m -v
 
 imports: gci
 	@$(call run-go-mod-dir,$(GCI) -w -local github.com/gojekfarm ./ | { grep -v -e 'skip file .*' || true; },".bin/gci")
@@ -40,9 +34,7 @@ generate: mockery protoc
 ## test: Run all tests
 .PHONY: test test-run test-cov test-xml
 
-test: check test-run
-
-test-run:
+test:
 	@$(call run-go-mod-dir,go test -race -covermode=atomic -coverprofile=coverage.out ./...,"go test")
 
 test-cov: gocov
@@ -64,19 +56,9 @@ check: fmt vet imports lint
 
 # ========= Helpers ===========
 
-## Determine the golangci-lint version based on $(GO_MINOR_VERSION)
-###################
-GOLANGCI_LINT_V18 := v1.50.1
-GOLANGCI_LINT_DEFAULT := v1.53.3
-
-get-golangci-lint-version = $(or $(value GOLANGCI_LINT_V$(1)), $(GOLANGCI_LINT_DEFAULT))
-GOLANGCI_LINT_VERSION := $(call get-golangci-lint-version,$(GO_MINOR_VERSION))
-
-###################
-
 GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 golangci-lint:
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION))
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest)
 
 GCI = $(BIN_DIR)/gci
 gci:

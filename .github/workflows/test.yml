@@ -26,8 +26,14 @@ jobs:
         with:
           path: .bin
           key: ${{ runner.os }}-go1.25.x-${{ hashFiles('Makefile') }}
+      - name: Check
+        run: make check
       - name: Test
-        run: make ci
+        run: make test
+      - name: Coverage
+        run: make test-cov
+      - name: Generate coverage report in XML format
+        run: make test-xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
