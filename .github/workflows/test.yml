@@ -32,10 +32,8 @@ jobs:
         run: make test
       - name: Coverage
         run: make test-cov
-      - name: Generate coverage report in XML format
-        run: make test-xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml

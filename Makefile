@@ -15,8 +15,7 @@ vet:
 	@$(call run-go-mod-dir,go vet ./...,"go vet")
 
 lint: golangci-lint
-	$(GOLANGCI_LINT) run --timeout=10m -v
-
+	$(GOLANGCI_LINT) run --timeout=10m -v --fix
 
 .PHONY: tidy
 tidy:
@@ -32,21 +31,11 @@ generate: mockery protoc
 test:
 	@$(call run-go-mod-dir,go test -race -covermode=atomic -coverprofile=coverage.out ./...,"go test")
 
-test-cov: gocov
-	@$(call run-go-mod-dir-exclude,$(GOCOV) convert coverage.out > coverage.json,$(EXCLUDE_GO_MOD_DIRS),"gocov convert")
-	@$(call run-go-mod-dir-exclude,$(GOCOV) convert coverage.out | $(GOCOV) report,$(EXCLUDE_GO_MOD_DIRS),"gocov report")
-
-test-xml: test-cov gocov-xml
-	@jq -n '{ Packages: [ inputs.Packages ] | add }' $(shell find . -type f -name 'coverage.json' | sort) | $(GOCOVXML) > coverage.xml
-
-.PHONY: test-html
-
-test-html: test-cov gocov-html
-	@jq -n '{ Packages: [ inputs.Packages ] | add }' $(shell find . -type f -name 'coverage.json' | sort) | $(GOCOVHTML) -t kit -r > coverage.html
-	@open coverage.html
+test-cov:
+	@$(call run-go-mod-dir-exclude,go tool cover -func=coverage.out,$(EXCLUDE_GO_MOD_DIRS),"go tool cover")
 
 .PHONY: check
-check: fmt vet lint
+check: tidy fmt vet lint
 	@git diff --quiet || test $$(git diff --name-only | grep -v -e 'go.mod$$' -e 'go.sum$$' | wc -l) -eq 0 || ( echo "The following changes (result of code generators and code checks) have been detected:" && git --no-pager diff && false ) # fail if Git working tree is dirty
 
 # ========= Helpers ===========
@@ -54,18 +43,6 @@ check: fmt vet lint
 GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 golangci-lint:
 	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest)
-
-GOCOV = $(BIN_DIR)/gocov
-gocov:
-	$(call go-get-tool,$(GOCOV),github.com/axw/gocov/gocov@v1.0.0)
-
-GOCOVXML = $(BIN_DIR)/gocov-xml
-gocov-xml:
-	$(call go-get-tool,$(GOCOVXML),github.com/AlekSi/gocov-xml@v1.0.0)
-
-GOCOVHTML = $(BIN_DIR)/gocov-html
-gocov-html:
-	$(call go-get-tool,$(GOCOVHTML),github.com/matm/gocov-html/cmd/gocov-html@v1.4.0)
 
 MOCKERY = $(BIN_DIR)/mockery
 mockery:
