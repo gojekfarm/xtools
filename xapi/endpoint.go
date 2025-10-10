@@ -19,8 +19,8 @@ func (e EndpointFunc[TReq, TRes]) Handle(ctx context.Context, req *TReq) (*TRes,
 	return e(ctx, req)
 }
 
-// Extracter allows extracting additional data - headers, query params, etc.
-// from the HTTP request.
+// Extracter allows extracting additional data from the HTTP request,
+// such as headers, query params, etc.
 type Extracter interface {
 	Extract(r *http.Request) error
 }
@@ -30,7 +30,7 @@ type Validator interface {
 	Validate() error
 }
 
-// StatusSetter allows setting a custom HTTP status code of the response.
+// StatusSetter allows setting a custom HTTP status code for the response.
 type StatusSetter interface {
 	StatusCode() int
 }

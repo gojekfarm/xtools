@@ -19,7 +19,8 @@ func (m MiddlewareFunc) Middleware(next http.Handler) http.Handler {
 type MiddlewareStack []MiddlewareHandler
 
 // Middleware applies all middleware in the stack to the given handler.
-// Middleware is applied in reverse order (last added is applied first).
+// Middleware is applied in reverse order, so the last added middleware
+// wraps the innermost handler.
 func (m MiddlewareStack) Middleware(next http.Handler) http.Handler {
 	for i := len(m) - 1; i >= 0; i-- {
 		next = m[i].Middleware(next)
