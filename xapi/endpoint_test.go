@@ -48,6 +48,34 @@ func TestEndpoint_Handler(t *testing.T) {
 		}`, rec.Body.String())
 	})
 
+	t.Run("GetEndpoint", func(t *testing.T) {
+		t.Parallel()
+
+		rec := httptest.NewRecorder()
+
+		handler := EndpointFunc[EmptyRequest, BasicResponse](
+			func(ctx context.Context, req *EmptyRequest) (*BasicResponse, error) {
+				return &BasicResponse{
+					Message: "Hello Tester",
+					ID:      321,
+				}, nil
+			},
+		)
+
+		endpoint := NewEndpoint(handler)
+		req := httptest.NewRequest(http.MethodGet, "/test?name=Tester", nil)
+		req.Header.Set("Content-Type", "application/json")
+
+		endpoint.Handler().ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		assert.Equal(t, "application/json; charset=utf-8", rec.Header().Get("Content-Type"))
+		assert.JSONEq(t, `{
+			"message": "Hello Tester",
+			"id": 321
+		}`, rec.Body.String())
+	})
+
 	t.Run("WithValidation", func(t *testing.T) {
 		t.Parallel()
 
@@ -442,6 +470,8 @@ func TestEndpoint_ContextCancellation(t *testing.T) {
 }
 
 // Test types and implementations
+
+type EmptyRequest struct{}
 
 type BasicRequest struct {
 	Name string `json:"name"`

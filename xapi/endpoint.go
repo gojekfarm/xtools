@@ -3,6 +3,7 @@ package xapi
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 )
 
@@ -69,13 +70,18 @@ func (e *Endpoint[TReq, TRes]) Handler() http.Handler {
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req TReq
 
-		if r.Body != nil {
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		data, err := io.ReadAll(r.Body)
+		if err != nil {
+			e.opts.errorHandler.HandleError(w, err)
+			return
+		}
+		defer r.Body.Close()
+
+		if len(data) > 0 {
+			if err := json.Unmarshal(data, &req); err != nil {
 				e.opts.errorHandler.HandleError(w, err)
 				return
 			}
-
-			defer r.Body.Close()
 		}
 
 		if extracter, ok := any(&req).(Extracter); ok {
