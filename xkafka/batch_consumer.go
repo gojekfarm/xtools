@@ -366,11 +366,6 @@ func (c *BatchConsumer) isPartitionActive(topic string, partition int32) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// if no partitions tracked yet (before first rebalance), allow all
-	if len(c.activePartitions) == 0 {
-		return true
-	}
-
 	if partitions, ok := c.activePartitions[topic]; ok {
 		_, active := partitions[partition]
 		return active

@@ -494,7 +494,13 @@ func TestConsumerAsync(t *testing.T) {
 	km := newFakeKafkaMessage()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	// Capture rebalance callback and trigger partition assignment
+	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Run(func(args mock.Arguments) {
+		cb := args.Get(1).(kafka.RebalanceCb)
+		partitions := []kafka.TopicPartition{{Topic: km.TopicPartition.Topic, Partition: km.TopicPartition.Partition}}
+		mockKafka.On("Assign", partitions).Return(nil).Once()
+		cb(nil, kafka.AssignedPartitions{Partitions: partitions})
+	}).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
@@ -536,7 +542,13 @@ func TestConsumerAsync_StopOffsetOnError(t *testing.T) {
 	km := newFakeKafkaMessage()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	// Capture rebalance callback and trigger partition assignment
+	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Run(func(args mock.Arguments) {
+		cb := args.Get(1).(kafka.RebalanceCb)
+		partitions := []kafka.TopicPartition{{Topic: km.TopicPartition.Topic, Partition: km.TopicPartition.Partition}}
+		mockKafka.On("Assign", partitions).Return(nil).Once()
+		cb(nil, kafka.AssignedPartitions{Partitions: partitions})
+	}).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 	mockKafka.On("Commit").Return(nil, nil)
@@ -875,6 +887,8 @@ func TestConsumer_StoreMessage(t *testing.T) {
 		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
 
 		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
 		msg := &Message{
 			Topic:     topic,
 			Partition: 0,
@@ -896,6 +910,8 @@ func TestConsumer_StoreMessage(t *testing.T) {
 		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
 
 		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
 		msg := &Message{
 			Topic:     topic,
 			Partition: 0,
@@ -965,8 +981,11 @@ func TestConsumer_StoreMessage(t *testing.T) {
 	t.Run("StoreOffsetsError", func(t *testing.T) {
 		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
 
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
 		msg := &Message{
-			Topic:     "topic1",
+			Topic:     topic,
 			Partition: 0,
 			Offset:    100,
 			Status:    Success,
@@ -984,8 +1003,11 @@ func TestConsumer_StoreMessage(t *testing.T) {
 		opts := append(defaultOpts, ManualCommit(true))
 		consumer, mockKafka := newTestConsumer(t, opts...)
 
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
 		msg := &Message{
-			Topic:     "topic1",
+			Topic:     topic,
 			Partition: 0,
 			Offset:    100,
 			Status:    Success,
@@ -1004,8 +1026,11 @@ func TestConsumer_StoreMessage(t *testing.T) {
 		opts := append(defaultOpts, ManualCommit(true))
 		consumer, mockKafka := newTestConsumer(t, opts...)
 
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
 		msg := &Message{
-			Topic:     "topic1",
+			Topic:     topic,
 			Partition: 0,
 			Offset:    100,
 			Status:    Success,
@@ -1023,8 +1048,11 @@ func TestConsumer_StoreMessage(t *testing.T) {
 	t.Run("OffsetIncrementedByOne", func(t *testing.T) {
 		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
 
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
 		msg := &Message{
-			Topic:     "topic1",
+			Topic:     topic,
 			Partition: 0,
 			Offset:    999,
 			Status:    Success,
@@ -1078,4 +1106,21 @@ func noopHandler() Handler {
 	return HandlerFunc(func(ctx context.Context, msg *Message) error {
 		return nil
 	})
+}
+
+// assignPartitions is a test helper that assigns partitions to a consumer
+// so that isPartitionActive returns true for those partitions.
+func assignPartitions(t *testing.T, consumer *Consumer, mockKafka *MockConsumerClient, topic string, partitions ...int32) {
+	t.Helper()
+
+	tps := make([]kafka.TopicPartition, len(partitions))
+	for i, p := range partitions {
+		tps[i] = kafka.TopicPartition{Topic: &topic, Partition: p}
+	}
+
+	mockKafka.On("Assign", tps).Return(nil).Once()
+
+	event := kafka.AssignedPartitions{Partitions: tps}
+	err := consumer.rebalanceCallback(nil, event)
+	require.NoError(t, err)
 }

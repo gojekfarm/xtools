@@ -295,7 +295,12 @@ func TestBatchConsumer_Async(t *testing.T) {
 		return nil
 	})
 
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Run(func(args mock.Arguments) {
+		cb := args.Get(1).(kafka.RebalanceCb)
+		partitions := []kafka.TopicPartition{{Topic: km.TopicPartition.Topic, Partition: km.TopicPartition.Partition}}
+		mockKafka.On("Assign", partitions).Return(nil).Once()
+		cb(nil, kafka.AssignedPartitions{Partitions: partitions})
+	}).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
@@ -357,15 +362,19 @@ func TestBatchConsumer_StopOffsetOnError(t *testing.T) {
 				return nil
 			})
 
-			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Run(func(args mock.Arguments) {
+				cb := args.Get(1).(kafka.RebalanceCb)
+				partitions := []kafka.TopicPartition{{Topic: km.TopicPartition.Topic, Partition: km.TopicPartition.Partition}}
+				mockKafka.On("Assign", partitions).Return(nil).Once()
+				cb(nil, kafka.AssignedPartitions{Partitions: partitions})
+			}).Return(nil)
 			mockKafka.On("Unsubscribe").Return(nil)
 			mockKafka.On("Commit").Return(nil, nil)
 			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 			mockKafka.On("Close").Return(nil)
 
 			mockKafka.On("StoreOffsets", mock.Anything).
-				Return(nil, nil).
-				Times(2)
+				Return(nil, nil)
 
 			consumer.handler = handler
 			err := consumer.Run(ctx)
@@ -416,7 +425,12 @@ func TestBatchConsumer_BatchTimeout(t *testing.T) {
 				return nil
 			})
 
-			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+			mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Run(func(args mock.Arguments) {
+				cb := args.Get(1).(kafka.RebalanceCb)
+				partitions := []kafka.TopicPartition{{Topic: km.TopicPartition.Topic, Partition: km.TopicPartition.Partition}}
+				mockKafka.On("Assign", partitions).Return(nil).Once()
+				cb(nil, kafka.AssignedPartitions{Partitions: partitions})
+			}).Return(nil)
 			mockKafka.On("Unsubscribe").Return(nil)
 			mockKafka.On("Commit").Return(nil, nil)
 			mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
@@ -649,42 +663,6 @@ func TestBatchConsumer_CommitError(t *testing.T) {
 	}
 }
 
-func noopBatchHandler() BatchHandler {
-	return BatchHandlerFunc(func(ctx context.Context, b *Batch) error {
-		return nil
-	})
-}
-
-func newTestBatchConsumer(t *testing.T, opts ...ConsumerOption) (*BatchConsumer, *MockConsumerClient) {
-	t.Helper()
-
-	mockConsumer := &MockConsumerClient{}
-
-	opts = append(opts, mockConsumerFunc(mockConsumer))
-
-	consumer, err := NewBatchConsumer(
-		"test-batch-consumer",
-		noopBatchHandler(),
-		opts...,
-	)
-	require.NoError(t, err)
-	require.NotNil(t, consumer)
-
-	return consumer, mockConsumer
-}
-
-func testBatchMiddleware(name string, preExec, postExec *[]string) BatchMiddlewarer {
-	return BatchMiddlewareFunc(func(next BatchHandler) BatchHandler {
-		return BatchHandlerFunc(func(ctx context.Context, b *Batch) error {
-			*preExec = append(*preExec, name)
-			err := next.HandleBatch(ctx, b)
-			*postExec = append(*postExec, name)
-
-			return err
-		})
-	})
-}
-
 func TestBatchConsumer_RebalanceCallback(t *testing.T) {
 	t.Parallel()
 
@@ -883,6 +861,8 @@ func TestBatchConsumer_StoreBatch(t *testing.T) {
 		consumer, mockKafka := newTestBatchConsumer(t, defaultOpts...)
 
 		topic := "topic1"
+		assignBatchPartitions(t, consumer, mockKafka, topic, 0)
+
 		batch := NewBatch()
 		batch.Messages = append(batch.Messages, &Message{
 			Topic:     topic,
@@ -905,6 +885,8 @@ func TestBatchConsumer_StoreBatch(t *testing.T) {
 		consumer, mockKafka := newTestBatchConsumer(t, defaultOpts...)
 
 		topic := "topic1"
+		assignBatchPartitions(t, consumer, mockKafka, topic, 0)
+
 		batch := NewBatch()
 		batch.Messages = append(batch.Messages, &Message{
 			Topic:     topic,
@@ -1015,6 +997,8 @@ func TestBatchConsumer_StoreBatch(t *testing.T) {
 		consumer, mockKafka := newTestBatchConsumer(t, defaultOpts...)
 
 		topic := "topic1"
+		assignBatchPartitions(t, consumer, mockKafka, topic, 0)
+
 		batch := NewBatch()
 		batch.Messages = append(batch.Messages, &Message{
 			Topic:     topic,
@@ -1036,6 +1020,8 @@ func TestBatchConsumer_StoreBatch(t *testing.T) {
 		consumer, mockKafka := newTestBatchConsumer(t, opts...)
 
 		topic := "topic1"
+		assignBatchPartitions(t, consumer, mockKafka, topic, 0)
+
 		batch := NewBatch()
 		batch.Messages = append(batch.Messages, &Message{
 			Topic:     topic,
@@ -1058,6 +1044,8 @@ func TestBatchConsumer_StoreBatch(t *testing.T) {
 		consumer, mockKafka := newTestBatchConsumer(t, opts...)
 
 		topic := "topic1"
+		assignBatchPartitions(t, consumer, mockKafka, topic, 0)
+
 		batch := NewBatch()
 		batch.Messages = append(batch.Messages, &Message{
 			Topic:     topic,
@@ -1080,6 +1068,11 @@ func TestBatchConsumer_StoreBatch(t *testing.T) {
 
 		topic1 := "topic1"
 		topic2 := "topic2"
+
+		// Assign all partitions that will be used
+		assignBatchPartitions(t, consumer, mockKafka, topic1, 0, 1)
+		assignBatchPartitions(t, consumer, mockKafka, topic2, 0)
+
 		batch := NewBatch()
 		batch.Messages = append(batch.Messages,
 			&Message{Topic: topic1, Partition: 0, Offset: 100},
@@ -1104,6 +1097,8 @@ func TestBatchConsumer_StoreBatch(t *testing.T) {
 		consumer, mockKafka := newTestBatchConsumer(t, defaultOpts...)
 
 		topic := "topic1"
+		assignBatchPartitions(t, consumer, mockKafka, topic, 0)
+
 		batch := NewBatch()
 		batch.Messages = append(batch.Messages,
 			&Message{Topic: topic, Partition: 0, Offset: 999},
@@ -1119,4 +1114,57 @@ func TestBatchConsumer_StoreBatch(t *testing.T) {
 		assert.NoError(t, err)
 		mockKafka.AssertExpectations(t)
 	})
+}
+
+func noopBatchHandler() BatchHandler {
+	return BatchHandlerFunc(func(ctx context.Context, b *Batch) error {
+		return nil
+	})
+}
+
+func newTestBatchConsumer(t *testing.T, opts ...ConsumerOption) (*BatchConsumer, *MockConsumerClient) {
+	t.Helper()
+
+	mockConsumer := &MockConsumerClient{}
+
+	opts = append(opts, mockConsumerFunc(mockConsumer))
+
+	consumer, err := NewBatchConsumer(
+		"test-batch-consumer",
+		noopBatchHandler(),
+		opts...,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, consumer)
+
+	return consumer, mockConsumer
+}
+
+func testBatchMiddleware(name string, preExec, postExec *[]string) BatchMiddlewarer {
+	return BatchMiddlewareFunc(func(next BatchHandler) BatchHandler {
+		return BatchHandlerFunc(func(ctx context.Context, b *Batch) error {
+			*preExec = append(*preExec, name)
+			err := next.HandleBatch(ctx, b)
+			*postExec = append(*postExec, name)
+
+			return err
+		})
+	})
+}
+
+// assignBatchPartitions is a test helper that assigns partitions to a batch consumer
+// so that isPartitionActive returns true for those partitions.
+func assignBatchPartitions(t *testing.T, consumer *BatchConsumer, mockKafka *MockConsumerClient, topic string, partitions ...int32) {
+	t.Helper()
+
+	tps := make([]kafka.TopicPartition, len(partitions))
+	for i, p := range partitions {
+		tps[i] = kafka.TopicPartition{Topic: &topic, Partition: p}
+	}
+
+	mockKafka.On("Assign", tps).Return(nil).Once()
+
+	event := kafka.AssignedPartitions{Partitions: tps}
+	err := consumer.rebalanceCallback(nil, event)
+	require.NoError(t, err)
 }
