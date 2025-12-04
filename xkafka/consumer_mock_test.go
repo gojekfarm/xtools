@@ -132,6 +132,34 @@ func (_m *MockConsumerClient) StoreOffsets(offsets []kafka.TopicPartition) ([]ka
 	return r0, r1
 }
 
+// Assign provides a mock function with given fields: partitions
+func (_m *MockConsumerClient) Assign(partitions []kafka.TopicPartition) error {
+	ret := _m.Called(partitions)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func([]kafka.TopicPartition) error); ok {
+		r0 = rf(partitions)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Unassign provides a mock function with given fields:
+func (_m *MockConsumerClient) Unassign() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // SubscribeTopics provides a mock function with given fields: topics, rebalanceCb
 func (_m *MockConsumerClient) SubscribeTopics(topics []string, rebalanceCb kafka.RebalanceCb) error {
 	ret := _m.Called(topics, rebalanceCb)

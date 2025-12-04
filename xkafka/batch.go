@@ -85,7 +85,9 @@ func (b *Batch) GroupMaxOffset() []kafka.TopicPartition {
 	offsets := make(map[string]map[int32]int64)
 	for _, m := range b.Messages {
 		if _, ok := offsets[m.Topic]; !ok {
-			offsets[m.Topic] = make(map[int32]int64)
+			offsets[m.Topic] = map[int32]int64{
+				m.Partition: m.Offset,
+			}
 		}
 
 		if m.Offset > offsets[m.Topic][m.Partition] {
@@ -102,7 +104,7 @@ func (b *Batch) GroupMaxOffset() []kafka.TopicPartition {
 			tps = append(tps, kafka.TopicPartition{
 				Topic:     &topic,
 				Partition: partition,
-				Offset:    kafka.Offset(offset + 1),
+				Offset:    kafka.Offset(offset),
 			})
 		}
 	}
