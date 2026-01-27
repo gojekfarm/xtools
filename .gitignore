@@ -50,3 +50,5 @@ go.work.sum
 .claude/
 .cursor/
 .tasks/
+
+release-manifest.json

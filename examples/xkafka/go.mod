@@ -11,8 +11,8 @@ replace (
 require (
 	github.com/confluentinc/confluent-kafka-go/v2 v2.0.2
 	github.com/gojekfarm/xrun v0.3.0
-	github.com/gojekfarm/xtools/xkafka v0.10.0
-	github.com/gojekfarm/xtools/xkafka/middleware/zerolog v0.10.0
+	github.com/gojekfarm/xtools/xkafka v0.11.0
+	github.com/gojekfarm/xtools/xkafka/middleware/zerolog v0.10.1
 	github.com/rs/xid v1.5.0
 	github.com/rs/zerolog v1.29.0
 	github.com/urfave/cli/v2 v2.23.7
