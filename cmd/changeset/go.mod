@@ -6,6 +6,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/charmbracelet/huh v0.8.0
 	github.com/go-git/go-git/v5 v5.16.4
+	github.com/lmittmann/tint v1.1.2
+	github.com/mattn/go-isatty v0.0.20
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v3 v3.3.3
 	golang.org/x/mod v0.32.0
@@ -39,7 +41,6 @@ require (
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect

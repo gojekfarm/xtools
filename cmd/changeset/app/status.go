@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,7 +46,7 @@ func Status(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if len(changesets) == 0 {
-		fmt.Println("No pending changesets.")
+		slog.Info("No pending changesets")
 		return nil
 	}
 
@@ -89,45 +90,41 @@ func Status(ctx context.Context, cmd *cli.Command) error {
 			return cli.Exit(fmt.Sprintf("Failed to write output file: %v", err), 1)
 		}
 
-		fmt.Printf("Output written to %s\n", outputFile)
+		slog.Info("Output written", "file", outputFile)
 		return nil
 	}
 
 	// Print changesets
-	fmt.Printf("Found %d changeset(s):\n\n", len(changesets))
+	slog.Info("Found changesets", "count", len(changesets))
 	for _, cs := range changesets {
-		fmt.Printf("  %s\n", cs.ID)
 		if verbose {
+			attrs := []any{"id", cs.ID}
 			for mod, bump := range cs.Modules {
-				modDisplay := mod
-				if mod == "" {
-					modDisplay = "(root)"
-				}
-				fmt.Printf("    - %s: %s\n", modDisplay, bump)
+				attrs = append(attrs, displayModule(mod), string(bump))
 			}
 			if cs.Summary != "" {
-				fmt.Printf("    Summary: %s\n", cs.Summary)
+				attrs = append(attrs, "summary", cs.Summary)
 			}
+			slog.Info("Changeset", attrs...)
+		} else {
+			slog.Info("Changeset", "id", cs.ID)
 		}
 	}
 
 	// Print releases
 	if len(releases) > 0 {
-		fmt.Printf("\nPlanned releases:\n\n")
+		slog.Info("Planned releases", "count", len(releases))
 		for _, r := range releases {
-			modDisplay := r.Module
-			if r.Module == "" {
-				modDisplay = "(root)"
-			}
-			reason := ""
-			if r.Reason != "" {
-				reason = fmt.Sprintf(" (%s)", r.Reason)
-			}
-			fmt.Printf("  %s: %s -> %s (%s)%s\n",
-				modDisplay, r.PreviousVersion, r.Version, r.Bump, reason)
+			slog.Info("Release",
+				"module", displayModule(r.Module),
+				"from", r.PreviousVersion,
+				"to", r.Version,
+				"bump", string(r.Bump),
+				"reason", r.Reason,
+			)
 		}
 	} else {
-		fmt.Println("\nNo releases planned.")
+		slog.Info("No releases planned")
 	}
 
 	return nil
@@ -188,7 +185,7 @@ func statusSince(dir, sinceRef string, changesets []*changeset.Changeset, cfg *c
 			return cli.Exit(fmt.Sprintf("Failed to write output file: %v", err), 1)
 		}
 
-		fmt.Printf("Output written to %s\n", outputFile)
+		slog.Info("Output written", "file", outputFile)
 		if len(missingChangesets) > 0 {
 			return cli.Exit("Missing changesets for changed modules", 1)
 		}
@@ -196,33 +193,31 @@ func statusSince(dir, sinceRef string, changesets []*changeset.Changeset, cfg *c
 	}
 
 	// Print results
-	fmt.Printf("Changes since %s:\n\n", sinceRef)
+	slog.Info("Changes since ref", "ref", sinceRef)
 
 	if len(changedModules) == 0 {
-		fmt.Println("  No module changes detected.")
+		slog.Info("No module changes detected")
 		return nil
 	}
 
-	fmt.Printf("  Changed modules: %d\n", len(changedModules))
+	slog.Info("Changed modules", "count", len(changedModules))
 	for mod := range changedModules {
-		modDisplay := mod
-		if mod == "" {
-			modDisplay = "(root)"
-		}
-		status := "✓ has changeset"
+		status := "has changeset"
 		if !coveredModules[mod] {
-			status = "✗ missing changeset"
+			status = "missing changeset"
 		}
-		fmt.Printf("    %s: %s\n", modDisplay, status)
+		slog.Info("Module status", "module", displayModule(mod), "status", status)
 	}
 
 	if len(missingChangesets) > 0 {
-		fmt.Printf("\nError: %d module(s) have changes but no changeset.\n", len(missingChangesets))
-		fmt.Println("Run 'changeset add' to create a changeset for your changes.")
+		slog.Error("Modules have changes but no changeset",
+			"count", len(missingChangesets),
+			"hint", "Run 'changeset add' to create a changeset for your changes",
+		)
 		return cli.Exit("Missing changesets", 1)
 	}
 
-	fmt.Println("\nAll changed modules have changesets.")
+	slog.Info("All changed modules have changesets")
 	return nil
 }
 

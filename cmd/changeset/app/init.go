@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/urfave/cli/v3"
 
@@ -34,13 +35,14 @@ func Init(ctx context.Context, cmd *cli.Command) error {
 		return cli.Exit(fmt.Sprintf("Failed to initialize: %v", err), 1)
 	}
 
-	fmt.Println("Changeset initialized successfully!")
-	fmt.Printf("  Root module: %s\n", cfg.Root)
-	fmt.Printf("  Config: .changeset/config.json\n")
-	fmt.Println()
-	fmt.Println("Next steps:")
-	fmt.Println("  1. Run 'changeset add' to create your first changeset")
-	fmt.Println("  2. Run 'changeset status' to see pending releases")
+	slog.Info("Changeset initialized successfully",
+		"root_module", cfg.Root,
+		"config", ".changeset/config.json",
+	)
+	slog.Info("Next steps",
+		"1", "Run 'changeset add' to create your first changeset",
+		"2", "Run 'changeset status' to see pending releases",
+	)
 
 	return nil
 }

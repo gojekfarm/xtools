@@ -6,9 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gojekfarm/xtools/cmd/changeset/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gojekfarm/xtools/cmd/changeset/testutil"
 )
 
 func TestBumpCompare(t *testing.T) {

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"time"
 
@@ -51,7 +52,7 @@ func Version(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if len(changesets) == 0 {
-		fmt.Println("No changesets found. Nothing to release.")
+		slog.Info("No changesets found, nothing to release")
 		return nil
 	}
 
@@ -77,7 +78,7 @@ func Version(ctx context.Context, cmd *cli.Command) error {
 	releases = changeset.FilterIgnored(releases, allIgnore)
 
 	if len(releases) == 0 {
-		fmt.Println("No releases to process after filtering.")
+		slog.Info("No releases to process after filtering")
 		return nil
 	}
 
@@ -87,9 +88,9 @@ func Version(ctx context.Context, cmd *cli.Command) error {
 		for i := range releases {
 			releases[i].Version = releases[i].Version + snapshotSuffix
 		}
-		fmt.Printf("Processing %d snapshot release(s)...\n\n", len(releases))
+		slog.Info("Processing snapshot releases", "count", len(releases))
 	} else {
-		fmt.Printf("Processing %d release(s)...\n\n", len(releases))
+		slog.Info("Processing releases", "count", len(releases))
 	}
 
 	// Build version map for go.mod updates
@@ -99,7 +100,7 @@ func Version(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	// Update go.mod files for each module that has internal dependencies
-	fmt.Println("Updating go.mod files...")
+	slog.Info("Updating go.mod files")
 	for _, mod := range graph.AllModules() {
 		if len(mod.Dependencies) == 0 {
 			continue
@@ -109,12 +110,12 @@ func Version(ctx context.Context, cmd *cli.Command) error {
 		if err := module.UpdateGoMod(gomodPath, cfg.Root, versions); err != nil {
 			return cli.Exit(fmt.Sprintf("Failed to update %s: %v", gomodPath, err), 1)
 		}
-		fmt.Printf("  Updated: %s\n", gomodPath)
+		slog.Info("Updated go.mod", "path", gomodPath)
 	}
 
 	// Update changelogs for each released module (skip for snapshots)
 	if !snapshot {
-		fmt.Println("\nUpdating changelogs...")
+		slog.Info("Updating changelogs")
 		for _, r := range releases {
 			mod := graph.FindModule(r.Module)
 			if mod == nil {
@@ -132,61 +133,56 @@ func Version(ctx context.Context, cmd *cli.Command) error {
 				return cli.Exit(fmt.Sprintf("Failed to update changelog for %s: %v", r.Module, err), 1)
 			}
 
-			modDisplay := r.Module
-			if modDisplay == "" {
-				modDisplay = "(root)"
-			}
-			fmt.Printf("  Updated: %s (%s)\n", changelogPath, modDisplay)
+			slog.Info("Updated changelog", "path", changelogPath, "module", displayModule(r.Module))
 		}
 
 		// Delete consumed changesets (skip for snapshots)
-		fmt.Println("\nDeleting consumed changesets...")
+		slog.Info("Deleting consumed changesets")
 		for _, cs := range changesets {
 			if err := changeset.DeleteChangeset(cs); err != nil {
-				fmt.Printf("  Warning: Failed to delete %s: %v\n", cs.ID, err)
+				slog.Warn("Failed to delete changeset", "id", cs.ID, "error", err)
 			} else {
-				fmt.Printf("  Deleted: %s\n", cs.ID)
+				slog.Info("Deleted changeset", "id", cs.ID)
 			}
 		}
 	} else {
-		fmt.Println("\nSnapshot mode: Skipping changelog updates and changeset deletion.")
+		slog.Info("Snapshot mode: Skipping changelog updates and changeset deletion")
 	}
 
 	// Write release manifest
-	fmt.Println("\nWriting release manifest...")
+	slog.Info("Writing release manifest")
 	manifest := &changeset.Manifest{Releases: releases}
 	if err := changeset.WriteManifest(dir, manifest); err != nil {
 		return cli.Exit(fmt.Sprintf("Failed to write manifest: %v", err), 1)
 	}
 
 	// Print summary
-	summaryTitle := "Release summary:"
+	summaryTitle := "Release summary"
 	if snapshot {
-		summaryTitle = "Snapshot release summary:"
+		summaryTitle = "Snapshot release summary"
 	}
-	fmt.Printf("\n%s\n", summaryTitle)
+	slog.Info(summaryTitle)
 	for _, r := range releases {
-		modDisplay := r.Module
-		if modDisplay == "" {
-			modDisplay = "(root)"
-		}
-		reason := ""
-		if r.Reason != "" {
-			reason = fmt.Sprintf(" (%s)", r.Reason)
-		}
-		fmt.Printf("  %s: %s -> %s%s\n", modDisplay, r.PreviousVersion, r.Version, reason)
+		slog.Info("Release",
+			"module", displayModule(r.Module),
+			"from", r.PreviousVersion,
+			"to", r.Version,
+			"reason", r.Reason,
+		)
 	}
 
 	if snapshot {
-		fmt.Println("\nSnapshot next steps:")
-		fmt.Println("  1. Run 'changeset publish --no-push' to create snapshot tags locally")
-		fmt.Println("  2. Test the snapshot versions")
-		fmt.Println("  3. Delete snapshot tags when done: git tag -d <tag>")
+		slog.Info("Snapshot next steps",
+			"1", "Run 'changeset publish --no-push' to create snapshot tags locally",
+			"2", "Test the snapshot versions",
+			"3", "Delete snapshot tags when done: git tag -d <tag>",
+		)
 	} else {
-		fmt.Println("\nNext steps:")
-		fmt.Println("  1. Review the changes")
-		fmt.Println("  2. Commit the updated files")
-		fmt.Println("  3. Run 'changeset publish' to create and push git tags")
+		slog.Info("Next steps",
+			"1", "Review the changes",
+			"2", "Commit the updated files",
+			"3", "Run 'changeset publish' to create and push git tags",
+		)
 	}
 
 	return nil

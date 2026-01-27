@@ -5,8 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gojekfarm/xtools/cmd/changeset/testutil"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gojekfarm/xtools/cmd/changeset/testutil"
 )
 
 func TestParseTag(t *testing.T) {

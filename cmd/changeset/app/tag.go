@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/urfave/cli/v3"
 
@@ -24,12 +25,12 @@ func Tag(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if len(manifest.Releases) == 0 {
-		fmt.Println("No releases in manifest.")
+		slog.Info("No releases in manifest")
 		return nil
 	}
 
 	// Create tags
-	fmt.Println("Creating git tags...")
+	slog.Info("Creating git tags")
 	var tags []git.Tag
 	for _, r := range manifest.Releases {
 		tag := git.Tag{
@@ -43,16 +44,14 @@ func Tag(ctx context.Context, cmd *cli.Command) error {
 			return cli.Exit(fmt.Sprintf("Failed to create tag %s: %v", tag.Name, err), 1)
 		}
 
-		modDisplay := r.Module
-		if modDisplay == "" {
-			modDisplay = "(root)"
-		}
-		fmt.Printf("  Created: %s (%s %s)\n", tag.Name, modDisplay, r.Version)
+		slog.Info("Created tag", "tag", tag.Name, "module", displayModule(r.Module), "version", r.Version)
 	}
 
-	fmt.Printf("\nCreated %d tag(s).\n", len(tags))
-	fmt.Println("\nTo push tags, run: changeset publish")
-	fmt.Println("Or manually: git push origin --tags")
+	slog.Info("Tags created", "count", len(tags))
+	slog.Info("To push tags",
+		"option1", "changeset publish",
+		"option2", "git push origin --tags",
+	)
 
 	return nil
 }

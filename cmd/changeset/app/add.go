@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"sort"
@@ -19,6 +20,8 @@ func Add(ctx context.Context, cmd *cli.Command) error {
 	dir := "."
 	empty := cmd.Bool("empty")
 	openEditor := cmd.Bool("open")
+	modules := cmd.StringSlice("module")
+	summary := cmd.String("summary")
 
 	// Check if initialized
 	if !changeset.ChangesetDirExists(dir) {
@@ -32,6 +35,13 @@ func Add(ctx context.Context, cmd *cli.Command) error {
 		cs = &changeset.Changeset{
 			Modules: make(map[string]changeset.Bump),
 			Summary: "Empty changeset for changes that don't require a release.",
+		}
+	} else if len(modules) > 0 {
+		// Non-interactive mode
+		var err error
+		cs, err = createChangesetNonInteractive(modules, summary)
+		if err != nil {
+			return cli.Exit(fmt.Sprintf("Failed to create changeset: %v", err), 1)
 		}
 	} else {
 		// Interactive flow
@@ -47,8 +57,7 @@ func Add(ctx context.Context, cmd *cli.Command) error {
 		return cli.Exit(fmt.Sprintf("Failed to write changeset: %v", err), 1)
 	}
 
-	fmt.Printf("Created changeset: %s\n", cs.ID)
-	fmt.Printf("  File: %s\n", cs.FilePath)
+	slog.Info("Created changeset", "id", cs.ID, "file", cs.FilePath)
 
 	// Open in editor if requested
 	if openEditor && cs.FilePath != "" {
@@ -61,11 +70,63 @@ func Add(ctx context.Context, cmd *cli.Command) error {
 		editorCmd.Stdout = os.Stdout
 		editorCmd.Stderr = os.Stderr
 		if err := editorCmd.Run(); err != nil {
-			fmt.Printf("Warning: Failed to open editor: %v\n", err)
+			slog.Warn("Failed to open editor", "error", err)
 		}
 	}
 
 	return nil
+}
+
+func createChangesetNonInteractive(modules []string, summary string) (*changeset.Changeset, error) {
+	if len(modules) == 0 {
+		return nil, fmt.Errorf("no modules specified")
+	}
+
+	moduleBumps := make(map[string]changeset.Bump)
+	for _, m := range modules {
+		parts := splitModuleBump(m)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid module:bump format: %q (expected 'module:bump')", m)
+		}
+		modName := parts[0]
+		bumpType := parts[1]
+
+		if !isValidBump(bumpType) {
+			return nil, fmt.Errorf("invalid bump type %q for module %q (must be patch, minor, or major)", bumpType, modName)
+		}
+
+		moduleBumps[modName] = changeset.Bump(bumpType)
+	}
+
+	if summary == "" {
+		summary = "No summary provided."
+	}
+
+	return &changeset.Changeset{
+		Modules: moduleBumps,
+		Summary: summary,
+	}, nil
+}
+
+func splitModuleBump(s string) []string {
+	idx := lastIndex(s, ':')
+	if idx == -1 {
+		return []string{s}
+	}
+	return []string{s[:idx], s[idx+1:]}
+}
+
+func lastIndex(s string, c byte) int {
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == c {
+			return i
+		}
+	}
+	return -1
+}
+
+func isValidBump(bump string) bool {
+	return bump == "patch" || bump == "minor" || bump == "major"
 }
 
 func createChangesetInteractive(dir string) (*changeset.Changeset, error) {
