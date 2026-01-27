@@ -1,0 +1,7 @@
+{
+  "root": "github.com/gojekfarm/xtools",
+  "baseBranch": "main",
+  "ignore": null,
+  "ignorePaths": null,
+  "dependentBump": "patch"
+}
