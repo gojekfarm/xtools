@@ -35,3 +35,16 @@ jobs:
           files: ./coverage.xml
           fail_ci_if_error: true
           verbose: true
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.25.x
+          cache: true
+      - name: E2E Tests
+        run: go test -tags=e2e -v ./cmd/changeset/e2e/...
