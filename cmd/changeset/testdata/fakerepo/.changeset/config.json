@@ -1,0 +1,7 @@
+{
+  "root": "github.com/test/fakerepo",
+  "baseBranch": "main",
+  "ignore": [],
+  "ignorePaths": [],
+  "dependentBump": "patch"
+}
