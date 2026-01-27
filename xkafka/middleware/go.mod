@@ -5,7 +5,7 @@ go 1.25
 replace github.com/gojekfarm/xtools/xkafka => ../
 
 require (
-	github.com/gojekfarm/xtools/xkafka v0.10.0
+	github.com/gojekfarm/xtools/xkafka v0.11.0
 	github.com/stretchr/testify v1.8.1
 )
 
