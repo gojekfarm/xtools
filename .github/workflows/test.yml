@@ -10,22 +10,18 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: 1.25.x
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Go mod cache
-        uses: actions/cache@v4
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go1.25.x
+          cache: true
       - name: Tools bin cache
         uses: actions/cache@v4
         with:
           path: .bin
-          key: ${{ runner.os }}-go1.25.x-${{ hashFiles('Makefile') }}
+          key: ${{ runner.os }}-tools-${{ hashFiles('Makefile') }}
       - name: Check
         run: make check
       - name: Test

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,6 +21,10 @@ type BatchConsumer struct {
 	middlewares []BatchMiddlewarer
 	config      *consumerConfig
 	stopOffset  atomic.Bool
+
+	// partition tracking
+	mu               sync.Mutex
+	activePartitions map[string]map[int32]struct{}
 }
 
 // NewBatchConsumer creates a new BatchConsumer instance.
@@ -44,10 +49,11 @@ func NewBatchConsumer(name string, handler BatchHandler, opts ...ConsumerOption)
 	}
 
 	return &BatchConsumer{
-		name:    name,
-		config:  cfg,
-		kafka:   consumer,
-		handler: handler,
+		name:             name,
+		config:           cfg,
+		kafka:            consumer,
+		handler:          handler,
+		activePartitions: make(map[string]map[int32]struct{}),
 	}, nil
 }
 
@@ -255,7 +261,24 @@ func (c *BatchConsumer) storeBatch(batch *Batch) error {
 		return nil
 	}
 
-	tps := batch.GroupMaxOffset()
+	allTps := batch.GroupMaxOffset()
+
+	// filter to only active partitions
+	tps := make([]kafka.TopicPartition, 0, len(allTps))
+	for _, tp := range allTps {
+		if tp.Topic != nil && c.isPartitionActive(*tp.Topic, tp.Partition) {
+			// similar to StoreMessage in confluent-kafka-go/consumer.go
+			// tp.Offset + 1 it ensures that the consumer starts with
+			// next message when it restarts
+			tp.Offset = kafka.Offset(tp.Offset + 1)
+
+			tps = append(tps, tp)
+		}
+	}
+
+	if len(tps) == 0 {
+		return nil
+	}
 
 	_, err := c.kafka.StoreOffsets(tps)
 	if err != nil {
@@ -281,7 +304,74 @@ func (c *BatchConsumer) concatMiddlewares(h BatchHandler) BatchHandler {
 }
 
 func (c *BatchConsumer) subscribe() error {
-	return c.kafka.SubscribeTopics(c.config.topics, nil)
+	return c.kafka.SubscribeTopics(c.config.topics, c.rebalanceCallback)
+}
+
+func (c *BatchConsumer) rebalanceCallback(_ *kafka.Consumer, event kafka.Event) error {
+	switch e := event.(type) {
+	case kafka.AssignedPartitions:
+		c.onPartitionsAssigned(e.Partitions)
+		return c.kafka.Assign(e.Partitions)
+
+	case kafka.RevokedPartitions:
+		if err := c.kafka.Unassign(); err != nil {
+			return err
+		}
+
+		c.onPartitionsRevoked(e.Partitions)
+	}
+
+	return nil
+}
+
+func (c *BatchConsumer) onPartitionsAssigned(partitions []kafka.TopicPartition) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for _, tp := range partitions {
+		if tp.Topic == nil {
+			continue
+		}
+
+		topic := *tp.Topic
+		if c.activePartitions[topic] == nil {
+			c.activePartitions[topic] = make(map[int32]struct{})
+		}
+
+		c.activePartitions[topic][tp.Partition] = struct{}{}
+	}
+}
+
+func (c *BatchConsumer) onPartitionsRevoked(partitions []kafka.TopicPartition) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for _, tp := range partitions {
+		if tp.Topic == nil {
+			continue
+		}
+
+		topic := *tp.Topic
+		if c.activePartitions[topic] != nil {
+			delete(c.activePartitions[topic], tp.Partition)
+
+			if len(c.activePartitions[topic]) == 0 {
+				delete(c.activePartitions, topic)
+			}
+		}
+	}
+}
+
+func (c *BatchConsumer) isPartitionActive(topic string, partition int32) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if partitions, ok := c.activePartitions[topic]; ok {
+		_, active := partitions[partition]
+		return active
+	}
+
+	return false
 }
 
 func (c *BatchConsumer) unsubscribe() error {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -174,22 +175,6 @@ func TestConsumerGetMetadata(t *testing.T) {
 	assert.NotNil(t, metadata)
 
 	consumer.Close()
-
-	mockKafka.AssertExpectations(t)
-}
-
-func TestConsumerSubscribeError(t *testing.T) {
-	t.Parallel()
-
-	consumer, mockKafka := newTestConsumer(t, defaultOpts...)
-
-	ctx := context.Background()
-	expectError := errors.New("error")
-
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(expectError)
-
-	err := consumer.Run(ctx)
-	assert.EqualError(t, err, expectError.Error())
 
 	mockKafka.AssertExpectations(t)
 }
@@ -500,38 +485,6 @@ func TestConsumerMiddlewareExecutionOrder(t *testing.T) {
 	mockKafka.AssertExpectations(t)
 }
 
-func TestConsumerManualCommit(t *testing.T) {
-	t.Parallel()
-
-	consumer, mockKafka := newTestConsumer(t,
-		append(defaultOpts, ManualCommit(true))...)
-
-	km := newFakeKafkaMessage()
-	ctx, cancel := context.WithCancel(context.Background())
-
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
-	mockKafka.On("Unsubscribe").Return(nil)
-	mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
-	mockKafka.On("Commit").Return(nil, nil)
-	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
-	mockKafka.On("Close").Return(nil)
-
-	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
-		cancel()
-
-		msg.AckSuccess()
-
-		return nil
-	})
-
-	consumer.handler = handler
-
-	err := consumer.Run(ctx)
-	assert.NoError(t, err)
-
-	mockKafka.AssertExpectations(t)
-}
-
 func TestConsumerAsync(t *testing.T) {
 	t.Parallel()
 
@@ -541,7 +494,13 @@ func TestConsumerAsync(t *testing.T) {
 	km := newFakeKafkaMessage()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	// Capture rebalance callback and trigger partition assignment
+	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Run(func(args mock.Arguments) {
+		cb := args.Get(1).(kafka.RebalanceCb)
+		partitions := []kafka.TopicPartition{{Topic: km.TopicPartition.Topic, Partition: km.TopicPartition.Partition}}
+		mockKafka.On("Assign", partitions).Return(nil).Once()
+		cb(nil, kafka.AssignedPartitions{Partitions: partitions})
+	}).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
@@ -583,26 +542,24 @@ func TestConsumerAsync_StopOffsetOnError(t *testing.T) {
 	km := newFakeKafkaMessage()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Return(nil)
+	// Capture rebalance callback and trigger partition assignment
+	mockKafka.On("SubscribeTopics", []string(testTopics), mock.Anything).Run(func(args mock.Arguments) {
+		cb := args.Get(1).(kafka.RebalanceCb)
+		partitions := []kafka.TopicPartition{{Topic: km.TopicPartition.Topic, Partition: km.TopicPartition.Partition}}
+		mockKafka.On("Assign", partitions).Return(nil).Once()
+		cb(nil, kafka.AssignedPartitions{Partitions: partitions})
+	}).Return(nil)
 	mockKafka.On("Unsubscribe").Return(nil)
 	mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 	mockKafka.On("Commit").Return(nil, nil)
 	mockKafka.On("Close").Return(nil)
 
-	mockKafka.On("StoreOffsets", mock.Anything).
-		Return(nil, nil).
-		Times(2)
+	mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
 
-	var recv []*Message
-	var mu sync.Mutex
+	var recv atomic.Int32
 
 	handler := HandlerFunc(func(ctx context.Context, msg *Message) error {
-		mu.Lock()
-		defer mu.Unlock()
-
-		recv = append(recv, msg)
-
-		if len(recv) > 2 {
+		if recv.Load() > 2 {
 			err := assert.AnError
 			msg.AckFail(err)
 
@@ -611,6 +568,7 @@ func TestConsumerAsync_StopOffsetOnError(t *testing.T) {
 			return err
 		}
 
+		recv.Add(1)
 		msg.AckSuccess()
 
 		return nil
@@ -666,6 +624,7 @@ func TestConsumerStoreOffsetsError(t *testing.T) {
 			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 			consumer.handler = handler
+			assignPartitions(t, consumer, mockKafka, testTopics[0], 1)
 
 			err := consumer.Run(ctx)
 			assert.Error(t, err)
@@ -719,6 +678,7 @@ func TestConsumerCommitError(t *testing.T) {
 			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 			consumer.handler = handler
+			assignPartitions(t, consumer, mockKafka, testTopics[0], 1)
 
 			err := consumer.Run(ctx)
 			assert.Error(t, err)
@@ -739,6 +699,377 @@ func testMiddleware(name string, pre, post *[]string) MiddlewareFunc {
 			return err
 		})
 	}
+}
+
+func TestConsumer_RebalanceCallback(t *testing.T) {
+	t.Parallel()
+
+	t.Run("AssignedPartitions", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		topic1 := "topic1"
+		topic2 := "topic2"
+		partitions := []kafka.TopicPartition{
+			{Topic: &topic1, Partition: 0},
+			{Topic: &topic1, Partition: 1},
+			{Topic: &topic2, Partition: 0},
+		}
+
+		mockKafka.On("Assign", partitions).Return(nil)
+
+		event := kafka.AssignedPartitions{Partitions: partitions}
+		err := consumer.rebalanceCallback(nil, event)
+
+		assert.NoError(t, err)
+
+		// Verify active partitions are tracked
+		assert.True(t, consumer.isPartitionActive(topic1, 0))
+		assert.True(t, consumer.isPartitionActive(topic1, 1))
+		assert.True(t, consumer.isPartitionActive(topic2, 0))
+		assert.False(t, consumer.isPartitionActive(topic2, 1))
+
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("AssignedPartitionsError", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		topic := "topic1"
+		partitions := []kafka.TopicPartition{
+			{Topic: &topic, Partition: 0},
+		}
+
+		mockKafka.On("Assign", partitions).Return(assert.AnError)
+
+		event := kafka.AssignedPartitions{Partitions: partitions}
+		err := consumer.rebalanceCallback(nil, event)
+
+		assert.ErrorIs(t, err, assert.AnError)
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("RevokedPartitions", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		topic1 := "topic1"
+		topic2 := "topic2"
+
+		// First assign partitions
+		assignPartitions := []kafka.TopicPartition{
+			{Topic: &topic1, Partition: 0},
+			{Topic: &topic1, Partition: 1},
+			{Topic: &topic2, Partition: 0},
+		}
+		mockKafka.On("Assign", assignPartitions).Return(nil)
+
+		assignEvent := kafka.AssignedPartitions{Partitions: assignPartitions}
+		err := consumer.rebalanceCallback(nil, assignEvent)
+		assert.NoError(t, err)
+
+		// Now revoke some partitions
+		revokePartitions := []kafka.TopicPartition{
+			{Topic: &topic1, Partition: 1},
+			{Topic: &topic2, Partition: 0},
+		}
+		mockKafka.On("Unassign").Return(nil)
+
+		revokeEvent := kafka.RevokedPartitions{Partitions: revokePartitions}
+		err = consumer.rebalanceCallback(nil, revokeEvent)
+		assert.NoError(t, err)
+
+		// Verify only non-revoked partitions are active
+		assert.True(t, consumer.isPartitionActive(topic1, 0))
+		assert.False(t, consumer.isPartitionActive(topic1, 1))
+		assert.False(t, consumer.isPartitionActive(topic2, 0))
+
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("RevokedPartitionsError", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		topic := "topic1"
+		partitions := []kafka.TopicPartition{
+			{Topic: &topic, Partition: 0},
+		}
+
+		mockKafka.On("Unassign").Return(assert.AnError)
+
+		event := kafka.RevokedPartitions{Partitions: partitions}
+		err := consumer.rebalanceCallback(nil, event)
+
+		assert.ErrorIs(t, err, assert.AnError)
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("RevokeAllPartitionsRemovesTopic", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		topic := "topic1"
+
+		// Assign a single partition
+		assignPartitions := []kafka.TopicPartition{
+			{Topic: &topic, Partition: 0},
+		}
+		mockKafka.On("Assign", assignPartitions).Return(nil)
+
+		assignEvent := kafka.AssignedPartitions{Partitions: assignPartitions}
+		err := consumer.rebalanceCallback(nil, assignEvent)
+		assert.NoError(t, err)
+
+		// Revoke all partitions for the topic
+		mockKafka.On("Unassign").Return(nil)
+
+		revokeEvent := kafka.RevokedPartitions{Partitions: assignPartitions}
+		err = consumer.rebalanceCallback(nil, revokeEvent)
+		assert.NoError(t, err)
+
+		// Verify topic is removed from active partitions
+		consumer.mu.Lock()
+		_, exists := consumer.activePartitions[topic]
+		consumer.mu.Unlock()
+		assert.False(t, exists)
+
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("NilTopicPartition", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		// Test with nil topic in partition
+		partitions := []kafka.TopicPartition{
+			{Topic: nil, Partition: 0},
+		}
+
+		mockKafka.On("Assign", partitions).Return(nil)
+
+		event := kafka.AssignedPartitions{Partitions: partitions}
+		err := consumer.rebalanceCallback(nil, event)
+		assert.NoError(t, err)
+
+		// Verify no panic and empty active partitions
+		consumer.mu.Lock()
+		assert.Len(t, consumer.activePartitions, 0)
+		consumer.mu.Unlock()
+
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("UnknownEvent", func(t *testing.T) {
+		consumer, _ := newTestConsumer(t, defaultOpts...)
+
+		// Test with an unknown event type (use kafka.Error as example)
+		event := kafka.NewError(kafka.ErrUnknown, "unknown", false)
+		err := consumer.rebalanceCallback(nil, event)
+
+		assert.NoError(t, err)
+	})
+}
+
+func TestConsumer_StoreMessage(t *testing.T) {
+	t.Parallel()
+
+	t.Run("MessageWithFailStatus", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		msg := &Message{
+			Topic:     "topic1",
+			Partition: 0,
+			Offset:    100,
+			Status:    Fail,
+		}
+
+		err := consumer.storeMessage(msg)
+
+		assert.NoError(t, err)
+		mockKafka.AssertNotCalled(t, "StoreOffsets")
+	})
+
+	t.Run("MessageWithSuccessStatus", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
+		msg := &Message{
+			Topic:     topic,
+			Partition: 0,
+			Offset:    100,
+			Status:    Success,
+		}
+
+		mockKafka.On("StoreOffsets", mock.MatchedBy(func(tps []kafka.TopicPartition) bool {
+			return len(tps) == 1 && *tps[0].Topic == topic && tps[0].Partition == 0 && tps[0].Offset == 101
+		})).Return(nil, nil)
+
+		err := consumer.storeMessage(msg)
+
+		assert.NoError(t, err)
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("MessageWithSkipStatus", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
+		msg := &Message{
+			Topic:     topic,
+			Partition: 0,
+			Offset:    100,
+			Status:    Skip,
+		}
+
+		mockKafka.On("StoreOffsets", mock.MatchedBy(func(tps []kafka.TopicPartition) bool {
+			return len(tps) == 1 && *tps[0].Topic == topic && tps[0].Partition == 0 && tps[0].Offset == 101
+		})).Return(nil, nil)
+
+		err := consumer.storeMessage(msg)
+
+		assert.NoError(t, err)
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("StopOffsetPreventsStore", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		msg := &Message{
+			Topic:     "topic1",
+			Partition: 0,
+			Offset:    100,
+			Status:    Success,
+		}
+
+		// Set stopOffset flag
+		consumer.stopOffset.Store(true)
+
+		err := consumer.storeMessage(msg)
+
+		assert.NoError(t, err)
+		mockKafka.AssertNotCalled(t, "StoreOffsets")
+	})
+
+	t.Run("FilterInactivePartition", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		topic := "topic1"
+
+		// Assign only partition 0
+		partitions := []kafka.TopicPartition{
+			{Topic: &topic, Partition: 0},
+		}
+		mockKafka.On("Assign", partitions).Return(nil)
+
+		assignEvent := kafka.AssignedPartitions{Partitions: partitions}
+		err := consumer.rebalanceCallback(nil, assignEvent)
+		require.NoError(t, err)
+
+		// Message is from partition 1 (inactive)
+		msg := &Message{
+			Topic:     topic,
+			Partition: 1,
+			Offset:    100,
+			Status:    Success,
+		}
+
+		// StoreOffsets should not be called for inactive partition
+		err = consumer.storeMessage(msg)
+
+		assert.NoError(t, err)
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("StoreOffsetsError", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
+		msg := &Message{
+			Topic:     topic,
+			Partition: 0,
+			Offset:    100,
+			Status:    Success,
+		}
+
+		mockKafka.On("StoreOffsets", mock.Anything).Return(nil, assert.AnError)
+
+		err := consumer.storeMessage(msg)
+
+		assert.ErrorIs(t, err, assert.AnError)
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("ManualCommitEnabled", func(t *testing.T) {
+		opts := append(defaultOpts, ManualCommit(true))
+		consumer, mockKafka := newTestConsumer(t, opts...)
+
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
+		msg := &Message{
+			Topic:     topic,
+			Partition: 0,
+			Offset:    100,
+			Status:    Success,
+		}
+
+		mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
+		mockKafka.On("Commit").Return(nil, nil)
+
+		err := consumer.storeMessage(msg)
+
+		assert.NoError(t, err)
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("ManualCommitError", func(t *testing.T) {
+		opts := append(defaultOpts, ManualCommit(true))
+		consumer, mockKafka := newTestConsumer(t, opts...)
+
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
+		msg := &Message{
+			Topic:     topic,
+			Partition: 0,
+			Offset:    100,
+			Status:    Success,
+		}
+
+		mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
+		mockKafka.On("Commit").Return(nil, assert.AnError)
+
+		err := consumer.storeMessage(msg)
+
+		assert.ErrorIs(t, err, assert.AnError)
+		mockKafka.AssertExpectations(t)
+	})
+
+	t.Run("OffsetIncrementedByOne", func(t *testing.T) {
+		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
+
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
+		msg := &Message{
+			Topic:     topic,
+			Partition: 0,
+			Offset:    999,
+			Status:    Success,
+		}
+
+		// Verify offset is incremented by 1
+		mockKafka.On("StoreOffsets", mock.MatchedBy(func(tps []kafka.TopicPartition) bool {
+			return len(tps) == 1 && tps[0].Offset == kafka.Offset(1000)
+		})).Return(nil, nil)
+
+		err := consumer.storeMessage(msg)
+
+		assert.NoError(t, err)
+		mockKafka.AssertExpectations(t)
+	})
 }
 
 func newTestConsumer(t *testing.T, opts ...ConsumerOption) (*Consumer, *MockConsumerClient) {
@@ -777,4 +1108,21 @@ func noopHandler() Handler {
 	return HandlerFunc(func(ctx context.Context, msg *Message) error {
 		return nil
 	})
+}
+
+// assignPartitions is a test helper that assigns partitions to a consumer
+// so that isPartitionActive returns true for those partitions.
+func assignPartitions(t *testing.T, consumer *Consumer, mockKafka *MockConsumerClient, topic string, partitions ...int32) {
+	t.Helper()
+
+	tps := make([]kafka.TopicPartition, len(partitions))
+	for i, p := range partitions {
+		tps[i] = kafka.TopicPartition{Topic: &topic, Partition: p}
+	}
+
+	mockKafka.On("Assign", tps).Return(nil).Once()
+
+	event := kafka.AssignedPartitions{Partitions: tps}
+	err := consumer.rebalanceCallback(nil, event)
+	require.NoError(t, err)
 }

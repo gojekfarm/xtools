@@ -65,7 +65,7 @@ func TestBatch_OffsetMethods(t *testing.T) {
 				{
 					Topic:     strPtr("topic1"),
 					Partition: 0,
-					Offset:    kafka.Offset(11),
+					Offset:    kafka.Offset(10),
 				},
 			},
 		},
@@ -81,17 +81,17 @@ func TestBatch_OffsetMethods(t *testing.T) {
 				{
 					Topic:     strPtr("topic1"),
 					Partition: 0,
-					Offset:    kafka.Offset(6),
+					Offset:    kafka.Offset(5),
 				},
 				{
 					Topic:     strPtr("topic1"),
 					Partition: 1,
-					Offset:    kafka.Offset(11),
+					Offset:    kafka.Offset(10),
 				},
 				{
 					Topic:     strPtr("topic2"),
 					Partition: 0,
-					Offset:    kafka.Offset(16),
+					Offset:    kafka.Offset(15),
 				},
 			},
 		},

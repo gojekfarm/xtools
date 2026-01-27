@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -21,6 +22,10 @@ type Consumer struct {
 	config      *consumerConfig
 	cancelCtx   atomic.Pointer[context.CancelFunc]
 	stopOffset  atomic.Bool
+
+	// partition tracking
+	mu               sync.Mutex
+	activePartitions map[string]map[int32]struct{}
 }
 
 // NewConsumer creates a new Consumer instance.
@@ -45,10 +50,11 @@ func NewConsumer(name string, handler Handler, opts ...ConsumerOption) (*Consume
 	}
 
 	return &Consumer{
-		name:    name,
-		config:  cfg,
-		kafka:   consumer,
-		handler: handler,
+		name:             name,
+		config:           cfg,
+		kafka:            consumer,
+		handler:          handler,
+		activePartitions: make(map[string]map[int32]struct{}),
 	}, nil
 }
 
@@ -234,6 +240,11 @@ func (c *Consumer) storeMessage(msg *Message) error {
 		return nil
 	}
 
+	// only store offset if partition is still active
+	if !c.isPartitionActive(msg.Topic, msg.Partition) {
+		return nil
+	}
+
 	// similar to StoreMessage in confluent-kafka-go/consumer.go
 	// msg.Offset + 1 it ensures that the consumer starts with
 	// next message when it restarts
@@ -267,7 +278,73 @@ func (c *Consumer) concatMiddlewares(h Handler) Handler {
 }
 
 func (c *Consumer) subscribe() error {
-	return c.kafka.SubscribeTopics(c.config.topics, nil)
+	return c.kafka.SubscribeTopics(c.config.topics, c.rebalanceCallback)
+}
+
+func (c *Consumer) rebalanceCallback(_ *kafka.Consumer, event kafka.Event) error {
+	switch e := event.(type) {
+	case kafka.AssignedPartitions:
+		c.onPartitionsAssigned(e.Partitions)
+		return c.kafka.Assign(e.Partitions)
+
+	case kafka.RevokedPartitions:
+		if err := c.kafka.Unassign(); err != nil {
+			return err
+		}
+		c.onPartitionsRevoked(e.Partitions)
+	}
+
+	return nil
+}
+
+func (c *Consumer) onPartitionsAssigned(partitions []kafka.TopicPartition) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for _, tp := range partitions {
+		if tp.Topic == nil {
+			continue
+		}
+
+		topic := *tp.Topic
+		if c.activePartitions[topic] == nil {
+			c.activePartitions[topic] = make(map[int32]struct{})
+		}
+
+		c.activePartitions[topic][tp.Partition] = struct{}{}
+	}
+}
+
+func (c *Consumer) onPartitionsRevoked(partitions []kafka.TopicPartition) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for _, tp := range partitions {
+		if tp.Topic == nil {
+			continue
+		}
+
+		topic := *tp.Topic
+		if c.activePartitions[topic] != nil {
+			delete(c.activePartitions[topic], tp.Partition)
+
+			if len(c.activePartitions[topic]) == 0 {
+				delete(c.activePartitions, topic)
+			}
+		}
+	}
+}
+
+func (c *Consumer) isPartitionActive(topic string, partition int32) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if partitions, ok := c.activePartitions[topic]; ok {
+		_, active := partitions[partition]
+		return active
+	}
+
+	return false
 }
 
 func (c *Consumer) unsubscribe() error {
