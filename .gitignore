@@ -48,3 +48,5 @@ go.work.sum
 
 .envrc
 .claude/
+.cursor/
+.tasks/
