@@ -2,6 +2,7 @@ package errors
 
 import (
 	"errors"
+	"sort"
 	"strings"
 )
 
@@ -22,10 +23,15 @@ type ErrorTags struct {
 
 // Error returns the error message with the tags attached.
 func (e *ErrorTags) Error() string {
-	md := []string{}
+	keys := make([]string, 0, len(e.tags))
+	for k := range e.tags {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-	for k, v := range e.tags {
-		md = append(md, k+"="+v)
+	md := make([]string, 0, len(e.tags))
+	for _, k := range keys {
+		md = append(md, k+"="+e.tags[k])
 	}
 
 	return e.err.Error() + " [" + strings.Join(md, ", ") + "]"
