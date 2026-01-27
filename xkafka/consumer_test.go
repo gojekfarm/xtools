@@ -624,6 +624,7 @@ func TestConsumerStoreOffsetsError(t *testing.T) {
 			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 			consumer.handler = handler
+			assignPartitions(t, consumer, mockKafka, testTopics[0], 1)
 
 			err := consumer.Run(ctx)
 			assert.Error(t, err)
@@ -677,6 +678,7 @@ func TestConsumerCommitError(t *testing.T) {
 			mockKafka.On("ReadMessage", testTimeout).Return(km, nil)
 
 			consumer.handler = handler
+			assignPartitions(t, consumer, mockKafka, testTopics[0], 1)
 
 			err := consumer.Run(ctx)
 			assert.Error(t, err)

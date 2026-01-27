@@ -653,6 +653,7 @@ func TestBatchConsumer_CommitError(t *testing.T) {
 			mockKafka.On("Commit").Return(nil, expect)
 
 			consumer.handler = handler
+			assignBatchPartitions(t, consumer, mockKafka, testTopics[0], 1)
 
 			err := consumer.Run(ctx)
 			assert.Error(t, err)
