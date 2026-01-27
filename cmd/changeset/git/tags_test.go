@@ -1,8 +1,11 @@
 package git
 
 import (
+	"os/exec"
+	"path/filepath"
 	"testing"
 
+	"github.com/gojekfarm/xtools/cmd/changeset/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,4 +77,27 @@ func TestParseTagFormatTagRoundTrip(t *testing.T) {
 		assert.Equal(t, tt.module, module, "round trip module")
 		assert.Equal(t, tt.version, version, "round trip version")
 	}
+}
+
+func TestSetupTestRepo(t *testing.T) {
+	dir := testutil.SetupTestRepo(t)
+
+	// Verify git tags were created
+	cmd := exec.Command("git", "tag", "-l")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	assert.NoError(t, err)
+
+	tags := string(out)
+	assert.Contains(t, tags, "v0.1.0")
+	assert.Contains(t, tags, "libA/v0.1.0")
+	assert.Contains(t, tags, "libB/v0.1.0")
+	assert.Contains(t, tags, "libC/v0.1.0")
+
+	// Verify files exist
+	assert.FileExists(t, filepath.Join(dir, "go.mod"))
+	assert.FileExists(t, filepath.Join(dir, "libA/go.mod"))
+	assert.FileExists(t, filepath.Join(dir, "libB/go.mod"))
+	assert.FileExists(t, filepath.Join(dir, "libC/go.mod"))
+	assert.FileExists(t, filepath.Join(dir, ".changeset/config.json"))
 }

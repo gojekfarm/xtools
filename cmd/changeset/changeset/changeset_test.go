@@ -3,20 +3,13 @@ package changeset
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/gojekfarm/xtools/cmd/changeset/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func testdataPath(parts ...string) string {
-	_, file, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(file)
-	all := append([]string{dir, "..", "testdata"}, parts...)
-	return filepath.Join(all...)
-}
 
 func TestBumpCompare(t *testing.T) {
 	tests := []struct {
@@ -83,7 +76,8 @@ func TestGenerateIDUniqueness(t *testing.T) {
 }
 
 func TestParseChangeset(t *testing.T) {
-	path := testdataPath("fakerepo", ".changeset", "happy-tiger-jump.md")
+	dir := testutil.SetupTestRepo(t)
+	path := filepath.Join(dir, ".changeset", "happy-tiger-jump.md")
 
 	cs, err := ParseChangeset(path)
 	require.NoError(t, err)
@@ -119,7 +113,7 @@ func TestParseChangesetInvalid(t *testing.T) {
 }
 
 func TestReadChangesets(t *testing.T) {
-	dir := testdataPath("fakerepo")
+	dir := testutil.SetupTestRepo(t)
 
 	changesets, err := ReadChangesets(dir)
 	require.NoError(t, err)

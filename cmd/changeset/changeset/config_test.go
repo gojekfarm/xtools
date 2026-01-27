@@ -1,20 +1,12 @@
 package changeset
 
 import (
-	"path/filepath"
-	"runtime"
 	"testing"
 
+	"github.com/gojekfarm/xtools/cmd/changeset/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func configTestdataPath(parts ...string) string {
-	_, file, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(file)
-	all := append([]string{dir, "..", "testdata"}, parts...)
-	return filepath.Join(all...)
-}
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
@@ -27,7 +19,7 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestReadConfig(t *testing.T) {
-	dir := configTestdataPath("fakerepo")
+	dir := testutil.SetupTestRepo(t)
 
 	cfg, err := ReadConfig(dir)
 	require.NoError(t, err)
@@ -47,12 +39,14 @@ func TestReadConfigNonExistent(t *testing.T) {
 }
 
 func TestChangesetDirExists(t *testing.T) {
+	repoDir := testutil.SetupTestRepo(t)
+
 	tests := []struct {
 		name string
 		dir  string
 		want bool
 	}{
-		{"existing", configTestdataPath("fakerepo"), true},
+		{"existing", repoDir, true},
 		{"nonexistent", "/nonexistent/path", false},
 	}
 
