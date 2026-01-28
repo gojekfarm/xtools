@@ -113,30 +113,8 @@ func Version(ctx context.Context, cmd *cli.Command) error {
 		slog.Info("Updated go.mod", "path", gomodPath)
 	}
 
-	// Update changelogs for each released module (skip for snapshots)
+	// Delete consumed changesets (skip for snapshots)
 	if !snapshot {
-		slog.Info("Updating changelogs")
-		for _, r := range releases {
-			mod := graph.FindModule(r.Module)
-			if mod == nil {
-				continue
-			}
-
-			// Generate changelog entry for this module
-			entry := changeset.GenerateChangelog([]changeset.Release{r}, changesets)
-			if entry == nil {
-				continue
-			}
-
-			changelogPath := filepath.Join(mod.Path, "CHANGELOG.md")
-			if err := changeset.UpdateChangelog(changelogPath, entry); err != nil {
-				return cli.Exit(fmt.Sprintf("Failed to update changelog for %s: %v", r.Module, err), 1)
-			}
-
-			slog.Info("Updated changelog", "path", changelogPath, "module", displayModule(r.Module))
-		}
-
-		// Delete consumed changesets (skip for snapshots)
 		slog.Info("Deleting consumed changesets")
 		for _, cs := range changesets {
 			if err := changeset.DeleteChangeset(cs); err != nil {
@@ -146,7 +124,7 @@ func Version(ctx context.Context, cmd *cli.Command) error {
 			}
 		}
 	} else {
-		slog.Info("Snapshot mode: Skipping changelog updates and changeset deletion")
+		slog.Info("Snapshot mode: Skipping changeset deletion")
 	}
 
 	// Write release manifest

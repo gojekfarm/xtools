@@ -67,7 +67,7 @@ $ changeset status
 
 ### `changeset version`
 
-Consume changesets, update go.mod files, and generate changelogs.
+Consume changesets and update go.mod files.
 
 ```bash
 $ changeset version
@@ -154,7 +154,6 @@ main
     │       ├── Reads all .changeset/*.md
     │       ├── Computes: xkafka v0.10.0 → v0.11.0
     │       ├── Updates go.mod files
-    │       ├── Updates CHANGELOG.md
     │       ├── Deletes .changeset/*.md
     │       └── Writes .changeset/release-manifest.json
     │
@@ -212,7 +211,6 @@ changeset version
     ├── Reads .changeset/*.md (changesets)
     ├── Computes version bumps
     ├── Updates go.mod files
-    ├── Updates CHANGELOG.md
     ├── Deletes consumed changesets
     └── Writes .changeset/release-manifest.json  ← created
 

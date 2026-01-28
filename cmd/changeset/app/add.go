@@ -212,7 +212,7 @@ func createChangesetInteractive(dir string) (*changeset.Changeset, error) {
 		huh.NewGroup(
 			huh.NewText().
 				Title("Describe the changes").
-				Description("This will appear in the changelog").
+				Description("Summary of the change").
 				CharLimit(1000).
 				Value(&summary),
 		),

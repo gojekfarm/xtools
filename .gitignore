@@ -51,4 +51,3 @@ go.work.sum
 .cursor/
 .tasks/
 
-release-manifest.json

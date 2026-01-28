@@ -134,8 +134,8 @@ func BuildStatusCommand() *cli.Command {
 func BuildVersionCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "version",
-		Usage: "Update versions and changelogs from changesets",
-		Description: "Consumes all changesets, updates go.mod files, generates changelogs,\n" +
+		Usage: "Update versions from changesets",
+		Description: "Consumes all changesets, updates go.mod files,\n" +
 			"and writes a release manifest for the publish step.\n\n" +
 			"Examples:\n" +
 			"  changeset version\n" +
