@@ -23,5 +23,4 @@ jobs:
 
       - name: Check for changeset
         run: |
-          # Show changeset status (don't fail on missing changesets)
-          changeset status --since=origin/main || true
+          changeset status --since=origin/main
