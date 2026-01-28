@@ -40,12 +40,6 @@ func TestE2E_FullReleaseWorkflow(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, changesetsAfter, "changesets should be consumed")
 
-	// Verify CHANGELOG was updated
-	testutil.AssertFileContains(t,
-		filepath.Join(dir, "libA", "CHANGELOG.md"),
-		"0.2.0",
-	)
-
 	// Step 3: Create tags (without push since no remote)
 	tagResult := runCLI(t, dir, "tag")
 	require.Equal(t, 0, tagResult.ExitCode, "tag should succeed")

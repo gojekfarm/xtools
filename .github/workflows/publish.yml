@@ -1,0 +1,31 @@
+name: Publish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".changeset/release-manifest.json"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+
+      - name: Install changeset
+        run: go install github.com/gojekfarm/xtools/cmd/changeset@latest
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Publish
+        run: changeset publish

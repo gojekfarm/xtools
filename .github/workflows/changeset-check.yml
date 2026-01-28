@@ -1,0 +1,27 @@
+name: Changeset Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+
+      - name: Install changeset
+        run: go install github.com/gojekfarm/xtools/cmd/changeset@latest
+
+      - name: Check for changeset
+        run: |
+          # Show changeset status (don't fail on missing changesets)
+          changeset status --since=origin/main || true
