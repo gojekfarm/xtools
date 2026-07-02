@@ -261,17 +261,7 @@ func (c *Consumer) storeMessage(msg *Message) error {
 
 	if c.config.manualCommit {
 		_, err := c.kafka.Commit()
-		if err != nil {
-			// ErrNoOffset ("Local: No offset stored") is benign: there is nothing
-			// to commit for the current assignment. With concurrency > 1 the poll
-			// loop can service a rebalance (Unassign clears the stored offsets) on
-			// another goroutine between StoreOffsets and Commit here, leaving the
-			// store empty. Treat it as a no-op instead of stopping the consumer.
-			var kerr kafka.Error
-			if errors.As(err, &kerr) && kerr.Code() == kafka.ErrNoOffset {
-				return nil
-			}
-
+		if err != nil && !isErrNoOffset(err) {
 			return err
 		}
 	}
