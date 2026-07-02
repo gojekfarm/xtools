@@ -1,10 +1,45 @@
 {
   "releases": [
     {
-      "module": "cmd/changeset",
-      "version": "v0.1.1",
-      "previousVersion": "v0.1.0",
+      "module": "examples/xkafka",
+      "version": "v0.10.2",
+      "previousVersion": "v0.10.1",
+      "bump": "patch",
+      "reason": "dependency"
+    },
+    {
+      "module": "xkafka",
+      "version": "v0.11.1",
+      "previousVersion": "v0.11.0",
       "bump": "patch"
+    },
+    {
+      "module": "xkafka/middleware",
+      "version": "v0.10.2",
+      "previousVersion": "v0.10.1",
+      "bump": "patch",
+      "reason": "dependency"
+    },
+    {
+      "module": "xkafka/middleware/retry",
+      "version": "v0.10.2",
+      "previousVersion": "v0.10.1",
+      "bump": "patch",
+      "reason": "dependency"
+    },
+    {
+      "module": "xkafka/middleware/zerolog",
+      "version": "v0.10.2",
+      "previousVersion": "v0.10.1",
+      "bump": "patch",
+      "reason": "dependency"
+    },
+    {
+      "module": "xprom/xpromkafka",
+      "version": "v0.10.2",
+      "previousVersion": "v0.10.1",
+      "bump": "patch",
+      "reason": "dependency"
     }
   ]
 }
