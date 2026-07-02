@@ -1047,6 +1047,34 @@ func TestConsumer_StoreMessage(t *testing.T) {
 		mockKafka.AssertExpectations(t)
 	})
 
+	t.Run("ManualCommitNoOffsetIgnored", func(t *testing.T) {
+		opts := append(defaultOpts, ManualCommit(true))
+		consumer, mockKafka := newTestConsumer(t, opts...)
+
+		topic := "topic1"
+		assignPartitions(t, consumer, mockKafka, topic, 0)
+
+		msg := &Message{
+			Topic:     topic,
+			Partition: 0,
+			Offset:    100,
+			Status:    Success,
+		}
+
+		// A concurrent rebalance can clear the offset store between StoreOffsets
+		// and Commit, making Commit return ErrNoOffset. This is benign and must
+		// not stop the consumer.
+		noOffset := kafka.NewError(kafka.ErrNoOffset, "Local: No offset stored", false)
+
+		mockKafka.On("StoreOffsets", mock.Anything).Return(nil, nil)
+		mockKafka.On("Commit").Return(nil, noOffset)
+
+		err := consumer.storeMessage(msg)
+
+		assert.NoError(t, err)
+		mockKafka.AssertExpectations(t)
+	})
+
 	t.Run("OffsetIncrementedByOne", func(t *testing.T) {
 		consumer, mockKafka := newTestConsumer(t, defaultOpts...)
 

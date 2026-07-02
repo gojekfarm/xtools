@@ -261,7 +261,7 @@ func (c *Consumer) storeMessage(msg *Message) error {
 
 	if c.config.manualCommit {
 		_, err := c.kafka.Commit()
-		if err != nil {
+		if err != nil && !isErrNoOffset(err) {
 			return err
 		}
 	}
