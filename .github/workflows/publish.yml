@@ -9,6 +9,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,6 +28,16 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # `changeset publish` pushes tags via go-git, which does not read the
+      # http.extraheader credentials actions/checkout configures. Embed the
+      # token in the origin URL so go-git can authenticate the push. Without
+      # this the push fails with "authentication required: No anonymous write
+      # access" and no tags are published.
+      - name: Authenticate git remote for go-git
+        run: git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish
         run: changeset publish
